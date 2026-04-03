@@ -1,10 +1,10 @@
 from fastapi import FastAPI
-from app.api.routes.health import router as health_router
+from app.api.routes.register import router as register_router
 
 app = FastAPI(title="Fretado API")
 
-app.include_router(health_router)
+app.include_router(register_router)
 
 @app.get("/")
 def root():
-    return {"message": "API do Fretado no ar"}
+    return {"message": "Fretado API is running"}

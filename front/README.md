@@ -1,16 +1,17 @@
-# front
+# 📱 Front-end
 
-A new Flutter project.
+O front-end do projeto será desenvolvido utilizando **Flutter**, permitindo a criação de uma aplicação multiplataforma (mobile/web).
 
-## Getting Started
+## 🚀 Como rodar o projeto
 
-This project is a starting point for a Flutter application.
+**Pré-requisitos:**
 
-A few resources to get you started if this is your first Flutter project:
+* Flutter instalado (versão recomendada: 3.35.2)
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+**Passos:**
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+```bash
+cd front
+flutter pub get
+flutter run -d chrome
+```

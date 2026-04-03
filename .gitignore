@@ -1,0 +1,65 @@
+# =========================
+# Sistema
+# =========================
+.DS_Store
+Thumbs.db
+
+# =========================
+# IDE / Editor
+# =========================
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# =========================
+# Python / FastAPI
+# =========================
+back/venv/
+back/.venv/
+**/__pycache__/
+*.pyc
+*.pyo
+*.pyd
+back/.pytest_cache/
+back/.mypy_cache/
+back/.coverage
+back/htmlcov/
+
+# =========================
+# Logs
+# =========================
+*.log
+
+# =========================
+# Banco / arquivos locais
+# =========================
+*.sqlite3
+*.db
+
+# =========================
+# Flutter / Dart
+# =========================
+front/.dart_tool/
+front/.packages
+front/.flutter-plugins
+front/.flutter-plugins-dependencies
+front/.pub-cache/
+front/build/
+
+# Android / iOS gerados
+front/android/.gradle/
+front/android/app/debug/
+front/android/app/profile/
+front/android/app/release/
+
+# =========================
+# Segredos / ambiente
+# =========================
+.env
+.env.*
+back/.env
+front/.env
+!.env.example
+!back/.env.example
+!front/.env.example

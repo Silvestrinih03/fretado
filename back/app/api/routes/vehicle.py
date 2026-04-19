@@ -1,13 +1,18 @@
 from typing import List
-
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.database.database import get_db
 from app.models.vehicle import Vehicle
-from app.schemas.vehicle import VehicleResponse
+from app.schemas.vehicle import VehicleCreateRequest, VehicleResponse
+from app.services.vehicle_service import VehicleService
 
 router = APIRouter(prefix="/vehicles", tags=["Vehicles"])
+
+
+@router.post("", response_model=VehicleResponse, status_code=status.HTTP_201_CREATED)
+def create_vehicle(payload: VehicleCreateRequest, db: Session = Depends(get_db)):
+    return VehicleService.create_vehicle(payload, db)
 
 
 @router.get("/user/{user_id}", response_model=List[VehicleResponse], status_code=status.HTTP_200_OK)

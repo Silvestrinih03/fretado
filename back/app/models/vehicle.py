@@ -1,8 +1,6 @@
 from sqlalchemy import BigInteger, Column, DateTime, ForeignKey, Integer, SmallInteger, String, Boolean
 from sqlalchemy.sql import func
-
 from app.database.base import Base
-
 
 class Vehicle(Base):
     __tablename__ = "vehicles"
@@ -12,8 +10,15 @@ class Vehicle(Base):
     vehicle_type_id = Column(BigInteger, ForeignKey("vehicle_types.id", ondelete="RESTRICT"), nullable=False)
 
     brand = Column(String(100), nullable=False)
-    model = Column(String(100), nullable=False)
+    brand_code = Column(String(20), nullable=True)
+
+    model = Column(String(150), nullable=False)
+    model_code = Column(String(20), nullable=True)
+
     year = Column(SmallInteger, nullable=False)
+    year_code = Column(String(20), nullable=True)
+    year_label = Column(String(50), nullable=True)
+
     color = Column(String(50), nullable=True)
     plate = Column(String(10), nullable=False, unique=True)
 

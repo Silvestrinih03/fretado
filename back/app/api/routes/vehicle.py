@@ -1,10 +1,10 @@
 from typing import List
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy.orm import Session
 
 from app.database.database import get_db
 from app.models.vehicle import Vehicle
-from app.schemas.vehicle import VehicleCreateRequest, VehicleResponse
+from app.schemas.vehicle import UpdateVehicleRequest, VehicleCreateRequest, VehicleResponse
 from app.services.vehicle_service import VehicleService
 
 router = APIRouter(prefix="/vehicles", tags=["Vehicles"])
@@ -39,3 +39,44 @@ def get_vehicle_by_id(vehicle_id: int, db: Session = Depends(get_db)):
         )
 
     return vehicle
+
+
+@router.patch("/{vehicle_id}", response_model=VehicleResponse, status_code=status.HTTP_200_OK)
+def update_vehicle_by_id(
+    vehicle_id: int,
+    payload: UpdateVehicleRequest,
+    db: Session = Depends(get_db)
+):
+    vehicle = db.query(Vehicle).filter(Vehicle.id == vehicle_id).first()
+
+    if not vehicle:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Vehicle not found."
+        )
+
+    update_data = payload.model_dump(exclude_unset=True)
+
+    for field_name, value in update_data.items():
+        setattr(vehicle, field_name, value)
+
+    db.commit()
+    db.refresh(vehicle)
+
+    return vehicle
+
+
+@router.delete("/{vehicle_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_vehicle_by_id(vehicle_id: int, db: Session = Depends(get_db)):
+    vehicle = db.query(Vehicle).filter(Vehicle.id == vehicle_id).first()
+
+    if not vehicle:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Vehicle not found."
+        )
+
+    db.delete(vehicle)
+    db.commit()
+
+    return Response(status_code=status.HTTP_204_NO_CONTENT)

@@ -88,22 +88,40 @@ class VehicleCreateRequest(BaseModel):
 
 
 class UpdateVehicleRequest(BaseModel):
-    user_id: Optional[int] = None
-    vehicle_type_id: Optional[VehicleTypeEnum] = None
-    brand: Optional[str] = Field(None, max_length=100)
-    brand_code: Optional[str] = Field(None, max_length=20)
-    model: Optional[str] = Field(None, max_length=150)
-    model_code: Optional[str] = Field(None, max_length=20)
-    year: Optional[int] = None
-    year_code: Optional[str] = Field(None, max_length=20)
-    year_label: Optional[str] = Field(None, max_length=50)
     color: Optional[str] = Field(None, max_length=50)
-    plate: Optional[str] = Field(None, min_length=7, max_length=10)
     load_capacity_kg: Optional[int] = Field(None, ge=0)
     width_cm: Optional[int] = Field(None, ge=0)
     height_cm: Optional[int] = Field(None, ge=0)
     length_cm: Optional[int] = Field(None, ge=0)
     status: Optional[bool] = None
+
+    @field_validator("color", mode="before")
+    @classmethod
+    def normalize_color(cls, value: Optional[str]) -> Optional[str]:
+        if value is None:
+            return value
+
+        cleaned = value.strip()
+        return cleaned or None
+
+    @model_validator(mode="after")
+    def validate_at_least_one_field(self):
+        if not any(
+            getattr(self, field_name) is not None
+            for field_name in (
+                "color",
+                "status",
+                "load_capacity_kg",
+                "width_cm",
+                "height_cm",
+                "length_cm",
+            )
+        ):
+            raise ValueError(
+                "Provide at least one field to update."
+            )
+
+        return self
 
 
 class CreateVehicleRequest(VehicleCreateRequest):

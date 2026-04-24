@@ -65,9 +65,44 @@ CREATE TABLE vehicles (
     CONSTRAINT chk_plate_format CHECK (plate ~ '^[A-Z]{3}[0-9][A-Z][0-9]{2}$')
 );
 
+-- TABLE: driver_license_categories
+CREATE TABLE driver_license_categories (
+    id bigint generated always as identity primary key,
+    code VARCHAR(3) NOT NULL UNIQUE,
+    description VARCHAR(100)
+);
+
+-- TABLE: driver_documents
+CREATE TABLE driver_documents (
+    id bigint generated always as identity primary key,
+    user_id INT NOT NULL,
+    license_number VARCHAR(20) NOT NULL,
+    license_category_id INT NOT NULL,
+    issue_date DATE NOT NULL,
+    expiration_date DATE NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
+
+    CONSTRAINT fk_driver_documents_user
+        FOREIGN KEY (user_id)
+        REFERENCES users(id),
+
+    CONSTRAINT fk_driver_documents_license_category
+        FOREIGN KEY (license_category_id)
+        REFERENCES driver_license_categories(id),
+
+    CONSTRAINT uq_driver_documents_user
+        UNIQUE (user_id),
+
+    CONSTRAINT uq_driver_documents_license_number
+        UNIQUE (license_number),
+
+    CONSTRAINT chk_driver_documents_dates
+        CHECK (expiration_date > issue_date)
+);
+
 -- SEED
-insert into user_types (type)
-values ('client'), ('driver');
+INSERT INTO user_types (type) VALUES ('client'), ('driver');
 
 INSERT INTO vehicle_types (type) VALUES
 ('moto'),
@@ -77,3 +112,10 @@ INSERT INTO vehicle_types (type) VALUES
 ('van'),
 ('utilitário'),
 ('caminhão');
+
+INSERT INTO driver_license_categories (code, description) VALUES
+('A', 'Motocicleta'),
+('B', 'Automóvel'),
+('C', 'Veículo de carga'),
+('D', 'Transporte de passageiros'),
+('E', 'Veículos com unidade acoplada');

@@ -1,14 +1,11 @@
 from typing import Optional
-
 import requests
 from fastapi import HTTPException, status
-
 from app.core.mappings.fipe import FIPE_TYPE_MAP
 from app.enums.vehicle_type import VehicleTypeEnum
 
 BASE_URL = "https://parallelum.com.br/fipe/api/v1"
 TIMEOUT = 10
-
 
 class FipeService:
     @staticmethod

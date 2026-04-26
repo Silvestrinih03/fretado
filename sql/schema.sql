@@ -101,7 +101,7 @@ CREATE TABLE driver_documents (
         CHECK (expiration_date > issue_date)
 );
 
--- SEED
+-- SEEDs
 INSERT INTO user_types (type) VALUES ('client'), ('driver');
 
 INSERT INTO vehicle_types (type) VALUES

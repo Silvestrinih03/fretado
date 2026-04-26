@@ -1,6 +1,5 @@
 from typing import List, Optional
 from fastapi import APIRouter, Query, status
-
 from app.schemas.vehicle_catalog import (
     VehicleBrandResponse,
     VehicleModelResponse,
@@ -9,7 +8,6 @@ from app.schemas.vehicle_catalog import (
 from app.services.fipe_service import FipeService
 
 router = APIRouter(prefix="/vehicle-catalog", tags=["Vehicle Catalog"])
-
 
 @router.get(
     "/brands",
@@ -22,7 +20,6 @@ def get_brands(
 ):
     return FipeService.get_brands(vehicle_type_id, search)
 
-
 @router.get(
     "/models",
     response_model=List[VehicleModelResponse],
@@ -34,7 +31,6 @@ def get_models(
     search: Optional[str] = Query(None, min_length=1)
 ):
     return FipeService.get_models(vehicle_type_id, brand_id, search)
-
 
 @router.get(
     "/years",

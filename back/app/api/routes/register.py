@@ -1,7 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
-
 from app.core.security import hash_password
 from app.database.database import get_db
 from app.models.user import User
@@ -10,7 +9,6 @@ from app.models.user_type import UserType
 from app.schemas.register import RegisterUserRequest, RegisterUserResponse
 
 router = APIRouter(prefix="/register", tags=["Register"])
-
 
 @router.post("", status_code=status.HTTP_201_CREATED, response_model=RegisterUserResponse)
 def register_user(payload: RegisterUserRequest, db: Session = Depends(get_db)):

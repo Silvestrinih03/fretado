@@ -1,12 +1,10 @@
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
-
 from app.models.user import User
 from app.models.vehicle import Vehicle
 from app.models.vehicle_type import VehicleType
 from app.schemas.vehicle import VehicleCreateRequest
 from app.services.fipe_service import FipeService
-
 
 class VehicleService:
     @staticmethod

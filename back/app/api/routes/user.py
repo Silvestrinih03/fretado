@@ -1,13 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-
 from app.database.database import get_db
 from app.models.user import User
 from app.models.user_profile import UserProfile
 from app.schemas.user import UpdateUserRequest, UserProfileResponse
 
 router = APIRouter(prefix="/users", tags=["Users"])
-
 
 @router.get("/{user_id}", response_model=UserProfileResponse, status_code=status.HTTP_200_OK)
 def get_user_by_id(user_id: int, db: Session = Depends(get_db)):
@@ -34,7 +32,6 @@ def get_user_by_id(user_id: int, db: Session = Depends(get_db)):
         birth_date=profile.birth_date,
         phone=profile.phone,
     )
-
 
 @router.patch("/{user_id}", response_model=UserProfileResponse, status_code=status.HTTP_200_OK)
 def update_user_by_id(

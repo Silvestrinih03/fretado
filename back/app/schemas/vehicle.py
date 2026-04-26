@@ -1,10 +1,7 @@
 from datetime import datetime
 from typing import Optional
-
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
-
 from app.enums.vehicle_type import VehicleTypeEnum
-
 
 class VehicleResponse(BaseModel):
     id: int
@@ -28,7 +25,6 @@ class VehicleResponse(BaseModel):
     updated_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
-
 
 class VehicleCreateRequest(BaseModel):
     user_id: int
@@ -86,7 +82,6 @@ class VehicleCreateRequest(BaseModel):
 
         return self
 
-
 class UpdateVehicleRequest(BaseModel):
     color: Optional[str] = Field(None, max_length=50)
     load_capacity_kg: Optional[int] = Field(None, ge=0)
@@ -122,7 +117,6 @@ class UpdateVehicleRequest(BaseModel):
             )
 
         return self
-
 
 class CreateVehicleRequest(VehicleCreateRequest):
     pass

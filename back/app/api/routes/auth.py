@@ -1,13 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-
 from app.core.security import hash_password, verify_password
 from app.database.database import get_db
 from app.models.user import User
 from app.schemas.auth import ChangePasswordRequest, LoginRequest
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
-
 
 @router.post("")
 def login(payload: LoginRequest, db: Session = Depends(get_db)):

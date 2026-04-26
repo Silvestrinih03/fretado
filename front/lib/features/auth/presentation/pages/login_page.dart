@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../app/design_system/design_system.dart';
+import '../../../../core/enums/home_profile.dart';
 import '../../../../core/services/http_service.dart';
 import '../../../home/presentation/pages/home_page.dart';
 import '../../data/datasources/auth_datasource.dart';
@@ -73,8 +74,13 @@ class _LoginPageState extends State<LoginPage> {
     }
 
     if (isSuccess) {
+      final int userTypeId = _authController.currentUser?.userTypeId ?? 2;
+      final HomeProfile profile = HomeProfileMapper.fromUserTypeId(userTypeId);
+
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute<void>(builder: (_) => const HomePage()),
+        MaterialPageRoute<void>(
+          builder: (_) => HomePage(profile: profile, userName: 'Alex Sterling'),
+        ),
       );
       return;
     }

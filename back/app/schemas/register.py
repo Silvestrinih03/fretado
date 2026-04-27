@@ -1,14 +1,11 @@
 from datetime import date
 from typing import Optional
 from enum import IntEnum
-
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
-
 
 class UserTypeEnum(IntEnum):
     CLIENT = 1
     DRIVER = 2
-
 
 class RegisterUserRequest(BaseModel):
     cpf: str = Field(..., min_length=11, max_length=14)
@@ -19,7 +16,6 @@ class RegisterUserRequest(BaseModel):
     last_name: str = Field(..., min_length=1, max_length=100)
     birth_date: Optional[date] = None
     phone: Optional[str] = Field(None, max_length=20)
-
 
 class RegisterUserResponse(BaseModel):
     id: int

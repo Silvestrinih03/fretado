@@ -1,0 +1,4 @@
+CREATE TABLE vehicle_types (
+    id BIGSERIAL PRIMARY KEY,
+    type VARCHAR(50) NOT NULL UNIQUE
+);

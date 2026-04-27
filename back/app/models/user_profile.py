@@ -1,7 +1,6 @@
 from sqlalchemy import BigInteger, Column, Date, ForeignKey, String
 from app.database.base import Base
 
-
 class UserProfile(Base):
     __tablename__ = "user_profiles"
 

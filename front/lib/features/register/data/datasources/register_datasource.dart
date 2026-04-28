@@ -1,3 +1,4 @@
+import '../../../../core/endpoints.dart';
 import '../../../../core/services/http_service.dart';
 import '../models/register_user_model.dart';
 
@@ -18,7 +19,7 @@ class RegisterDatasource {
   }) async {
     try {
       final Map<String, dynamic> response = await _httpService.post(
-        '/register',
+        Endpoints.register,
         body: {
           'cpf': cpf,
           'email': email.trim(),

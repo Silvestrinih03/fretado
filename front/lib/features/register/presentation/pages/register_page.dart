@@ -20,8 +20,8 @@ class RegisterPage extends StatefulWidget {
 }
 
 class _RegisterPageState extends State<RegisterPage> {
-  RegisterStep _currentStep = RegisterStep.accountType;
-  RegisterAccountType? _selectedAccountType;
+  RegisterStepEnum _currentStep = RegisterStepEnum.accountType;
+  UserTypeEnum? _selectedAccountType;
 
   final TextEditingController _cpfController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
@@ -70,21 +70,21 @@ class _RegisterPageState extends State<RegisterPage> {
   }
 
   void _handleBack() {
-    if (_currentStep == RegisterStep.personalData) {
-      setState(() => _currentStep = RegisterStep.basicData);
+    if (_currentStep == RegisterStepEnum.personalData) {
+      setState(() => _currentStep = RegisterStepEnum.basicData);
       return;
     }
-    if (_currentStep == RegisterStep.basicData) {
-      setState(() => _currentStep = RegisterStep.accountType);
+    if (_currentStep == RegisterStepEnum.basicData) {
+      setState(() => _currentStep = RegisterStepEnum.accountType);
       return;
     }
     Navigator.of(context).maybePop();
   }
 
-  void _onAccountTypeSelected(RegisterAccountType type) {
+  void _onAccountTypeSelected(UserTypeEnum type) {
     setState(() {
       _selectedAccountType = type;
-      _currentStep = RegisterStep.basicData;
+      _currentStep = RegisterStepEnum.basicData;
     });
   }
 
@@ -105,7 +105,7 @@ class _RegisterPageState extends State<RegisterPage> {
       return;
     }
 
-    setState(() => _currentStep = RegisterStep.personalData);
+    setState(() => _currentStep = RegisterStepEnum.personalData);
   }
 
   Future<void> _finishRegister() async {
@@ -156,7 +156,7 @@ class _RegisterPageState extends State<RegisterPage> {
       builder: (context, _) {
         return RegisterFlowShell(
           stepIndex: _currentStepIndex,
-          showBackButton: _currentStep != RegisterStep.accountType,
+          showBackButton: _currentStep != RegisterStepEnum.accountType,
           onBackPressed: _handleBack,
           activeDotColor: _currentStepDotColor,
           child: _buildCurrentStep(),
@@ -167,12 +167,12 @@ class _RegisterPageState extends State<RegisterPage> {
 
   Widget _buildCurrentStep() {
     switch (_currentStep) {
-      case RegisterStep.accountType:
+      case RegisterStepEnum.accountType:
         return RegisterStepOne(
           selectedType: _selectedAccountType,
           onTypeSelected: _onAccountTypeSelected,
         );
-      case RegisterStep.basicData:
+      case RegisterStepEnum.basicData:
         return RegisterStepTwo(
           cpfController: _cpfController,
           emailController: _emailController,
@@ -188,7 +188,7 @@ class _RegisterPageState extends State<RegisterPage> {
           },
           onContinue: _goToStepThree,
         );
-      case RegisterStep.personalData:
+      case RegisterStepEnum.personalData:
         return RegisterStepThree(
           firstNameController: _firstNameController,
           lastNameController: _lastNameController,

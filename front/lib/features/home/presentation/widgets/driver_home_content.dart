@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 
 import '../../../../app/design_system/design_system.dart';
+import '../../../vehicles/presentation/pages/my_vehicles.dart';
 
 class DriverHomeContent extends StatelessWidget {
-  final String userName;
+  final String firstName;
 
-  const DriverHomeContent({super.key, required this.userName});
+  const DriverHomeContent({super.key, required this.firstName});
 
   @override
   Widget build(BuildContext context) {
@@ -13,7 +14,7 @@ class DriverHomeContent extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(24, 18, 24, 24),
       children: [
         Text(
-          'Olá, $userName!',
+          'Olá, $firstName!',
           style: const TextStyle(
             fontSize: 44,
             fontWeight: FontWeight.w800,
@@ -28,11 +29,16 @@ class DriverHomeContent extends StatelessWidget {
         const SizedBox(height: 22),
         const _BalanceCard(),
         const SizedBox(height: 16),
-        const _SimpleMetricCard(
+        _SimpleMetricCard(
           icon: Icons.local_shipping_rounded,
           title: 'Meus veículos',
           subtitle: 'Gerenciar meus veículos',
           barColor: FretColors.loginFooterLink,
+          onTap: () {
+            Navigator.of(context).push(
+              MaterialPageRoute<void>(builder: (_) => const MyVehiclesPage()),
+            );
+          },
         ),
         const SizedBox(height: 12),
         const _SimpleMetricCard(
@@ -183,6 +189,7 @@ class _SimpleMetricCard extends StatelessWidget {
   final Color? urgencyColor;
   final Color? urgencyTextColor;
   final Color? barColor;
+  final VoidCallback? onTap;
 
   const _SimpleMetricCard({
     required this.icon,
@@ -192,75 +199,89 @@ class _SimpleMetricCard extends StatelessWidget {
     this.urgencyColor,
     this.urgencyTextColor,
     this.barColor,
+    this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(22),
-      decoration: BoxDecoration(
-        color: FretColors.neutral050,
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: FretColors.neutral200),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 54,
-            height: 54,
-            decoration: BoxDecoration(
-              color: FretColors.neutral100,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(icon, color: FretColors.loginFooterLink),
+        child: Ink(
+          padding: const EdgeInsets.all(22),
+          decoration: BoxDecoration(
+            color: FretColors.neutral050,
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: FretColors.neutral200),
           ),
-          const SizedBox(height: 14),
-          Text(
-            title,
-            style: const TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.w700,
-              color: FretColors.loginFooterLink,
-            ),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            subtitle,
-            style: const TextStyle(fontSize: 16, color: FretColors.neutral700),
-          ),
-          const SizedBox(height: 12),
-          if (urgencyTag != null)
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: urgencyColor,
-                borderRadius: BorderRadius.circular(4),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 54,
+                height: 54,
+                decoration: BoxDecoration(
+                  color: FretColors.neutral100,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(icon, color: FretColors.loginFooterLink),
               ),
-              child: Text(
-                urgencyTag!,
-                style: TextStyle(
-                  color: urgencyTextColor,
-                  fontWeight: FontWeight.w800,
-                  fontSize: 12,
+              const SizedBox(height: 14),
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w700,
+                  color: FretColors.loginFooterLink,
                 ),
               ),
-            ),
-          if (barColor != null) ...[
-            ClipRRect(
-              borderRadius: BorderRadius.circular(999),
-              child: Container(
-                height: 6,
-                color: FretColors.neutral200,
-                child: FractionallySizedBox(
-                  widthFactor: 0.38,
-                  alignment: Alignment.centerLeft,
-                  child: Container(color: barColor),
+              const SizedBox(height: 2),
+              Text(
+                subtitle,
+                style: const TextStyle(
+                  fontSize: 16,
+                  color: FretColors.neutral700,
                 ),
               ),
-            ),
-          ],
-        ],
+              const SizedBox(height: 12),
+              if (urgencyTag != null)
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: urgencyColor,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(
+                    urgencyTag!,
+                    style: TextStyle(
+                      color: urgencyTextColor,
+                      fontWeight: FontWeight.w800,
+                      fontSize: 12,
+                    ),
+                  ),
+                ),
+              if (barColor != null) ...[
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(999),
+                  child: Container(
+                    height: 6,
+                    color: FretColors.neutral200,
+                    child: FractionallySizedBox(
+                      widthFactor: 0.38,
+                      alignment: Alignment.centerLeft,
+                      child: Container(color: barColor),
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -377,104 +398,3 @@ class _TripCard extends StatelessWidget {
     );
   }
 }
-
-// class _TrafficCard extends StatelessWidget {
-//   const _TrafficCard();
-
-//   @override
-//   Widget build(BuildContext context) {
-//     return Container(
-//       height: 188,
-//       decoration: BoxDecoration(
-//         borderRadius: BorderRadius.circular(18),
-//         gradient: const LinearGradient(
-//           colors: [Color(0xFF082C52), Color(0xFF061877)],
-//           begin: Alignment.topLeft,
-//           end: Alignment.bottomRight,
-//         ),
-//       ),
-//       child: Stack(
-//         children: [
-//           Positioned.fill(
-//             child: Opacity(
-//               opacity: 0.18,
-//               child: CustomPaint(painter: _GridPainter()),
-//             ),
-//           ),
-//           const Positioned(right: 14, top: 14, child: _LiveChip()),
-//           const Positioned(
-//             left: 24,
-//             bottom: 22,
-//             child: Column(
-//               crossAxisAlignment: CrossAxisAlignment.start,
-//               children: [
-//                 Text(
-//                   'Visão Geral do Tráfego',
-//                   style: TextStyle(
-//                     color: FretColors.white,
-//                     fontSize: 36,
-//                     fontWeight: FontWeight.w700,
-//                   ),
-//                 ),
-//                 SizedBox(height: 4),
-//                 Text(
-//                   '8 veículos rastreados em tempo real',
-//                   style: TextStyle(color: Color(0xFFDDE6FF), fontSize: 22),
-//                 ),
-//               ],
-//             ),
-//           ),
-//         ],
-//       ),
-//     );
-//   }
-// }
-
-// class _LiveChip extends StatelessWidget {
-//   const _LiveChip();
-
-//   @override
-//   Widget build(BuildContext context) {
-//     return Container(
-//       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-//       decoration: BoxDecoration(
-//         color: FretColors.white,
-//         borderRadius: BorderRadius.circular(999),
-//       ),
-//       child: const Row(
-//         children: [
-//           CircleAvatar(radius: 4, backgroundColor: Color(0xFF26CF6A)),
-//           SizedBox(width: 8),
-//           Text(
-//             'AO VIVO',
-//             style: TextStyle(
-//               color: FretColors.loginFooterLink,
-//               fontWeight: FontWeight.w700,
-//               fontSize: 12,
-//             ),
-//           ),
-//         ],
-//       ),
-//     );
-//   }
-// }
-
-// class _GridPainter extends CustomPainter {
-//   @override
-//   void paint(Canvas canvas, Size size) {
-//     final Paint paint = Paint()
-//       ..color = FretColors.white
-//       ..strokeWidth = 1;
-
-//     const double step = 16;
-//     for (double x = 0; x < size.width; x += step) {
-//       canvas.drawLine(Offset(x, 0), Offset(x, size.height), paint);
-//     }
-//     for (double y = 0; y < size.height; y += step) {
-//       canvas.drawLine(Offset(0, y), Offset(size.width, y), paint);
-//     }
-//   }
-
-//   @override
-//   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
-// }

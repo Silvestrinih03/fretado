@@ -5,8 +5,8 @@ import '../../../../core/enums/register_account_type.dart';
 import 'register_shared_widgets.dart';
 
 class RegisterStepOne extends StatelessWidget {
-  final RegisterAccountType? selectedType;
-  final ValueChanged<RegisterAccountType> onTypeSelected;
+  final UserTypeEnum? selectedType;
+  final ValueChanged<UserTypeEnum> onTypeSelected;
 
   const RegisterStepOne({
     super.key,
@@ -32,8 +32,8 @@ class RegisterStepOne extends StatelessWidget {
                 imageIcon: Icons.local_shipping_outlined,
                 title: 'Sou',
                 subtitle: 'MOTORISTA',
-                selected: selectedType == RegisterAccountType.driver,
-                onTap: () => onTypeSelected(RegisterAccountType.driver),
+                selected: selectedType == UserTypeEnum.driver,
+                onTap: () => onTypeSelected(UserTypeEnum.driver),
               ),
             ),
             const SizedBox(width: 20),
@@ -42,8 +42,8 @@ class RegisterStepOne extends StatelessWidget {
                 imageIcon: Icons.person_outline,
                 title: 'Sou',
                 subtitle: 'CLIENTE',
-                selected: selectedType == RegisterAccountType.client,
-                onTap: () => onTypeSelected(RegisterAccountType.client),
+                selected: selectedType == UserTypeEnum.client,
+                onTap: () => onTypeSelected(UserTypeEnum.client),
               ),
             ),
           ],

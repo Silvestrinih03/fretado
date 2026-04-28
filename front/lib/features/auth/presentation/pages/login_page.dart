@@ -75,7 +75,7 @@ class _LoginPageState extends State<LoginPage> {
 
     if (isSuccess) {
       final int userTypeId = _authController.currentUser?.userTypeId ?? 2;
-      final HomeProfile profile = HomeProfileMapper.fromUserTypeId(userTypeId);
+      final HomeProfileEnum profile = HomeProfileMapper.fromUserTypeId(userTypeId);
 
       Navigator.of(context).pushReplacement(
         MaterialPageRoute<void>(

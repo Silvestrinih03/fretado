@@ -1,11 +1,11 @@
-enum RegisterAccountType { driver, client }
+enum UserTypeEnum { driver, client }
 
-extension RegisterAccountTypeApiMapper on RegisterAccountType {
+extension RegisterAccountTypeApiMapper on UserTypeEnum {
   int get userTypeId {
     switch (this) {
-      case RegisterAccountType.client:
+      case UserTypeEnum.client:
         return 1;
-      case RegisterAccountType.driver:
+      case UserTypeEnum.driver:
         return 2;
     }
   }

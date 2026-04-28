@@ -1,4 +1,4 @@
-enum RegisterStep {
+enum RegisterStepEnum {
   accountType,
   basicData,
   personalData,

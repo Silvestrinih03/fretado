@@ -138,6 +138,81 @@ CREATE TABLE rides (
         FOREIGN KEY (status_id) REFERENCES ride_status(id)
 );
 
+-- TABLE: ride_offer_status
+CREATE TABLE ride_offer_status (
+    id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    status VARCHAR(50) NOT NULL UNIQUE
+);
+
+-- TABLE: ride_offers
+CREATE TABLE ride_offers (
+    id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    ride_id BIGINT NOT NULL,
+    driver_user_id BIGINT NOT NULL,
+    status_id BIGINT NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT fk_ride_offers_ride
+        FOREIGN KEY (ride_id) REFERENCES rides(id),
+
+    CONSTRAINT fk_ride_offers_driver
+        FOREIGN KEY (driver_user_id) REFERENCES users(id),
+
+    CONSTRAINT fk_ride_offers_status
+        FOREIGN KEY (status_id) REFERENCES ride_offer_status(id)
+);
+
+-- TABLE: driver_wallets
+CREATE TABLE driver_wallets (
+    id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    driver_user_id BIGINT NOT NULL UNIQUE,
+    available_balance DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT fk_driver_wallets_driver
+        FOREIGN KEY (driver_user_id) REFERENCES users(id)
+);
+
+-- TABLE: driver_earnings
+CREATE TABLE driver_earnings (
+    id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    driver_user_id BIGINT NOT NULL,
+    ride_id BIGINT NOT NULL UNIQUE,
+    gross_value DECIMAL(10,2) NOT NULL, -- Valor total da corrida
+    app_fee_value DECIMAL(10,2) NOT NULL, -- Valor da taxa do aplicativo
+    net_value DECIMAL(10,2) NOT NULL, -- Valor líquido para o motorista
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT fk_driver_earnings_driver
+        FOREIGN KEY (driver_user_id) REFERENCES users(id),
+
+    CONSTRAINT fk_driver_earnings_ride
+        FOREIGN KEY (ride_id) REFERENCES rides(id)
+);
+
+-- TABLE: wallet_transaction_status
+CREATE TABLE wallet_transaction_status (
+    id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    status VARCHAR(50) NOT NULL UNIQUE
+);
+
+-- TABLE: wallet_transactions
+CREATE TABLE wallet_transactions (
+    id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    driver_user_id BIGINT NOT NULL,
+    value DECIMAL(10,2) NOT NULL,
+    status_id BIGINT NOT NULL,
+    pix_key VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT fk_wallet_transactions_driver
+        FOREIGN KEY (driver_user_id) REFERENCES users(id),
+
+    CONSTRAINT fk_wallet_transactions_status
+        FOREIGN KEY (status_id) REFERENCES wallet_transaction_status(id)
+);
+
 -- SEEDs
 INSERT INTO user_types (type) VALUES ('client'), ('driver');
 
@@ -164,3 +239,15 @@ INSERT INTO ride_status (status) VALUES
 ('A_CAMINHO_ENTREGA'),
 ('FINALIZADA'),
 ('CANCELADA');
+
+INSERT INTO ride_offer_status (status) VALUES
+('PENDENTE'),
+('ACEITA'),
+('RECUSADA'),
+('EXPIRADA');
+
+INSERT INTO wallet_transaction_status (status) VALUES
+('PROCESSANDO'),
+('FINALIZADO'),
+('FALHA'),
+('CANCELADO');

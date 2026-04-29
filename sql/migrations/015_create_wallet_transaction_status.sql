@@ -1,0 +1,4 @@
+CREATE TABLE wallet_transaction_status (
+    id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    status VARCHAR(50) NOT NULL UNIQUE
+);

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../app/design_system/design_system.dart';
 import '../../../../core/services/myself/models/myself_user_model.dart';
 import '../../../../core/services/myself/services/myself_service.dart';
+import '../../../profile/presentation/pages/user_data_page.dart';
 
 class HomeDrawer extends StatelessWidget {
   const HomeDrawer({super.key});
@@ -41,7 +42,14 @@ class HomeDrawer extends StatelessWidget {
             _DrawerItem(
               icon: Icons.supervised_user_circle_outlined,
               label: 'Dados pessoais',
-              onTap: () => Navigator.of(context).pop(),
+              onTap: () {
+                Navigator.of(context).pop();
+                Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const UserDataPage(),
+                  ),
+                );
+              },
             ),
             _DrawerItem(
               icon: Icons.credit_card_outlined,

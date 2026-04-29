@@ -3,6 +3,7 @@ class MyselfUserModel {
   final String lastName;
   final String email;
   final String cpf;
+  final int userTypeId;
   final String? birthDate;
   final String? phone;
 
@@ -11,6 +12,7 @@ class MyselfUserModel {
     required this.lastName,
     required this.email,
     required this.cpf,
+    required this.userTypeId,
     this.birthDate,
     this.phone,
   });
@@ -21,6 +23,7 @@ class MyselfUserModel {
       lastName: _readString(json['last_name']) ?? '',
       email: _readString(json['email']) ?? '',
       cpf: _readString(json['cpf']) ?? '',
+      userTypeId: _readInt(json['user_type_id']) ?? 1,
       birthDate: _readString(json['birth_date']),
       phone: _readString(json['phone']),
     );
@@ -35,5 +38,15 @@ class MyselfUserModel {
 
     final String cleaned = value.toString().trim();
     return cleaned.isEmpty ? null : cleaned;
+  }
+
+  static int? _readInt(dynamic value) {
+    if (value is int) {
+      return value;
+    }
+    if (value is String) {
+      return int.tryParse(value);
+    }
+    return null;
   }
 }

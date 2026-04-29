@@ -81,6 +81,42 @@ class HttpService {
     );
   }
 
+  Future<Map<String, dynamic>> patch(
+    String path, {
+    Map<String, dynamic>? body,
+    Map<String, String>? headers,
+  }) async {
+    final Uri uri = Uri.parse('$baseUrl${_normalizePath(path)}');
+
+    final http.Response response;
+    try {
+      response = await _client.patch(
+        uri,
+        headers: {'Content-Type': 'application/json', ...?headers},
+        body: jsonEncode(body ?? <String, dynamic>{}),
+      );
+    } catch (e) {
+      throw HttpServiceException(
+        message:
+            'NÃ£o foi possÃ­vel conectar ao servidor em $baseUrl. '
+            'Verifique se a API estÃ¡ rodando e se a URL estÃ¡ correta para o seu dispositivo. '
+            'Detalhe: $e',
+      );
+    }
+
+    final Map<String, dynamic> parsedData = _parseResponseBody(response.body);
+
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      return parsedData;
+    }
+
+    throw HttpServiceException(
+      message: _extractErrorMessage(parsedData),
+      statusCode: response.statusCode,
+      data: parsedData,
+    );
+  }
+
   static String _normalizePath(String path) {
     if (path.startsWith('/')) {
       return path;

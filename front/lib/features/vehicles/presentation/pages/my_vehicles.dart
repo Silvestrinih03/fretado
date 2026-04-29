@@ -1,64 +1,193 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/services/http_service.dart';
+import '../../../../core/services/myself/services/myself_service.dart';
+import '../../data/datasources/vehicle_datasource.dart';
+import '../../data/repositories/vehicle_repository_impl.dart';
+import '../stores/my_vehicles_store.dart';
 import 'register_vehicle_page.dart';
+import '../widgets/vehicle_card.dart';
 
-class MyVehiclesPage extends StatelessWidget {
-  const MyVehiclesPage({super.key});
+class MyVehiclesPage extends StatefulWidget {
+  final int? userId;
+
+  const MyVehiclesPage({super.key, this.userId});
+
+  @override
+  State<MyVehiclesPage> createState() => _MyVehiclesPageState();
+}
+
+class _MyVehiclesPageState extends State<MyVehiclesPage> {
+  late final HttpService _httpService;
+  late final VehicleDatasource _vehicleDatasource;
+  late final VehicleRepositoryImpl _vehicleRepository;
+  late final MyselfService _myselfService;
+  late final MyVehiclesStore _store;
+
+  @override
+  void initState() {
+    super.initState();
+    _httpService = HttpService();
+    _vehicleDatasource = VehicleDatasource(_httpService);
+    _vehicleRepository = VehicleRepositoryImpl(_vehicleDatasource);
+    _myselfService = MyselfService();
+    _store = MyVehiclesStore(
+      _vehicleRepository,
+      _myselfService,
+      fallbackUserId: widget.userId,
+    );
+    _store.loadVehicles();
+  }
+
+  @override
+  void dispose() {
+    _store.dispose();
+    _httpService.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     void openRegisterVehicle() {
       Navigator.of(context).push(
-        MaterialPageRoute<void>(builder: (_) => const RegisterVehiclePage()),
+        MaterialPageRoute<void>(
+          builder: (_) => RegisterVehiclePage(userId: widget.userId),
+        ),
       );
     }
 
-    return Scaffold(
-      backgroundColor: const Color(0xFFF3F4F8),
-      body: SafeArea(
-        child: Column(
-          children: [
-            _MyVehiclesHeader(onAddTap: openRegisterVehicle),
-            Expanded(
-              child: ListView(
-                padding: const EdgeInsets.fromLTRB(24, 22, 24, 24),
-                children: [
-                  const _VehicleCard(
-                    title: 'Volvo FH 540',
-                    plate: 'ABC-1234',
-                    year: '2022',
-                    brand: 'Volvo Trucks Brazil - FH 540',
-                    statusLabel: 'ATIVO',
-                    statusBackgroundColor: Color(0xFFF2D45C),
-                    statusTextColor: Color(0xFF4A3D00),
+    return AnimatedBuilder(
+      animation: _store,
+      builder: (context, _) {
+        return Scaffold(
+          backgroundColor: const Color(0xFFF3F4F8),
+          body: SafeArea(
+            child: Column(
+              children: [
+                _MyVehiclesHeader(onAddTap: openRegisterVehicle),
+                Expanded(
+                  child: ListView(
+                    padding: const EdgeInsets.fromLTRB(24, 22, 24, 24),
+                    children: [
+                      if (_store.isLoading) ...[
+                        const Padding(
+                          padding: EdgeInsets.only(top: 24),
+                          child: Center(
+                            child: CircularProgressIndicator(),
+                          ),
+                        ),
+                      ] else if (_store.errorMessage != null) ...[
+                        _EmptyState(
+                          title: 'Não foi possível carregar seus veículos',
+                          subtitle: _store.errorMessage!,
+                          onTap: _store.loadVehicles,
+                        ),
+                      ] else if (_store.vehicles.isEmpty) ...[
+                        _EmptyState(
+                          title: 'Nenhum veículo cadastrado',
+                          subtitle:
+                              'Cadastre o primeiro veículo para começar.',
+                          onTap: openRegisterVehicle,
+                        ),
+                      ] else ...[
+                        ..._store.vehicles.asMap().entries.map((entry) {
+                          final index = entry.key;
+                          final vehicle = entry.value;
+
+                          return Column(
+                            children: [
+                              VehicleCard(
+                                plate: vehicle.plate,
+                                year: vehicle.yearText,
+                                brand: vehicle.brand,
+                                model: vehicle.model,
+                                statusLabel: vehicle.statusLabel,
+                                statusBackgroundColor: vehicle.isActive
+                                    ? const Color(0xFFF2D45C)
+                                    : const Color(0xFFE4E6EC),
+                                statusTextColor: vehicle.isActive
+                                    ? const Color(0xFF4A3D00)
+                                    : const Color(0xFF4B505D),
+                              ),
+                              if (index != _store.vehicles.length - 1)
+                                const SizedBox(height: 16),
+                            ],
+                          );
+                        }),
+                        const SizedBox(height: 20),
+                        _NewVehicleCallout(onTap: openRegisterVehicle),
+                      ],
+                    ],
                   ),
-                  const SizedBox(height: 16),
-                  const _VehicleCard(
-                    title: 'Scania R500',
-                    plate: 'XYZ-9876',
-                    year: '2021',
-                    brand: 'Scania Latin America - R500',
-                    statusLabel: 'MANUTENCAO',
-                    statusBackgroundColor: Color(0xFFE4E6EC),
-                    statusTextColor: Color(0xFF4B505D),
-                  ),
-                  const SizedBox(height: 16),
-                  const _VehicleCard(
-                    title: 'Mercedes Axor',
-                    plate: 'KML-4455',
-                    year: '2023',
-                    brand: 'Mercedes-Benz - Axor',
-                    statusLabel: 'ATIVO',
-                    statusBackgroundColor: Color(0xFFF2D45C),
-                    statusTextColor: Color(0xFF4A3D00),
-                  ),
-                  const SizedBox(height: 20),
-                  _NewVehicleCallout(onTap: openRegisterVehicle),
-                ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _EmptyState extends StatelessWidget {
+  final String title;
+  final String subtitle;
+  final VoidCallback onTap;
+
+  const _EmptyState({
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE4E6EE)),
+      ),
+      child: Column(
+        children: [
+          const Icon(
+            Icons.local_shipping_outlined,
+            size: 44,
+            color: Color(0xFF9CA0C8),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            title,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.w700,
+              color: Color(0xFF121E84),
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            subtitle,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontSize: 15,
+              color: Color(0xFF6B7285),
+            ),
+          ),
+          const SizedBox(height: 14),
+          ElevatedButton(
+            onPressed: onTap,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF0E1386),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
               ),
             ),
-          ],
-        ),
+            child: const Text('Cadastrar veículo'),
+          ),
+        ],
       ),
     );
   }
@@ -77,7 +206,9 @@ class _MyVehiclesHeader extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(16, 10, 16, 8),
       decoration: const BoxDecoration(
         color: Color(0xFFF3F4F8),
-        border: Border(bottom: BorderSide(color: Color(0xFFE7E9F0), width: 1)),
+        border: Border(
+          bottom: BorderSide(color: Color(0xFFE7E9F0), width: 1),
+        ),
       ),
       child: Row(
         children: [
@@ -123,174 +254,6 @@ class _MyVehiclesHeader extends StatelessWidget {
   }
 }
 
-class _VehicleCard extends StatelessWidget {
-  final String title;
-  final String plate;
-  final String year;
-  final String brand;
-  final String statusLabel;
-  final Color statusBackgroundColor;
-  final Color statusTextColor;
-
-  const _VehicleCard({
-    required this.title,
-    required this.plate,
-    required this.year,
-    required this.brand,
-    required this.statusLabel,
-    required this.statusBackgroundColor,
-    required this.statusTextColor,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0xFFE4E6EE)),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x120F1A4A),
-            blurRadius: 9,
-            offset: Offset(0, 3),
-          ),
-        ],
-      ),
-      child: IntrinsicHeight(
-        child: Row(
-          children: [
-            Container(
-              width: 92,
-              decoration: const BoxDecoration(
-                color: Color(0xFFF0F1F4),
-                borderRadius: BorderRadius.only(
-                  topLeft: Radius.circular(18),
-                  bottomLeft: Radius.circular(18),
-                ),
-              ),
-              child: const Center(
-                child: Icon(
-                  Icons.local_shipping_rounded,
-                  size: 58,
-                  color: Color(0xFF9CA0C8),
-                ),
-              ),
-            ),
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            title,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              fontSize: 23,
-                              fontWeight: FontWeight.w700,
-                              color: Color(0xFF121E84),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 6,
-                          ),
-                          decoration: BoxDecoration(
-                            color: statusBackgroundColor,
-                            borderRadius: BorderRadius.circular(999),
-                          ),
-                          child: Text(
-                            statusLabel,
-                            style: TextStyle(
-                              color: statusTextColor,
-                              fontSize: 11,
-                              fontWeight: FontWeight.w700,
-                              letterSpacing: 0.5,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _VehicleMetaItem(label: 'PLACA', value: plate),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: _VehicleMetaItem(label: 'ANO', value: year),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    const _VehicleMetaItem(label: 'MARCA'),
-                    const SizedBox(height: 4),
-                    Text(
-                      brand,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w500,
-                        color: Color(0xFF101114),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _VehicleMetaItem extends StatelessWidget {
-  final String label;
-  final String? value;
-
-  const _VehicleMetaItem({required this.label, this.value});
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: const TextStyle(
-            fontSize: 10,
-            fontWeight: FontWeight.w700,
-            color: Color(0xFF9296A5),
-            letterSpacing: 1.5,
-          ),
-        ),
-        if (value != null) ...[
-          const SizedBox(height: 3),
-          Text(
-            value!,
-            style: const TextStyle(
-              fontSize: 21,
-              fontWeight: FontWeight.w600,
-              color: Color(0xFF0E1015),
-            ),
-          ),
-        ],
-      ],
-    );
-  }
-}
-
 class _NewVehicleCallout extends StatelessWidget {
   final VoidCallback onTap;
 
@@ -321,7 +284,7 @@ class _NewVehicleCallout extends StatelessWidget {
             ),
             SizedBox(height: 14),
             Text(
-              'Novo Veiculo',
+              'Novo Veículo',
               style: TextStyle(
                 fontSize: 20,
                 color: Color(0xFF5A61A3),

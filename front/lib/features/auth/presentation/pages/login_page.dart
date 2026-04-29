@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../app/design_system/design_system.dart';
 import '../../../../core/enums/home_profile.dart';
 import '../../../../core/services/http_service.dart';
+import '../../../../core/services/myself/services/myself_service.dart';
 import '../../../home/presentation/pages/home_page.dart';
 import '../../data/datasources/auth_datasource.dart';
 import '../../data/repositories/auth_repository_impl.dart';
@@ -74,12 +75,16 @@ class _LoginPageState extends State<LoginPage> {
     }
 
     if (isSuccess) {
+      final MyselfService myselfService = MyselfService();
+      myselfService.currentUserId = _authController.currentUser?.id;
+
       final int userTypeId = _authController.currentUser?.userTypeId ?? 2;
       final HomeProfileEnum profile = HomeProfileMapper.fromUserTypeId(userTypeId);
+      final int? userId = _authController.currentUser?.id;
 
       Navigator.of(context).pushReplacement(
         MaterialPageRoute<void>(
-          builder: (_) => HomePage(profile: profile, userName: 'Alex Sterling'),
+          builder: (_) => HomePage(profile: profile, userId: userId),
         ),
       );
       return;

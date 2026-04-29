@@ -5,8 +5,13 @@ import '../../../vehicles/presentation/pages/my_vehicles.dart';
 
 class DriverHomeContent extends StatelessWidget {
   final String firstName;
+  final int userId;
 
-  const DriverHomeContent({super.key, required this.firstName});
+  const DriverHomeContent({
+    super.key,
+    required this.firstName,
+    required this.userId,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -36,7 +41,9 @@ class DriverHomeContent extends StatelessWidget {
           barColor: FretColors.loginFooterLink,
           onTap: () {
             Navigator.of(context).push(
-              MaterialPageRoute<void>(builder: (_) => const MyVehiclesPage()),
+              MaterialPageRoute<void>(
+                builder: (_) => MyVehiclesPage(userId: userId),
+              ),
             );
           },
         ),

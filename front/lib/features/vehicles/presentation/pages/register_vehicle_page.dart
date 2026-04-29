@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/services/http_service.dart';
+import '../../../../core/services/myself/services/myself_service.dart';
 import '../../data/datasources/vehicle_type_datasource.dart';
 import '../../data/datasources/register_vehicle_datasource.dart';
 import '../../data/datasources/vehicle_fipe_datasource.dart';
@@ -13,10 +14,12 @@ import 'package:front/features/vehicles/presentation/widgets/fill_vehicle_brand_
 import 'package:front/features/vehicles/presentation/widgets/fill_vehicle_load_capacity.dart';
 import 'package:front/features/vehicles/presentation/widgets/fill_vehicle_plate.dart';
 import 'package:front/features/vehicles/presentation/widgets/fill_vehicle_detailed_data.dart';
-import 'package:front/features/vehicles/presentation/widgets/fill_vehicle_activation.dart';
+//import 'package:front/features/vehicles/presentation/widgets/fill_vehicle_activation.dart';
 
 class RegisterVehiclePage extends StatefulWidget {
-  const RegisterVehiclePage({super.key});
+  final int? userId;
+
+  const RegisterVehiclePage({super.key, this.userId});
 
   @override
   State<RegisterVehiclePage> createState() => _RegisterVehiclePageState();
@@ -32,9 +35,10 @@ class _RegisterVehiclePageState extends State<RegisterVehiclePage> {
   late final VehicleFipeRepositoryImpl _vehicleFipeRepository;
   late final RegisterVehicleDatasource _registerVehicleDatasource;
   late final RegisterVehicleRepositoryImpl _registerVehicleRepository;
+  late final MyselfService _myselfService;
   late final RegisterVehicleStore _store;
 
-  String _registerMode = 'manual';
+  String _registerMode = 'fipe';
   bool _isActive = true;
 
   final TextEditingController _plateController = TextEditingController();
@@ -60,10 +64,15 @@ class _RegisterVehiclePageState extends State<RegisterVehiclePage> {
     _registerVehicleRepository = RegisterVehicleRepositoryImpl(
       _registerVehicleDatasource,
     );
+    _myselfService = MyselfService();
+    if (widget.userId != null) {
+      _myselfService.currentUserId = widget.userId;
+    }
     _store = RegisterVehicleStore(
       _vehicleTypeRepository,
       _vehicleFipeRepository,
       _registerVehicleRepository,
+      _myselfService,
     );
     _store.loadVehicleTypes();
   }
@@ -217,12 +226,12 @@ class _RegisterVehiclePageState extends State<RegisterVehiclePage> {
                     lengthController: _lengthController,
                   ),
                   const SizedBox(height: 14),
-                  FillVehicleActivation(
-                    isActive: _isActive,
-                    onChanged: (value) {
-                      setState(() => _isActive = value);
-                    },
-                  ),
+                  // FillVehicleActivation(
+                  //   isActive: _isActive,
+                  //   onChanged: (value) {
+                  //     setState(() => _isActive = value);
+                  //   },
+                  // ),
                   const SizedBox(height: 18),
                   _buildBottomActionBar(context),
                   const SizedBox(height: 10),

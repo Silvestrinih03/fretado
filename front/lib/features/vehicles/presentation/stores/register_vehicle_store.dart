@@ -6,18 +6,19 @@ import '../../data/models/vehicle_type_model.dart';
 import '../../data/repositories/register_vehicle_repository.dart';
 import '../../data/repositories/vehicle_fipe_repository.dart';
 import '../../data/repositories/vehicle_type_repository.dart';
+import '../../../../core/services/myself/services/myself_service.dart';
 
 class RegisterVehicleStore extends ChangeNotifier {
-  static const int _fixedUserId = 5;
-
   final VehicleTypeRepository _vehicleTypeRepository;
   final VehicleFipeRepository _vehicleFipeRepository;
   final RegisterVehicleRepository _registerVehicleRepository;
+  final MyselfService _myselfService;
 
   RegisterVehicleStore(
     this._vehicleTypeRepository,
     this._vehicleFipeRepository,
     this._registerVehicleRepository,
+    this._myselfService,
   );
 
   bool _isLoadingVehicleTypes = false;
@@ -264,10 +265,18 @@ class RegisterVehicleStore extends ChangeNotifier {
     _setRegistering(true);
     _registerVehicleError = null;
 
+    final int? userId = _myselfService.currentUserId;
+    if (userId == null) {
+      _setRegistering(false);
+      _registerVehicleError = 'Usuário logado não encontrado.';
+      notifyListeners();
+      return false;
+    }
+
     try {
       final RegisterVehicleModel payload = isFipeMode
           ? RegisterVehicleModel(
-              userId: _fixedUserId,
+              userId: userId,
               vehicleTypeId: _selectedVehicleTypeId!,
               brand: selectedBrandLabel ?? trimmedBrand,
               brandCode: _selectedVehicleFipeBrandCode,
@@ -285,7 +294,7 @@ class RegisterVehicleStore extends ChangeNotifier {
               status: status,
             )
           : RegisterVehicleModel(
-              userId: _fixedUserId,
+              userId: userId,
               vehicleTypeId: _selectedVehicleTypeId!,
               brand: trimmedBrand,
               model: trimmedModel,

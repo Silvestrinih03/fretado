@@ -122,21 +122,20 @@ class RegisterController extends ChangeNotifier {
       return null;
     }
 
-    final RegExp slashPattern = RegExp(r'^(\d{2})\/(\d{2})\/(\d{4})$');
-    final Match? slashMatch = slashPattern.firstMatch(raw);
-    if (slashMatch != null) {
-      final String day = slashMatch.group(1)!;
-      final String month = slashMatch.group(2)!;
-      final String year = slashMatch.group(3)!;
-      return '$year-$month-$day';
-    }
-
     final RegExp isoPattern = RegExp(r'^\d{4}-\d{2}-\d{2}$');
     if (isoPattern.hasMatch(raw)) {
       return raw;
     }
 
-    return null;
+    final String digits = raw.replaceAll(RegExp(r'\D'), '');
+    if (digits.length != 8) {
+      return null;
+    }
+
+    final String day = digits.substring(0, 2);
+    final String month = digits.substring(2, 4);
+    final String year = digits.substring(4, 8);
+    return '$year-$month-$day';
   }
 
   void _setLoading(bool value) {

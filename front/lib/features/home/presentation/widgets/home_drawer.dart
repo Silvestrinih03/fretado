@@ -56,11 +56,11 @@ class HomeDrawer extends StatelessWidget {
               label: 'Métodos de pagamento',
               onTap: () => Navigator.of(context).pop(),
             ),
-            // _DrawerItem(
-            //   icon: Icons.settings_outlined,
-            //   label: 'Configurações',
-            //   onTap: () => Navigator.of(context).pop(),
-            // ),
+            _DrawerItem(
+              icon: Icons.history_outlined,
+              label: 'Histórico de ???',
+              onTap: () => Navigator.of(context).pop(),
+            ),
             const Spacer(),
             Padding(
               padding: const EdgeInsets.all(16),

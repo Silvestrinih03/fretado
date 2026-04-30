@@ -2,8 +2,12 @@ import 'package:flutter/material.dart';
 
 import '../../../../app/design_system/design_system.dart';
 import '../../../../core/enums/register_account_type.dart';
+import '../../../../core/services/http_service.dart';
 import '../../../../core/services/myself/models/myself_user_model.dart';
 import '../../../../core/services/myself/services/myself_service.dart';
+import '../../data/datasources/profile_datasource.dart';
+import '../../data/repositories/profile_repository_impl.dart';
+import '../controllers/profile_controller.dart';
 import 'change_password_popup.dart';
 
 class UserDataPage extends StatefulWidget {
@@ -24,16 +28,26 @@ class _UserDataPageState extends State<UserDataPage> {
     text: '**************',
   );
 
+  late final int _userId;
   late final Future<MyselfUserModel> _userFuture;
+  late final HttpService _httpService;
+  late final ProfileController _profileController;
   bool _didFillControllers = false;
+  bool _isSaving = false;
 
   @override
   void initState() {
     super.initState();
     final MyselfService myselfService = MyselfService();
-    final int userId = myselfService.currentUserId ?? 5;
+    _userId = myselfService.currentUserId ?? 5;
 
-    _userFuture = myselfService.getMyself(userId);
+    _userFuture = myselfService.getMyself(_userId);
+    _httpService = HttpService();
+    _profileController = ProfileController(
+      ProfileRepositoryImpl(
+        ProfileDatasource(_httpService),
+      ),
+    );
   }
 
   @override
@@ -45,6 +59,7 @@ class _UserDataPageState extends State<UserDataPage> {
     _birthDateController.dispose();
     _phoneController.dispose();
     _passwordController.dispose();
+    _httpService.dispose();
     super.dispose();
   }
 
@@ -53,19 +68,58 @@ class _UserDataPageState extends State<UserDataPage> {
       return;
     }
 
+    _fillUserData(user);
+    _didFillControllers = true;
+  }
+
+  void _fillUserData(MyselfUserModel user) {
     _firstNameController.text = user.firstName;
     _lastNameController.text = user.lastName;
     _emailController.text = user.email;
     _cpfController.text = _formatCpf(user.cpf);
     _birthDateController.text = _formatBirthDate(user.birthDate);
     _phoneController.text = _formatPhone(user.phone);
-    _didFillControllers = true;
   }
 
-  void _save() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Dados salvos com sucesso.')),
-    );
+  Future<void> _save() async {
+    if (_isSaving) {
+      return;
+    }
+
+    setState(() => _isSaving = true);
+
+    try {
+      final MyselfUserModel updatedUser = await _profileController.updateUser(
+        userId: _userId,
+        firstName: _firstNameController.text,
+        lastName: _lastNameController.text,
+        email: _emailController.text,
+        birthDate: _birthDateController.text,
+        phone: _phoneController.text,
+      );
+
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _fillUserData(updatedUser);
+        _isSaving = false;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Dados salvos com sucesso.')),
+      );
+    } catch (e) {
+      if (!mounted) {
+        return;
+      }
+
+      setState(() => _isSaving = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(_readErrorMessage(e))),
+      );
+    }
   }
 
   @override
@@ -131,6 +185,9 @@ class _UserDataPageState extends State<UserDataPage> {
                           label: 'CPF',
                           controller: _cpfController,
                           keyboardType: TextInputType.number,
+                          readOnly: true,
+                          canRequestFocus: false,
+                          suffixIcon: Icons.check_rounded,
                         ),
                         const SizedBox(height: 20),
                         _ProfileTextField(
@@ -166,7 +223,7 @@ class _UserDataPageState extends State<UserDataPage> {
                 },
               ),
             ),
-            _SaveBar(onPressed: _save),
+            _SaveBar(onPressed: _save, isLoading: _isSaving),
           ],
         ),
       ),
@@ -392,9 +449,13 @@ class _ProfileTextField extends StatelessWidget {
 }
 
 class _SaveBar extends StatelessWidget {
-  final VoidCallback onPressed;
+  final Future<void> Function() onPressed;
+  final bool isLoading;
 
-  const _SaveBar({required this.onPressed});
+  const _SaveBar({
+    required this.onPressed,
+    required this.isLoading,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -415,7 +476,11 @@ class _SaveBar extends StatelessWidget {
       child: SizedBox(
         height: 62,
         child: ElevatedButton(
-          onPressed: onPressed,
+          onPressed: isLoading
+              ? null
+              : () async {
+                  await onPressed();
+                },
           style: ElevatedButton.styleFrom(
             elevation: 10,
             shadowColor: FretColors.loginFooterLink.withOpacity(0.3),
@@ -425,9 +490,9 @@ class _SaveBar extends StatelessWidget {
               borderRadius: BorderRadius.circular(10),
             ),
           ),
-          child: const Text(
-            'Salvar',
-            style: TextStyle(
+          child: Text(
+            isLoading ? 'Salvando...' : 'Salvar',
+            style: const TextStyle(
               fontSize: 21,
               fontWeight: FontWeight.w800,
             ),
@@ -477,3 +542,14 @@ String _formatPhone(String? value) {
 }
 
 String _twoDigits(int value) => value.toString().padLeft(2, '0');
+
+String _readErrorMessage(Object error) {
+  final String message = error.toString();
+  final int separatorIndex = message.indexOf(': ');
+
+  if (separatorIndex == -1) {
+    return message;
+  }
+
+  return message.substring(separatorIndex + 2);
+}

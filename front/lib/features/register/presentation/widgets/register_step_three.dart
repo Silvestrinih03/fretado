@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../../../app/design_system/design_system.dart';
 import 'register_shared_widgets.dart';
@@ -71,7 +72,8 @@ class RegisterStepThree extends StatelessWidget {
                 child: RegisterInputField(
                   controller: birthDateController,
                   hintText: 'DD/MM/AAAA',
-                  keyboardType: TextInputType.datetime,
+                  keyboardType: TextInputType.number,
+                  inputFormatters: const [_BirthDateInputFormatter()],
                   suffixIcon: const Padding(
                     padding: EdgeInsetsDirectional.only(end: 14),
                     child: Icon(
@@ -131,6 +133,40 @@ class RegisterStepThree extends StatelessWidget {
         ),
       ],
     );
+  }
+}
+
+class _BirthDateInputFormatter extends TextInputFormatter {
+  const _BirthDateInputFormatter();
+
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    final String digits = newValue.text.replaceAll(RegExp(r'\D'), '');
+    final String limitedDigits = digits.length > 8
+        ? digits.substring(0, 8)
+        : digits;
+    final String formatted = _formatBirthDateDigits(limitedDigits);
+
+    return TextEditingValue(
+      text: formatted,
+      selection: TextSelection.collapsed(offset: formatted.length),
+    );
+  }
+
+  String _formatBirthDateDigits(String digits) {
+    final StringBuffer buffer = StringBuffer();
+
+    for (int index = 0; index < digits.length; index += 1) {
+      if (index == 2 || index == 4) {
+        buffer.write('/');
+      }
+      buffer.write(digits[index]);
+    }
+
+    return buffer.toString();
   }
 }
 

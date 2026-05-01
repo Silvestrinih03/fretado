@@ -1,3 +1,4 @@
+import '../../../../core/endpoints.dart';
 import '../../../../core/services/http_service.dart';
 import '../models/user_model.dart';
 
@@ -12,7 +13,7 @@ class AuthDatasource {
   }) async {
     try {
       final Map<String, dynamic> response = await _httpService.post(
-        '/auth',
+        Endpoints.auth,
         body: {'email': email.trim(), 'password': password},
       );
 

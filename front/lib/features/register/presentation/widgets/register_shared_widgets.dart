@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../../../app/design_system/design_system.dart';
 
@@ -68,6 +69,7 @@ class RegisterInputField extends StatelessWidget {
   final Widget? suffixIcon;
   final bool obscureText;
   final TextInputType? keyboardType;
+  final List<TextInputFormatter>? inputFormatters;
 
   const RegisterInputField({
     super.key,
@@ -76,6 +78,7 @@ class RegisterInputField extends StatelessWidget {
     this.suffixIcon,
     this.obscureText = false,
     this.keyboardType,
+    this.inputFormatters,
   });
 
   @override
@@ -84,6 +87,7 @@ class RegisterInputField extends StatelessWidget {
       controller: controller,
       obscureText: obscureText,
       keyboardType: keyboardType,
+      inputFormatters: inputFormatters,
       style: const TextStyle(
         fontSize: 20,
         color: FretColors.neutral700,

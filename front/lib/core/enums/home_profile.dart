@@ -1,10 +1,10 @@
-enum HomeProfile { driver, client }
+enum HomeProfileEnum { driver, client }
 
-extension HomeProfileMapper on HomeProfile {
-  static HomeProfile fromUserTypeId(int userTypeId) {
+extension HomeProfileMapper on HomeProfileEnum {
+  static HomeProfileEnum fromUserTypeId(int userTypeId) {
     if (userTypeId == 2) {
-      return HomeProfile.driver;
+      return HomeProfileEnum.driver;
     }
-    return HomeProfile.client;
+    return HomeProfileEnum.client;
   }
 }

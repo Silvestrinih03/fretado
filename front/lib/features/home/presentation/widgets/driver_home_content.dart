@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../app/design_system/design_system.dart';
+import '../../../documents/presentation/pages/my_documents.dart';
 import '../../../vehicles/presentation/pages/my_vehicles.dart';
 
 class DriverHomeContent extends StatelessWidget {
@@ -48,13 +49,17 @@ class DriverHomeContent extends StatelessWidget {
           },
         ),
         const SizedBox(height: 12),
-        const _SimpleMetricCard(
+        _SimpleMetricCard(
           icon: Icons.description_outlined,
           title: 'Meus documentos',
-          subtitle: '3 pendências de renovação',
-          urgencyTag: 'URGENTE',
-          urgencyColor: Color(0xFFFFD9D9),
-          urgencyTextColor: Color(0xFFB01212),
+          subtitle: 'Acompanhar validade da CNH',
+          onTap: () {
+            Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => MyDocumentsPage(userId: userId),
+              ),
+            );
+          },
         ),
         const SizedBox(height: 22),
         const Row(

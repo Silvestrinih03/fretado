@@ -20,6 +20,8 @@ class RegisterPage extends StatefulWidget {
 }
 
 class _RegisterPageState extends State<RegisterPage> {
+  final GlobalKey<FormState> _stepTwoFormKey = GlobalKey<FormState>();
+  final GlobalKey<FormState> _stepThreeFormKey = GlobalKey<FormState>();
   RegisterStepEnum _currentStep = RegisterStepEnum.accountType;
   UserTypeEnum? _selectedAccountType;
 
@@ -36,6 +38,8 @@ class _RegisterPageState extends State<RegisterPage> {
 
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
+  AutovalidateMode _stepTwoAutovalidateMode = AutovalidateMode.disabled;
+  AutovalidateMode _stepThreeAutovalidateMode = AutovalidateMode.disabled;
   late final RegisterController _registerController;
 
   @override
@@ -89,19 +93,13 @@ class _RegisterPageState extends State<RegisterPage> {
   }
 
   void _goToStepThree() {
-    final bool valid = _registerController.validateStepTwo(
-      cpf: _cpfController.text,
-      email: _emailController.text,
-      password: _passwordController.text,
-      confirmPassword: _confirmPasswordController.text,
-    );
+    FocusScope.of(context).unfocus();
 
-    if (!valid) {
-      final String message =
-          _registerController.errorMessage ?? 'Revise os dados para continuar.';
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(message)));
+    final bool isFormValid = _stepTwoFormKey.currentState?.validate() ?? false;
+    if (!isFormValid) {
+      setState(() {
+        _stepTwoAutovalidateMode = AutovalidateMode.onUserInteraction;
+      });
       return;
     }
 
@@ -109,12 +107,23 @@ class _RegisterPageState extends State<RegisterPage> {
   }
 
   Future<void> _finishRegister() async {
+    FocusScope.of(context).unfocus();
+
     if (_selectedAccountType == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Selecione o tipo de conta para continuar.'),
         ),
       );
+      return;
+    }
+
+    final bool isFormValid =
+        _stepThreeFormKey.currentState?.validate() ?? false;
+    if (!isFormValid) {
+      setState(() {
+        _stepThreeAutovalidateMode = AutovalidateMode.onUserInteraction;
+      });
       return;
     }
 
@@ -174,6 +183,8 @@ class _RegisterPageState extends State<RegisterPage> {
         );
       case RegisterStepEnum.basicData:
         return RegisterStepTwo(
+          formKey: _stepTwoFormKey,
+          autovalidateMode: _stepTwoAutovalidateMode,
           cpfController: _cpfController,
           emailController: _emailController,
           passwordController: _passwordController,
@@ -190,6 +201,8 @@ class _RegisterPageState extends State<RegisterPage> {
         );
       case RegisterStepEnum.personalData:
         return RegisterStepThree(
+          formKey: _stepThreeFormKey,
+          autovalidateMode: _stepThreeAutovalidateMode,
           firstNameController: _firstNameController,
           lastNameController: _lastNameController,
           birthDateController: _birthDateController,

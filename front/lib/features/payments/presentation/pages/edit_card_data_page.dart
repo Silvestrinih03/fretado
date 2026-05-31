@@ -24,6 +24,7 @@ class _EditCardDataPageState extends State<EditCardDataPage> {
   static const Color _mutedText = Color(0xFF3F4050);
   static const Color _hintText = Color(0xFFAEB0BA);
 
+  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   final TextEditingController _cardNumberController = TextEditingController();
   final TextEditingController _cardNameController = TextEditingController();
   final TextEditingController _expirationController = TextEditingController();
@@ -32,6 +33,7 @@ class _EditCardDataPageState extends State<EditCardDataPage> {
   late final HttpService _httpService;
   late final PaymentCardsStore _store;
   bool _isDefault = true;
+  AutovalidateMode _autovalidateMode = AutovalidateMode.disabled;
 
   @override
   void initState() {
@@ -76,9 +78,12 @@ class _EditCardDataPageState extends State<EditCardDataPage> {
               children: [
                 const _EditCardHeader(),
                 Expanded(
-                  child: ListView(
-                    padding: const EdgeInsets.fromLTRB(19, 30, 19, 22),
-                    children: [
+                  child: Form(
+                    key: _formKey,
+                    autovalidateMode: _autovalidateMode,
+                    child: ListView(
+                      padding: const EdgeInsets.fromLTRB(19, 30, 19, 22),
+                      children: [
                       _CreditCardPreview(
                         holderName: _cardNameController.text,
                         expiration: _expirationController.text,
@@ -94,6 +99,8 @@ class _EditCardDataPageState extends State<EditCardDataPage> {
                           FilteringTextInputFormatter.digitsOnly,
                           LengthLimitingTextInputFormatter(19),
                         ],
+                        textInputAction: TextInputAction.next,
+                        validator: _validateCardNumber,
                       ),
                       const SizedBox(height: 24),
                       _CardInputField(
@@ -101,6 +108,8 @@ class _EditCardDataPageState extends State<EditCardDataPage> {
                         hintText: 'COMO IMPRESSO NO CARTAO',
                         controller: _cardNameController,
                         textCapitalization: TextCapitalization.characters,
+                        textInputAction: TextInputAction.next,
+                        validator: _validateCardName,
                       ),
                       const SizedBox(height: 24),
                       Row(
@@ -115,6 +124,8 @@ class _EditCardDataPageState extends State<EditCardDataPage> {
                                 FilteringTextInputFormatter.digitsOnly,
                                 LengthLimitingTextInputFormatter(4),
                               ],
+                              textInputAction: TextInputAction.next,
+                              validator: _validateExpiration,
                             ),
                           ),
                           const SizedBox(width: 15),
@@ -129,6 +140,9 @@ class _EditCardDataPageState extends State<EditCardDataPage> {
                                 FilteringTextInputFormatter.digitsOnly,
                                 LengthLimitingTextInputFormatter(4),
                               ],
+                              textInputAction: TextInputAction.done,
+                              onFieldSubmitted: (_) => _saveCard(),
+                              validator: _validateCvv,
                             ),
                           ),
                         ],
@@ -142,7 +156,8 @@ class _EditCardDataPageState extends State<EditCardDataPage> {
                           });
                         },
                       ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
                 _SaveCardBar(
@@ -159,6 +174,14 @@ class _EditCardDataPageState extends State<EditCardDataPage> {
 
   Future<void> _saveCard() async {
     FocusScope.of(context).unfocus();
+
+    final bool isFormValid = _formKey.currentState?.validate() ?? false;
+    if (!isFormValid) {
+      setState(() {
+        _autovalidateMode = AutovalidateMode.onUserInteraction;
+      });
+      return;
+    }
 
     final didSave = await _store.createCard(
       cardholderName: _cardNameController.text,
@@ -187,6 +210,55 @@ class _EditCardDataPageState extends State<EditCardDataPage> {
   void _refreshPreview() {
     setState(() {});
   }
+}
+
+String? _validateCardNumber(String? value) {
+  final String digits = (value ?? '').replaceAll(RegExp(r'\D'), '');
+  if (digits.isEmpty) {
+    return 'Informe o número do cartão.';
+  }
+  if (digits.length < 13 || digits.length > 19) {
+    return 'Informe um número de cartão válido.';
+  }
+
+  return null;
+}
+
+String? _validateCardName(String? value) {
+  if ((value ?? '').trim().isEmpty) {
+    return 'Informe o nome impresso no cartão.';
+  }
+
+  return null;
+}
+
+String? _validateExpiration(String? value) {
+  final String digits = (value ?? '').replaceAll(RegExp(r'\D'), '');
+  if (digits.isEmpty) {
+    return 'Informe a validade.';
+  }
+  if (digits.length != 4) {
+    return 'Use o formato MM/AA.';
+  }
+
+  final int month = int.parse(digits.substring(0, 2));
+  if (month < 1 || month > 12) {
+    return 'Informe um mês válido.';
+  }
+
+  return null;
+}
+
+String? _validateCvv(String? value) {
+  final String digits = (value ?? '').replaceAll(RegExp(r'\D'), '');
+  if (digits.isEmpty) {
+    return 'Informe o CVV.';
+  }
+  if (digits.length < 3 || digits.length > 4) {
+    return 'Informe um CVV válido.';
+  }
+
+  return null;
 }
 
 class _EditCardHeader extends StatelessWidget {
@@ -397,6 +469,9 @@ class _CardInputField extends StatelessWidget {
   final IconData? suffixIcon;
   final List<TextInputFormatter>? inputFormatters;
   final TextCapitalization textCapitalization;
+  final String? Function(String?)? validator;
+  final TextInputAction? textInputAction;
+  final ValueChanged<String>? onFieldSubmitted;
 
   const _CardInputField({
     required this.label,
@@ -406,6 +481,9 @@ class _CardInputField extends StatelessWidget {
     this.suffixIcon,
     this.inputFormatters,
     this.textCapitalization = TextCapitalization.none,
+    this.validator,
+    this.textInputAction,
+    this.onFieldSubmitted,
   });
 
   @override
@@ -422,13 +500,16 @@ class _CardInputField extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 8),
-        SizedBox(
-          height: 50,
-          child: TextField(
+        ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 50),
+          child: TextFormField(
             controller: controller,
             keyboardType: keyboardType,
             inputFormatters: inputFormatters,
             textCapitalization: textCapitalization,
+            validator: validator,
+            textInputAction: textInputAction,
+            onFieldSubmitted: onFieldSubmitted,
             style: const TextStyle(
               color: FretColors.neutral800,
               fontSize: 15,

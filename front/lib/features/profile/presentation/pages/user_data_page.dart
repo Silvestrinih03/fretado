@@ -18,6 +18,7 @@ class UserDataPage extends StatefulWidget {
 }
 
 class _UserDataPageState extends State<UserDataPage> {
+  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   final TextEditingController _firstNameController = TextEditingController();
   final TextEditingController _lastNameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
@@ -34,6 +35,7 @@ class _UserDataPageState extends State<UserDataPage> {
   late final ProfileController _profileController;
   bool _didFillControllers = false;
   bool _isSaving = false;
+  AutovalidateMode _autovalidateMode = AutovalidateMode.disabled;
 
   @override
   void initState() {
@@ -83,6 +85,16 @@ class _UserDataPageState extends State<UserDataPage> {
 
   Future<void> _save() async {
     if (_isSaving) {
+      return;
+    }
+
+    FocusScope.of(context).unfocus();
+
+    final bool isFormValid = _formKey.currentState?.validate() ?? false;
+    if (!isFormValid) {
+      setState(() {
+        _autovalidateMode = AutovalidateMode.onUserInteraction;
+      });
       return;
     }
 
@@ -142,9 +154,12 @@ class _UserDataPageState extends State<UserDataPage> {
                     _fillControllers(snapshot.data!);
                   }
 
-                  return SingleChildScrollView(
-                    padding: const EdgeInsets.fromLTRB(16, 18, 16, 18),
-                    child: Column(
+                  return Form(
+                    key: _formKey,
+                    autovalidateMode: _autovalidateMode,
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.fromLTRB(16, 18, 16, 18),
+                      child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         _ProfileSummary(
@@ -163,6 +178,8 @@ class _UserDataPageState extends State<UserDataPage> {
                               child: _ProfileTextField(
                                 label: 'NOME',
                                 controller: _firstNameController,
+                                validator: (value) =>
+                                    _validateRequiredField(value, 'nome'),
                               ),
                             ),
                             const SizedBox(width: 10),
@@ -170,6 +187,8 @@ class _UserDataPageState extends State<UserDataPage> {
                               child: _ProfileTextField(
                                 label: 'SOBRENOME',
                                 controller: _lastNameController,
+                                validator: (value) =>
+                                    _validateRequiredField(value, 'sobrenome'),
                               ),
                             ),
                           ],
@@ -179,6 +198,7 @@ class _UserDataPageState extends State<UserDataPage> {
                           label: 'E-MAIL',
                           controller: _emailController,
                           keyboardType: TextInputType.emailAddress,
+                          validator: _validateEmail,
                         ),
                         const SizedBox(height: 14),
                         _ProfileTextField(
@@ -195,12 +215,14 @@ class _UserDataPageState extends State<UserDataPage> {
                           controller: _birthDateController,
                           keyboardType: TextInputType.datetime,
                           suffixIcon: Icons.calendar_today_outlined,
+                          validator: _validateOptionalBirthDate,
                         ),
                         const SizedBox(height: 14),
                         _ProfileTextField(
                           label: 'TELEFONE',
                           controller: _phoneController,
                           keyboardType: TextInputType.phone,
+                          validator: _validateOptionalPhone,
                         ),
                         const SizedBox(height: 14),
                         _ProfileTextField(
@@ -218,6 +240,7 @@ class _UserDataPageState extends State<UserDataPage> {
                           },
                         ),
                       ],
+                      ),
                     ),
                   );
                 },
@@ -387,6 +410,7 @@ class _ProfileTextField extends StatelessWidget {
   final bool canRequestFocus;
   final IconData suffixIcon;
   final VoidCallback? onSuffixTap;
+  final String? Function(String?)? validator;
 
   const _ProfileTextField({
     required this.label,
@@ -397,6 +421,7 @@ class _ProfileTextField extends StatelessWidget {
     this.canRequestFocus = true,
     this.suffixIcon = Icons.edit_rounded,
     this.onSuffixTap,
+    this.validator,
   });
 
   @override
@@ -414,12 +439,13 @@ class _ProfileTextField extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 5),
-        TextField(
+        TextFormField(
           controller: controller,
           keyboardType: keyboardType,
           obscureText: obscureText,
           readOnly: readOnly,
           canRequestFocus: canRequestFocus,
+          validator: validator,
           style: const TextStyle(
             color: FretColors.black,
             fontSize: 15,
@@ -542,6 +568,73 @@ String _formatPhone(String? value) {
 }
 
 String _twoDigits(int value) => value.toString().padLeft(2, '0');
+
+String? _validateRequiredField(String? value, String fieldName) {
+  if ((value ?? '').trim().isEmpty) {
+    return 'Informe seu $fieldName.';
+  }
+
+  return null;
+}
+
+String? _validateEmail(String? value) {
+  final String trimmedValue = (value ?? '').trim();
+  if (trimmedValue.isEmpty) {
+    return 'Informe seu email.';
+  }
+
+  final bool validEmail = RegExp(
+    r'^[^@\s]+@[^@\s]+\.[^@\s]+$',
+  ).hasMatch(trimmedValue);
+
+  if (!validEmail) {
+    return 'Informe um email válido.';
+  }
+
+  return null;
+}
+
+String? _validateOptionalBirthDate(String? value) {
+  final String raw = (value ?? '').trim();
+  if (raw.isEmpty) {
+    return null;
+  }
+
+  final String digits = raw.replaceAll(RegExp(r'\D'), '');
+  if (digits.length != 8) {
+    return 'Informe a data no formato DD/MM/AAAA.';
+  }
+
+  final int day = int.parse(digits.substring(0, 2));
+  final int month = int.parse(digits.substring(2, 4));
+  final int year = int.parse(digits.substring(4, 8));
+  final DateTime date = DateTime(year, month, day);
+
+  final bool isValidDate =
+      date.day == day && date.month == month && date.year == year;
+  if (!isValidDate) {
+    return 'Informe uma data válida.';
+  }
+
+  if (date.isAfter(DateTime.now())) {
+    return 'A data de nascimento não pode ser futura.';
+  }
+
+  return null;
+}
+
+String? _validateOptionalPhone(String? value) {
+  final String digits = (value ?? '').replaceAll(RegExp(r'\D'), '');
+  if (digits.isEmpty) {
+    return null;
+  }
+
+  if (digits.length < 10 || digits.length > 11) {
+    return 'Informe um telefone válido.';
+  }
+
+  return null;
+}
 
 String _readErrorMessage(Object error) {
   final String message = error.toString();

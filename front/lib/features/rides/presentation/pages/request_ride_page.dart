@@ -26,12 +26,14 @@ class _RequestRidePageState extends State<RequestRidePage> {
   final TextEditingController _heightController = TextEditingController();
   final TextEditingController _lengthController = TextEditingController();
   final TextEditingController _weightController = TextEditingController();
+  final GlobalKey<FormState> _detailsFormKey = GlobalKey<FormState>();
 
   _RidePointMode _mode = _RidePointMode.pickup;
   LatLng? _pickup;
   LatLng? _delivery;
   bool _loading = false;
   bool _detailsVisible = false;
+  AutovalidateMode _detailsAutovalidateMode = AutovalidateMode.disabled;
   _RideQuote? _quote;
 
   @override
@@ -138,7 +140,8 @@ class _RequestRidePageState extends State<RequestRidePage> {
                 ),
               ],
               selected: {_mode},
-              onSelectionChanged: (value) => setState(() => _mode = value.first),
+              onSelectionChanged: (value) =>
+                  setState(() => _mode = value.first),
             ),
             const SizedBox(height: 8),
             _AddressSearchField(
@@ -159,7 +162,9 @@ class _RequestRidePageState extends State<RequestRidePage> {
               _PrimaryButton(
                 label: 'Prosseguir',
                 loading: _loading,
-                onPressed: _canProceed ? () => setState(() => _detailsVisible = true) : null,
+                onPressed: _canProceed
+                    ? () => setState(() => _detailsVisible = true)
+                    : null,
               )
             else
               _buildDetails(),
@@ -170,33 +175,57 @@ class _RequestRidePageState extends State<RequestRidePage> {
   }
 
   Widget _buildDetails() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Row(
-          children: [
-            Expanded(child: _NumberField(controller: _widthController, label: 'Largura')),
-            const SizedBox(width: 10),
-            Expanded(child: _NumberField(controller: _heightController, label: 'Altura')),
-          ],
-        ),
-        const SizedBox(height: 8),
-        Row(
-          children: [
-            Expanded(child: _NumberField(controller: _lengthController, label: 'Comprimento')),
-            const SizedBox(width: 10),
-            Expanded(child: _NumberField(controller: _weightController, label: 'Peso')),
-          ],
-        ),
-        const SizedBox(height: 8),
-        if (_quote != null) _QuoteBox(quote: _quote!),
-        const SizedBox(height: 8),
-        _PrimaryButton(
-          label: _quote == null ? 'Calcular valor' : 'Solicitar corrida',
-          loading: _loading,
-          onPressed: _quote == null ? _quoteRide : _confirmRide,
-        ),
-      ],
+    return Form(
+      key: _detailsFormKey,
+      autovalidateMode: _detailsAutovalidateMode,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: _NumberField(
+                  controller: _widthController,
+                  label: 'Largura',
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _NumberField(
+                  controller: _heightController,
+                  label: 'Altura',
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: _NumberField(
+                  controller: _lengthController,
+                  label: 'Comprimento',
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _NumberField(
+                  controller: _weightController,
+                  label: 'Peso',
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          if (_quote != null) _QuoteBox(quote: _quote!),
+          const SizedBox(height: 8),
+          _PrimaryButton(
+            label: _quote == null ? 'Calcular valor' : 'Solicitar corrida',
+            loading: _loading,
+            onPressed: _quote == null ? _quoteRide : _confirmRide,
+          ),
+        ],
+      ),
     );
   }
 
@@ -206,17 +235,21 @@ class _RequestRidePageState extends State<RequestRidePage> {
     setState(() {
       if (_mode == _RidePointMode.pickup) {
         _pickup = point;
-        _pickupController.text = '${point.latitude.toStringAsFixed(6)}, ${point.longitude.toStringAsFixed(6)}';
+        _pickupController.text =
+            '${point.latitude.toStringAsFixed(6)}, ${point.longitude.toStringAsFixed(6)}';
       } else {
         _delivery = point;
-        _deliveryController.text = '${point.latitude.toStringAsFixed(6)}, ${point.longitude.toStringAsFixed(6)}';
+        _deliveryController.text =
+            '${point.latitude.toStringAsFixed(6)}, ${point.longitude.toStringAsFixed(6)}';
       }
       _quote = null;
     });
   }
 
   Future<void> _searchAddress(_RidePointMode mode) async {
-    final controller = mode == _RidePointMode.pickup ? _pickupController : _deliveryController;
+    final controller = mode == _RidePointMode.pickup
+        ? _pickupController
+        : _deliveryController;
     if (controller.text.trim().length < 3) return;
 
     setState(() => _loading = true);
@@ -239,7 +272,11 @@ class _RequestRidePageState extends State<RequestRidePage> {
           itemBuilder: (context, index) {
             final result = results[index];
             return ListTile(
-              title: Text(result.label, maxLines: 2, overflow: TextOverflow.ellipsis),
+              title: Text(
+                result.label,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
               onTap: () => Navigator.of(context).pop(result),
             );
           },
@@ -266,6 +303,8 @@ class _RequestRidePageState extends State<RequestRidePage> {
   }
 
   Future<void> _quoteRide() async {
+    if (!_validateDetailsForm()) return;
+
     final payload = _payload(paymentConfirmed: false);
     if (payload == null) return;
 
@@ -293,8 +332,14 @@ class _RequestRidePageState extends State<RequestRidePage> {
           '${quote.distanceKm.toStringAsFixed(1)} km - ${quote.estimatedTimeMinutes} min - ${quote.vehicleName}',
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('Não')),
-          FilledButton(onPressed: () => Navigator.of(context).pop(true), child: const Text('Sim')),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Não'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Sim'),
+          ),
         ],
       ),
     );
@@ -306,6 +351,8 @@ class _RequestRidePageState extends State<RequestRidePage> {
   }
 
   Future<void> _confirmRide() async {
+    if (!_validateDetailsForm()) return;
+
     final paid = await _askCardPayment();
     if (paid != true) return;
 
@@ -316,7 +363,9 @@ class _RequestRidePageState extends State<RequestRidePage> {
     try {
       final data = await _http.post(Endpoints.createRide, body: payload);
       if (!mounted) return;
-      _showMessage('Corrida #${data['id']} solicitada. Status: ${data['status']}');
+      _showMessage(
+        'Corrida #${data['id']} solicitada. Status: ${data['status']}',
+      );
       Navigator.of(context).pop(true);
     } on HttpServiceException catch (e) {
       _showMessage(e.message);
@@ -325,40 +374,113 @@ class _RequestRidePageState extends State<RequestRidePage> {
     }
   }
 
-  Future<bool?> _askCardPayment() {
+  Future<bool?> _askCardPayment() async {
     final number = TextEditingController();
     final name = TextEditingController();
     final expiry = TextEditingController();
     final cvv = TextEditingController();
+    final formKey = GlobalKey<FormState>();
+    AutovalidateMode autovalidateMode = AutovalidateMode.disabled;
 
-    return showModalBottomSheet<bool>(
+    final result = await showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
-      builder: (context) => Padding(
-        padding: EdgeInsets.fromLTRB(14, 14, 14, MediaQuery.of(context).viewInsets.bottom + 14),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text('Pagamento no cartão', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800)),
-            const SizedBox(height: 8),
-            TextField(controller: number, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Número do cartão')),
-            TextField(controller: name, textCapitalization: TextCapitalization.words, decoration: const InputDecoration(labelText: 'Nome impresso')),
-            Row(
+      builder: (context) => StatefulBuilder(
+        builder: (context, setModalState) => Padding(
+          padding: EdgeInsets.fromLTRB(
+            14,
+            14,
+            14,
+            MediaQuery.of(context).viewInsets.bottom + 14,
+          ),
+          child: Form(
+            key: formKey,
+            autovalidateMode: autovalidateMode,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
               children: [
-                Expanded(child: TextField(controller: expiry, keyboardType: TextInputType.datetime, decoration: const InputDecoration(labelText: 'Validade'))),
-                const SizedBox(width: 12),
-                Expanded(child: TextField(controller: cvv, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'CVV'))),
+                const Text(
+                  'Pagamento no cartão',
+                  style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800),
+                ),
+                const SizedBox(height: 8),
+                TextFormField(
+                  controller: number,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    labelText: 'Número do cartão',
+                  ),
+                  validator: _validatePaymentCardNumber,
+                  textInputAction: TextInputAction.next,
+                ),
+                TextFormField(
+                  controller: name,
+                  textCapitalization: TextCapitalization.words,
+                  decoration: const InputDecoration(labelText: 'Nome impresso'),
+                  validator: _validatePaymentCardName,
+                  textInputAction: TextInputAction.next,
+                ),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: TextFormField(
+                        controller: expiry,
+                        keyboardType: TextInputType.datetime,
+                        decoration: const InputDecoration(
+                          labelText: 'Validade',
+                        ),
+                        validator: _validatePaymentExpiry,
+                        textInputAction: TextInputAction.next,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: TextFormField(
+                        controller: cvv,
+                        keyboardType: TextInputType.number,
+                        decoration: const InputDecoration(labelText: 'CVV'),
+                        validator: _validatePaymentCvv,
+                        textInputAction: TextInputAction.done,
+                        onFieldSubmitted: (_) {
+                          if (formKey.currentState?.validate() ?? false) {
+                            Navigator.of(context).pop(true);
+                          }
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                _PrimaryButton(
+                  label: 'Confirmar pagamento',
+                  onPressed: () {
+                    FocusScope.of(context).unfocus();
+                    final isFormValid =
+                        formKey.currentState?.validate() ?? false;
+                    if (!isFormValid) {
+                      setModalState(() {
+                        autovalidateMode = AutovalidateMode.onUserInteraction;
+                      });
+                      return;
+                    }
+
+                    Navigator.of(context).pop(true);
+                  },
+                ),
               ],
             ),
-            const SizedBox(height: 12),
-            _PrimaryButton(
-              label: 'Confirmar pagamento',
-              onPressed: () => Navigator.of(context).pop(true),
-            ),
-          ],
+          ),
         ),
       ),
     );
+
+    number.dispose();
+    name.dispose();
+    expiry.dispose();
+    cvv.dispose();
+
+    return result;
   }
 
   Map<String, dynamic>? _payload({required bool paymentConfirmed}) {
@@ -369,8 +491,15 @@ class _RequestRidePageState extends State<RequestRidePage> {
     final length = double.tryParse(_lengthController.text.replaceAll(',', '.'));
     final weight = double.tryParse(_weightController.text.replaceAll(',', '.'));
 
-    if (pickup == null || delivery == null || width == null || height == null || length == null || weight == null) {
-      _showMessage('Preencha coleta, entrega e todas as informações do pacote.');
+    if (pickup == null ||
+        delivery == null ||
+        width == null ||
+        height == null ||
+        length == null ||
+        weight == null) {
+      _showMessage(
+        'Preencha coleta, entrega e todas as informações do pacote.',
+      );
       return null;
     }
 
@@ -386,6 +515,17 @@ class _RequestRidePageState extends State<RequestRidePage> {
       'package_weight': weight,
       'payment_confirmed': paymentConfirmed,
     };
+  }
+
+  bool _validateDetailsForm() {
+    final bool isFormValid = _detailsFormKey.currentState?.validate() ?? false;
+    if (!isFormValid) {
+      setState(() {
+        _detailsAutovalidateMode = AutovalidateMode.onUserInteraction;
+      });
+    }
+
+    return isFormValid;
   }
 
   void _cancelFlow() {
@@ -405,7 +545,9 @@ class _RequestRidePageState extends State<RequestRidePage> {
 
   void _showMessage(String message) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 }
 
@@ -424,7 +566,7 @@ class _AddressSearchField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return TextField(
+    return TextFormField(
       controller: controller,
       decoration: InputDecoration(
         labelText: label,
@@ -435,7 +577,7 @@ class _AddressSearchField extends StatelessWidget {
         ),
         border: const OutlineInputBorder(),
       ),
-      onSubmitted: (_) => onSearch(),
+      onFieldSubmitted: (_) => onSearch(),
     );
   }
 }
@@ -448,12 +590,77 @@ class _NumberField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return TextField(
+    return TextFormField(
       controller: controller,
       keyboardType: const TextInputType.numberWithOptions(decimal: true),
-      decoration: InputDecoration(labelText: label, border: const OutlineInputBorder()),
+      validator: (value) => _validatePositiveNumber(value, label),
+      decoration: InputDecoration(
+        labelText: label,
+        border: const OutlineInputBorder(),
+      ),
     );
   }
+}
+
+String? _validatePositiveNumber(String? value, String label) {
+  final double? number = double.tryParse((value ?? '').replaceAll(',', '.'));
+  if (number == null) {
+    return 'Informe $label.';
+  }
+  if (number <= 0) {
+    return '$label deve ser maior que zero.';
+  }
+
+  return null;
+}
+
+String? _validatePaymentCardNumber(String? value) {
+  final String digits = (value ?? '').replaceAll(RegExp(r'\D'), '');
+  if (digits.isEmpty) {
+    return 'Informe o número.';
+  }
+  if (digits.length < 13 || digits.length > 19) {
+    return 'Número inválido.';
+  }
+
+  return null;
+}
+
+String? _validatePaymentCardName(String? value) {
+  if ((value ?? '').trim().isEmpty) {
+    return 'Informe o nome.';
+  }
+
+  return null;
+}
+
+String? _validatePaymentExpiry(String? value) {
+  final String digits = (value ?? '').replaceAll(RegExp(r'\D'), '');
+  if (digits.isEmpty) {
+    return 'Informe a validade.';
+  }
+  if (digits.length != 4) {
+    return 'Use MM/AA.';
+  }
+
+  final int month = int.parse(digits.substring(0, 2));
+  if (month < 1 || month > 12) {
+    return 'Mês inválido.';
+  }
+
+  return null;
+}
+
+String? _validatePaymentCvv(String? value) {
+  final String digits = (value ?? '').replaceAll(RegExp(r'\D'), '');
+  if (digits.isEmpty) {
+    return 'Informe o CVV.';
+  }
+  if (digits.length < 3 || digits.length > 4) {
+    return 'CVV inválido.';
+  }
+
+  return null;
 }
 
 class _PrimaryButton extends StatelessWidget {
@@ -476,10 +683,16 @@ class _PrimaryButton extends StatelessWidget {
         style: ElevatedButton.styleFrom(
           backgroundColor: const Color(0xFFFFE16D),
           foregroundColor: const Color(0xFF080A73),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
         ),
         child: loading
-            ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2))
+            ? const SizedBox(
+                width: 22,
+                height: 22,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
             : Text(label, style: const TextStyle(fontWeight: FontWeight.w900)),
       ),
     );
@@ -510,7 +723,11 @@ class _QuoteBox extends StatelessWidget {
           ),
           Text(
             'R\$ ${quote.totalPrice.toStringAsFixed(2)}',
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: FretColors.loginFooterLink),
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w900,
+              color: FretColors.loginFooterLink,
+            ),
           ),
         ],
       ),
@@ -554,7 +771,8 @@ class _RideQuote {
   factory _RideQuote.fromJson(Map<String, dynamic> json) {
     return _RideQuote(
       distanceKm: double.tryParse(json['distance_km'].toString()) ?? 0,
-      estimatedTimeMinutes: int.tryParse(json['estimated_time_minutes'].toString()) ?? 0,
+      estimatedTimeMinutes:
+          int.tryParse(json['estimated_time_minutes'].toString()) ?? 0,
       vehicleName: json['required_vehicle_type_name']?.toString() ?? '',
       totalPrice: double.tryParse(json['total_price'].toString()) ?? 0,
     );

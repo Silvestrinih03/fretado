@@ -5,6 +5,8 @@ import '../../../../app/design_system/design_system.dart';
 import 'register_shared_widgets.dart';
 
 class RegisterStepThree extends StatelessWidget {
+  final GlobalKey<FormState> formKey;
+  final AutovalidateMode autovalidateMode;
   final TextEditingController firstNameController;
   final TextEditingController lastNameController;
   final TextEditingController birthDateController;
@@ -14,6 +16,8 @@ class RegisterStepThree extends StatelessWidget {
 
   const RegisterStepThree({
     super.key,
+    required this.formKey,
+    required this.autovalidateMode,
     required this.firstNameController,
     required this.lastNameController,
     required this.birthDateController,
@@ -24,9 +28,12 @@ class RegisterStepThree extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
+    return Form(
+      key: formKey,
+      autovalidateMode: autovalidateMode,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
         const RegisterSectionTitle(
           title: 'Finalize seu cadastro',
           subtitle: 'Preencha seus dados pessoais para finalizar.',
@@ -50,6 +57,10 @@ class RegisterStepThree extends StatelessWidget {
                       label: 'Nome',
                       child: RegisterInputField(
                         controller: firstNameController,
+                        textCapitalization: TextCapitalization.words,
+                        textInputAction: TextInputAction.next,
+                        validator: (value) =>
+                            _validateRequiredName(value, 'nome'),
                         hintText: 'Ex: João',
                       ),
                     ),
@@ -60,6 +71,10 @@ class RegisterStepThree extends StatelessWidget {
                       label: 'Sobrenome',
                       child: RegisterInputField(
                         controller: lastNameController,
+                        textCapitalization: TextCapitalization.words,
+                        textInputAction: TextInputAction.next,
+                        validator: (value) =>
+                            _validateRequiredName(value, 'sobrenome'),
                         hintText: 'Ex: Silva',
                       ),
                     ),
@@ -73,6 +88,8 @@ class RegisterStepThree extends StatelessWidget {
                   controller: birthDateController,
                   hintText: 'DD/MM/AAAA',
                   keyboardType: TextInputType.number,
+                  textInputAction: TextInputAction.next,
+                  validator: _validateOptionalBirthDate,
                   inputFormatters: const [_BirthDateInputFormatter()],
                   suffixIcon: const Padding(
                     padding: EdgeInsetsDirectional.only(end: 10),
@@ -90,6 +107,9 @@ class RegisterStepThree extends StatelessWidget {
                   controller: phoneController,
                   hintText: '(00) 0000-0000',
                   keyboardType: TextInputType.phone,
+                  textInputAction: TextInputAction.done,
+                  onFieldSubmitted: (_) => onFinish(),
+                  validator: _validateOptionalPhone,
                   suffixIcon: const Padding(
                     padding: EdgeInsetsDirectional.only(end: 10),
                     child: Icon(
@@ -131,7 +151,8 @@ class RegisterStepThree extends StatelessWidget {
             ],
           ),
         ),
-      ],
+        ],
+      ),
     );
   }
 }
@@ -168,6 +189,56 @@ class _BirthDateInputFormatter extends TextInputFormatter {
 
     return buffer.toString();
   }
+}
+
+String? _validateRequiredName(String? value, String fieldName) {
+  if ((value ?? '').trim().isEmpty) {
+    return 'Informe seu $fieldName.';
+  }
+
+  return null;
+}
+
+String? _validateOptionalBirthDate(String? value) {
+  final String raw = (value ?? '').trim();
+  if (raw.isEmpty) {
+    return null;
+  }
+
+  final String digits = raw.replaceAll(RegExp(r'\D'), '');
+  if (digits.length != 8) {
+    return 'Informe a data no formato DD/MM/AAAA.';
+  }
+
+  final int day = int.parse(digits.substring(0, 2));
+  final int month = int.parse(digits.substring(2, 4));
+  final int year = int.parse(digits.substring(4, 8));
+  final DateTime date = DateTime(year, month, day);
+
+  final bool isValidDate =
+      date.day == day && date.month == month && date.year == year;
+  if (!isValidDate) {
+    return 'Informe uma data válida.';
+  }
+
+  if (date.isAfter(DateTime.now())) {
+    return 'A data de nascimento não pode ser futura.';
+  }
+
+  return null;
+}
+
+String? _validateOptionalPhone(String? value) {
+  final String digits = (value ?? '').replaceAll(RegExp(r'\D'), '');
+  if (digits.isEmpty) {
+    return null;
+  }
+
+  if (digits.length < 10 || digits.length > 11) {
+    return 'Informe um telefone válido.';
+  }
+
+  return null;
 }
 
 class _LabeledInput extends StatelessWidget {

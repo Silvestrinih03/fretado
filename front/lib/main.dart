@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'app/design_system/design_system.dart';
 import 'features/auth/presentation/pages/login_page.dart';
 
 void main() {
@@ -27,6 +28,29 @@ class FretadoApp extends StatelessWidget {
         visualDensity: VisualDensity.compact,
         materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
         colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF1F4E79)),
+        inputDecorationTheme: InputDecorationTheme(
+          errorMaxLines: 2,
+          errorStyle: const TextStyle(
+            color: FretColors.destructive600,
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            height: 1.25,
+          ),
+          errorBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10),
+            borderSide: const BorderSide(
+              color: FretColors.destructive500,
+              width: 1.2,
+            ),
+          ),
+          focusedErrorBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10),
+            borderSide: const BorderSide(
+              color: FretColors.destructive600,
+              width: 1.4,
+            ),
+          ),
+        ),
       ),
       home: const LoginPage(),
     );

@@ -70,6 +70,11 @@ class RegisterInputField extends StatelessWidget {
   final bool obscureText;
   final TextInputType? keyboardType;
   final List<TextInputFormatter>? inputFormatters;
+  final String? Function(String?)? validator;
+  final AutovalidateMode? autovalidateMode;
+  final TextInputAction? textInputAction;
+  final ValueChanged<String>? onFieldSubmitted;
+  final TextCapitalization textCapitalization;
 
   const RegisterInputField({
     super.key,
@@ -79,15 +84,25 @@ class RegisterInputField extends StatelessWidget {
     this.obscureText = false,
     this.keyboardType,
     this.inputFormatters,
+    this.validator,
+    this.autovalidateMode,
+    this.textInputAction,
+    this.onFieldSubmitted,
+    this.textCapitalization = TextCapitalization.none,
   });
 
   @override
   Widget build(BuildContext context) {
-    return TextField(
+    return TextFormField(
       controller: controller,
       obscureText: obscureText,
       keyboardType: keyboardType,
       inputFormatters: inputFormatters,
+      validator: validator,
+      autovalidateMode: autovalidateMode,
+      textInputAction: textInputAction,
+      onFieldSubmitted: onFieldSubmitted,
+      textCapitalization: textCapitalization,
       style: const TextStyle(
         fontSize: 15,
         color: FretColors.neutral700,
@@ -106,6 +121,20 @@ class RegisterInputField extends StatelessWidget {
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide.none,
+        ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(
+            color: FretColors.destructive500,
+            width: 1.2,
+          ),
+        ),
+        focusedErrorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(
+            color: FretColors.destructive600,
+            width: 1.4,
+          ),
         ),
         suffixIcon: suffixIcon,
       ),

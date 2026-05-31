@@ -25,10 +25,12 @@ class _FillInPackageDetailsPageState extends State<FillInPackageDetailsPage> {
   static const Color _hintText = Color(0xFFBEC0D0);
   static const Color _orange = Color(0xFF9F3F00);
 
+  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   final TextEditingController _widthController = TextEditingController();
   final TextEditingController _heightController = TextEditingController();
   final TextEditingController _lengthController = TextEditingController();
   final TextEditingController _weightController = TextEditingController();
+  AutovalidateMode _autovalidateMode = AutovalidateMode.disabled;
 
   @override
   void dispose() {
@@ -48,9 +50,12 @@ class _FillInPackageDetailsPageState extends State<FillInPackageDetailsPage> {
           children: [
             const _FreightRequestHeader(),
             Expanded(
-              child: ListView(
-                padding: const EdgeInsets.fromLTRB(10, 30, 10, 34),
-                children: [
+              child: Form(
+                key: _formKey,
+                autovalidateMode: _autovalidateMode,
+                child: ListView(
+                  padding: const EdgeInsets.fromLTRB(10, 30, 10, 34),
+                  children: [
                   const Text(
                     'ETAPA 2 DE 4',
                     style: TextStyle(
@@ -86,12 +91,31 @@ class _FillInPackageDetailsPageState extends State<FillInPackageDetailsPage> {
                     lengthController: _lengthController,
                     weightController: _weightController,
                   ),
-                ],
+                  ],
+                ),
               ),
             ),
-            const _BottomCalculateBar(),
+            _BottomCalculateBar(onPressed: _goToResume),
           ],
         ),
+      ),
+    );
+  }
+
+  void _goToResume() {
+    FocusScope.of(context).unfocus();
+
+    final bool isFormValid = _formKey.currentState?.validate() ?? false;
+    if (!isFormValid) {
+      setState(() {
+        _autovalidateMode = AutovalidateMode.onUserInteraction;
+      });
+      return;
+    }
+
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => const ShippingResumePage(),
       ),
     );
   }
@@ -221,11 +245,12 @@ class _PackageMetricField extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 6),
-        SizedBox(
-          height: 37,
-          child: TextField(
+        ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 37),
+          child: TextFormField(
             controller: controller,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            validator: (value) => _validatePositiveMetric(value, label),
             style: const TextStyle(
               color: FretColors.neutral800,
               fontSize: 14,
@@ -301,8 +326,23 @@ class _FieldUnitSuffix extends StatelessWidget {
   }
 }
 
+String? _validatePositiveMetric(String? value, String label) {
+  final String normalizedValue = (value ?? '').trim().replaceAll(',', '.');
+  final double? metricValue = double.tryParse(normalizedValue);
+  if (metricValue == null) {
+    return 'Informe ${label.toLowerCase()}.';
+  }
+  if (metricValue <= 0) {
+    return 'O valor deve ser maior que zero.';
+  }
+
+  return null;
+}
+
 class _BottomCalculateBar extends StatelessWidget {
-  const _BottomCalculateBar();
+  final VoidCallback onPressed;
+
+  const _BottomCalculateBar({required this.onPressed});
 
   @override
   Widget build(BuildContext context) {
@@ -313,13 +353,7 @@ class _BottomCalculateBar extends StatelessWidget {
       child: SizedBox(
         height: 42,
         child: ElevatedButton(
-          onPressed: () {
-            Navigator.of(context).push(
-              MaterialPageRoute<void>(
-                builder: (_) => const ShippingResumePage(),
-              ),
-            );
-          },
+          onPressed: onPressed,
           style: ElevatedButton.styleFrom(
             elevation: 0,
             backgroundColor: _FillInPackageDetailsPageState._primaryBlue,

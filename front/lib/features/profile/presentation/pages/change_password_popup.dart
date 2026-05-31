@@ -15,6 +15,7 @@ class ChangePasswordPopup extends StatefulWidget {
 }
 
 class _ChangePasswordPopupState extends State<ChangePasswordPopup> {
+  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   final TextEditingController _currentPasswordController =
       TextEditingController();
   final TextEditingController _newPasswordController = TextEditingController();
@@ -23,6 +24,7 @@ class _ChangePasswordPopupState extends State<ChangePasswordPopup> {
   HttpService? _httpService;
   String? _errorMessage;
   bool _isLoading = false;
+  AutovalidateMode _autovalidateMode = AutovalidateMode.disabled;
 
   ProfileController get _profileController {
     final HttpService httpService = _httpService ??= HttpService();
@@ -41,20 +43,20 @@ class _ChangePasswordPopupState extends State<ChangePasswordPopup> {
   }
 
   Future<void> _save() async {
+    FocusScope.of(context).unfocus();
+
+    final bool isFormValid = _formKey.currentState?.validate() ?? false;
+    if (!isFormValid) {
+      setState(() {
+        _autovalidateMode = AutovalidateMode.onUserInteraction;
+        _errorMessage = null;
+      });
+      return;
+    }
+
     final String currentPassword = _currentPasswordController.text.trim();
     final String newPassword = _newPasswordController.text.trim();
     final String confirmPassword = _confirmPasswordController.text.trim();
-
-    final String? validationMessage = _validatePasswords(
-      currentPassword: currentPassword,
-      newPassword: newPassword,
-      confirmPassword: confirmPassword,
-    );
-
-    if (validationMessage != null) {
-      setState(() => _errorMessage = validationMessage);
-      return;
-    }
 
     final int? userId = MyselfService().currentUserId;
     if (userId == null) {
@@ -130,19 +132,40 @@ class _ChangePasswordPopupState extends State<ChangePasswordPopup> {
               ),
             ),
             const SizedBox(height: 14),
-            _PasswordPopupField(
-              controller: _currentPasswordController,
-              hintText: 'Senha atual.',
-            ),
-            const SizedBox(height: 14),
-            _PasswordPopupField(
-              controller: _newPasswordController,
-              hintText: 'Digite a nova senha.',
-            ),
-            const SizedBox(height: 10),
-            _PasswordPopupField(
-              controller: _confirmPasswordController,
-              hintText: 'Confirme a nova senha.',
+            Form(
+              key: _formKey,
+              autovalidateMode: _autovalidateMode,
+              child: Column(
+                children: [
+                  _PasswordPopupField(
+                    controller: _currentPasswordController,
+                    hintText: 'Senha atual.',
+                    textInputAction: TextInputAction.next,
+                    validator: _validateCurrentPassword,
+                  ),
+                  const SizedBox(height: 14),
+                  _PasswordPopupField(
+                    controller: _newPasswordController,
+                    hintText: 'Digite a nova senha.',
+                    textInputAction: TextInputAction.next,
+                    validator: (value) => _validateNewPassword(
+                      value,
+                      _currentPasswordController.text,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  _PasswordPopupField(
+                    controller: _confirmPasswordController,
+                    hintText: 'Confirme a nova senha.',
+                    textInputAction: TextInputAction.done,
+                    onFieldSubmitted: (_) => _save(),
+                    validator: (value) => _validatePasswordConfirmation(
+                      value,
+                      _newPasswordController.text,
+                    ),
+                  ),
+                ],
+              ),
             ),
             if (_errorMessage != null) ...[
               const SizedBox(height: 14),
@@ -188,29 +211,40 @@ class _ChangePasswordPopupState extends State<ChangePasswordPopup> {
   }
 }
 
-String? _validatePasswords({
-  required String currentPassword,
-  required String newPassword,
-  required String confirmPassword,
-}) {
-  if (currentPassword.isEmpty ||
-      newPassword.isEmpty ||
-      confirmPassword.isEmpty) {
-    return 'Preencha todos os campos.';
+String? _validateCurrentPassword(String? value) {
+  final String password = (value ?? '').trim();
+  if (password.isEmpty) {
+    return 'Informe sua senha atual.';
+  }
+  if (password.length < 8) {
+    return 'A senha deve ter pelo menos 8 caracteres.';
   }
 
-  if (currentPassword.length < 8 ||
-      newPassword.length < 8 ||
-      confirmPassword.length < 8) {
-    return 'As senhas devem ter pelo menos 8 caracteres.';
-  }
+  return null;
+}
 
-  if (newPassword != confirmPassword) {
-    return 'A nova senha e a confirmação não conferem.';
+String? _validateNewPassword(String? value, String currentPassword) {
+  final String password = (value ?? '').trim();
+  if (password.isEmpty) {
+    return 'Informe a nova senha.';
   }
-
-  if (currentPassword == newPassword) {
+  if (password.length < 8) {
+    return 'A senha deve ter pelo menos 8 caracteres.';
+  }
+  if (password == currentPassword.trim()) {
     return 'A nova senha deve ser diferente da senha atual.';
+  }
+
+  return null;
+}
+
+String? _validatePasswordConfirmation(String? value, String newPassword) {
+  final String confirmation = (value ?? '').trim();
+  if (confirmation.isEmpty) {
+    return 'Confirme a nova senha.';
+  }
+  if (confirmation != newPassword.trim()) {
+    return 'A nova senha e a confirmação não conferem.';
   }
 
   return null;
@@ -230,17 +264,26 @@ String _readErrorMessage(Object error) {
 class _PasswordPopupField extends StatelessWidget {
   final TextEditingController controller;
   final String hintText;
+  final String? Function(String?)? validator;
+  final TextInputAction? textInputAction;
+  final ValueChanged<String>? onFieldSubmitted;
 
   const _PasswordPopupField({
     required this.controller,
     required this.hintText,
+    this.validator,
+    this.textInputAction,
+    this.onFieldSubmitted,
   });
 
   @override
   Widget build(BuildContext context) {
-    return TextField(
+    return TextFormField(
       controller: controller,
       obscureText: true,
+      validator: validator,
+      textInputAction: textInputAction,
+      onFieldSubmitted: onFieldSubmitted,
       style: const TextStyle(
         color: FretColors.neutral900,
         fontSize: 15,

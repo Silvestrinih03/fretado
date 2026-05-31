@@ -18,9 +18,11 @@ class LoginPage extends StatefulWidget {
 }
 
 class _LoginPageState extends State<LoginPage> {
+  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   late final AuthController _authController;
+  AutovalidateMode _autovalidateMode = AutovalidateMode.disabled;
   bool _obscurePassword = true;
 
   @override
@@ -64,6 +66,14 @@ class _LoginPageState extends State<LoginPage> {
 
   Future<void> _login() async {
     FocusScope.of(context).unfocus();
+
+    final bool isFormValid = _formKey.currentState?.validate() ?? false;
+    if (!isFormValid) {
+      setState(() {
+        _autovalidateMode = AutovalidateMode.onUserInteraction;
+      });
+      return;
+    }
 
     final bool isSuccess = await _authController.login(
       email: _emailController.text,
@@ -127,9 +137,12 @@ class _LoginPageState extends State<LoginPage> {
                         child: ConstrainedBox(
                           constraints: const BoxConstraints(maxWidth: 480),
                           child: FretAuthCard(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
-                              children: [
+                            child: Form(
+                              key: _formKey,
+                              autovalidateMode: _autovalidateMode,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
                                 Row(
                                   crossAxisAlignment: CrossAxisAlignment.center,
                                   children: [
@@ -160,6 +173,8 @@ class _LoginPageState extends State<LoginPage> {
                                   hintText: 'nome@email.com',
                                   keyboardType: TextInputType.emailAddress,
                                   prefixIcon: Icons.mail_outline_rounded,
+                                  textInputAction: TextInputAction.next,
+                                  validator: _validateEmail,
                                 ),
                                 const SizedBox(height: 16),
                                 const FretAuthFieldLabel(text: 'Senha'),
@@ -169,6 +184,9 @@ class _LoginPageState extends State<LoginPage> {
                                   hintText: '•••••••••',
                                   obscureText: _obscurePassword,
                                   prefixIcon: Icons.lock_outline_rounded,
+                                  textInputAction: TextInputAction.done,
+                                  onFieldSubmitted: (_) => _login(),
+                                  validator: _validatePassword,
                                   suffixIcon: IconButton(
                                     onPressed: _togglePasswordVisibility,
                                     icon: Icon(
@@ -205,7 +223,8 @@ class _LoginPageState extends State<LoginPage> {
                                     minHeight: 3,
                                   ),
                                 ],
-                              ],
+                                ],
+                              ),
                             ),
                           ),
                         ),
@@ -220,4 +239,29 @@ class _LoginPageState extends State<LoginPage> {
       },
     );
   }
+}
+
+String? _validateEmail(String? value) {
+  final String trimmedValue = (value ?? '').trim();
+  if (trimmedValue.isEmpty) {
+    return 'Informe seu email.';
+  }
+
+  final bool validEmail = RegExp(
+    r'^[^@\s]+@[^@\s]+\.[^@\s]+$',
+  ).hasMatch(trimmedValue);
+
+  if (!validEmail) {
+    return 'Informe um email válido.';
+  }
+
+  return null;
+}
+
+String? _validatePassword(String? value) {
+  if ((value ?? '').isEmpty) {
+    return 'Informe sua senha.';
+  }
+
+  return null;
 }

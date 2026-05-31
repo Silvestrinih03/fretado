@@ -22,6 +22,7 @@ class MyDriversLicensePage extends StatefulWidget {
 }
 
 class _MyDriversLicensePageState extends State<MyDriversLicensePage> {
+  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   final TextEditingController _registrationController =
       TextEditingController();
   final TextEditingController _issueDateController = TextEditingController();
@@ -41,6 +42,7 @@ class _MyDriversLicensePageState extends State<MyDriversLicensePage> {
   bool _isEditing = true;
   bool _showUpdateButtonLabel = false;
   bool _expiredDialogShown = false;
+  AutovalidateMode _autovalidateMode = AutovalidateMode.disabled;
 
   @override
   void initState() {
@@ -201,6 +203,23 @@ class _MyDriversLicensePageState extends State<MyDriversLicensePage> {
   }
 
   Future<void> _saveDriversLicense() async {
+    FocusScope.of(context).unfocus();
+
+    final bool isFormValid = _formKey.currentState?.validate() ?? false;
+    if (!isFormValid) {
+      setState(() {
+        _autovalidateMode = AutovalidateMode.onUserInteraction;
+      });
+      return;
+    }
+
+    if (_store.selectedCategoryId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Selecione a categoria da CNH.')),
+      );
+      return;
+    }
+
     final wasUpdating = _store.hasDriverDocument;
     final success = await _store.saveDriverDocument(
       licenseNumber: _registrationController.text,
@@ -565,19 +584,23 @@ class _MyDriversLicensePageState extends State<MyDriversLicensePage> {
                         ),
                       ),
                       const SizedBox(height: 12),
-                      _DriversLicenseFormCard(
-                        isReadOnly: !_isEditing || isLoadingInitialData,
-                        isLoadingCategories: _store.isLoadingCategories,
-                        categoriesError: _store.categoriesError,
-                        categories: _store.categories,
-                        selectedCategoryId: _store.selectedCategoryId,
-                        registrationController: _registrationController,
-                        issueDateController: _issueDateController,
-                        expirationDateController: _expirationDateController,
-                        onCategoryChanged: _store.selectCategory,
-                        onReloadCategories: _store.loadCategories,
-                        onIssueDateTap: _selectIssueDate,
-                        onExpirationDateTap: _selectExpirationDate,
+                      Form(
+                        key: _formKey,
+                        autovalidateMode: _autovalidateMode,
+                        child: _DriversLicenseFormCard(
+                          isReadOnly: !_isEditing || isLoadingInitialData,
+                          isLoadingCategories: _store.isLoadingCategories,
+                          categoriesError: _store.categoriesError,
+                          categories: _store.categories,
+                          selectedCategoryId: _store.selectedCategoryId,
+                          registrationController: _registrationController,
+                          issueDateController: _issueDateController,
+                          expirationDateController: _expirationDateController,
+                          onCategoryChanged: _store.selectCategory,
+                          onReloadCategories: _store.loadCategories,
+                          onIssueDateTap: _selectIssueDate,
+                          onExpirationDateTap: _selectExpirationDate,
+                        ),
                       ),
                     ],
                   ),
@@ -710,6 +733,7 @@ class _DriversLicenseFormCard extends StatelessWidget {
             controller: registrationController,
             hintText: 'Ex: 00000000000',
             keyboardType: TextInputType.number,
+            validator: _validateLicenseNumber,
             inputFormatters: [
               FilteringTextInputFormatter.digitsOnly,
               LengthLimitingTextInputFormatter(11),
@@ -722,6 +746,8 @@ class _DriversLicenseFormCard extends StatelessWidget {
             isReadOnly: isReadOnly,
             controller: issueDateController,
             onTap: onIssueDateTap,
+            validator: (value) =>
+                _validateRequiredDate(value, 'data de emissão'),
           ),
           const SizedBox(height: 12),
           const _DriversLicenseInputLabel('Data de validade'),
@@ -730,6 +756,8 @@ class _DriversLicenseFormCard extends StatelessWidget {
             isReadOnly: isReadOnly,
             controller: expirationDateController,
             onTap: onExpirationDateTap,
+            validator: (value) =>
+                _validateRequiredDate(value, 'data de validade'),
           ),
         ],
       ),
@@ -890,6 +918,7 @@ class _DriversLicenseTextField extends StatelessWidget {
   final String hintText;
   final TextInputType? keyboardType;
   final List<TextInputFormatter>? inputFormatters;
+  final String? Function(String?)? validator;
 
   const _DriversLicenseTextField({
     required this.isReadOnly,
@@ -897,16 +926,18 @@ class _DriversLicenseTextField extends StatelessWidget {
     required this.hintText,
     this.keyboardType,
     this.inputFormatters,
+    this.validator,
   });
 
   @override
   Widget build(BuildContext context) {
-    return TextField(
+    return TextFormField(
       controller: controller,
       readOnly: isReadOnly,
       enableInteractiveSelection: !isReadOnly,
       keyboardType: keyboardType,
       inputFormatters: inputFormatters,
+      validator: isReadOnly ? null : validator,
       style: const TextStyle(
         color: FretColors.black,
         fontSize: 16,
@@ -938,20 +969,23 @@ class _DriversLicenseDateField extends StatelessWidget {
   final bool isReadOnly;
   final TextEditingController controller;
   final VoidCallback onTap;
+  final String? Function(String?)? validator;
 
   const _DriversLicenseDateField({
     required this.isReadOnly,
     required this.controller,
     required this.onTap,
+    this.validator,
   });
 
   @override
   Widget build(BuildContext context) {
-    return TextField(
+    return TextFormField(
       controller: controller,
       readOnly: true,
       enableInteractiveSelection: !isReadOnly,
       onTap: isReadOnly ? null : onTap,
+      validator: isReadOnly ? null : validator,
       style: const TextStyle(
         color: FretColors.black,
         fontSize: 16,
@@ -989,6 +1023,26 @@ class _DriversLicenseDateField extends StatelessWidget {
       ),
     );
   }
+}
+
+String? _validateLicenseNumber(String? value) {
+  final String digits = (value ?? '').replaceAll(RegExp(r'\D'), '');
+  if (digits.isEmpty) {
+    return 'Informe o número de registro.';
+  }
+  if (digits.length != 11) {
+    return 'Informe os 11 dígitos do registro.';
+  }
+
+  return null;
+}
+
+String? _validateRequiredDate(String? value, String fieldName) {
+  if ((value ?? '').trim().isEmpty) {
+    return 'Informe a $fieldName.';
+  }
+
+  return null;
 }
 
 class _SaveDriversLicenseFooter extends StatelessWidget {

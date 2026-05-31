@@ -124,6 +124,10 @@ class FretAuthTextField extends StatelessWidget {
   final IconData prefixIcon;
   final Widget? suffixIcon;
   final bool obscureText;
+  final String? Function(String?)? validator;
+  final AutovalidateMode? autovalidateMode;
+  final TextInputAction? textInputAction;
+  final ValueChanged<String>? onFieldSubmitted;
 
   const FretAuthTextField({
     super.key,
@@ -133,14 +137,22 @@ class FretAuthTextField extends StatelessWidget {
     this.keyboardType,
     this.suffixIcon,
     this.obscureText = false,
+    this.validator,
+    this.autovalidateMode,
+    this.textInputAction,
+    this.onFieldSubmitted,
   });
 
   @override
   Widget build(BuildContext context) {
-    return TextField(
+    return TextFormField(
       controller: controller,
       keyboardType: keyboardType,
       obscureText: obscureText,
+      validator: validator,
+      autovalidateMode: autovalidateMode,
+      textInputAction: textInputAction,
+      onFieldSubmitted: onFieldSubmitted,
       style: const TextStyle(
         fontSize: 14,
         height: 1.2,
@@ -176,6 +188,20 @@ class FretAuthTextField extends StatelessWidget {
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide.none,
+        ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(
+            color: FretColors.destructive500,
+            width: 1.2,
+          ),
+        ),
+        focusedErrorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(
+            color: FretColors.destructive600,
+            width: 1.4,
+          ),
         ),
       ),
     );

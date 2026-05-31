@@ -1,5 +1,4 @@
 import 'dart:convert';
-
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
@@ -8,7 +7,7 @@ class HttpService {
   final http.Client _client;
 
   HttpService({String? baseUrl, http.Client? client})
-    : baseUrl = baseUrl ?? _resolveBaseUrl(),
+    : baseUrl = _normalizeBaseUrl(baseUrl ?? _resolveBaseUrl()),
       _client = client ?? http.Client();
 
   Future<Map<String, dynamic>> post(
@@ -124,6 +123,13 @@ class HttpService {
     return '/$path';
   }
 
+  static String _normalizeBaseUrl(String value) {
+    if (value.endsWith('/')) {
+      return value.substring(0, value.length - 1);
+    }
+    return value;
+  }
+
   static Map<String, dynamic> _parseResponseBody(String body) {
     if (body.trim().isEmpty) {
       return <String, dynamic>{};
@@ -157,7 +163,7 @@ class HttpService {
     }
 
     if (kIsWeb) {
-      return 'http://localhost:8000';
+      return _resolveWebBaseUrl();
     }
 
     if (defaultTargetPlatform == TargetPlatform.android) {
@@ -165,6 +171,18 @@ class HttpService {
     }
 
     return 'http://localhost:8000';
+  }
+
+  static String _resolveWebBaseUrl() {
+    final Uri pageUri = Uri.base;
+    final String host = pageUri.host;
+
+    if (host.isEmpty || host == 'localhost' || host == '127.0.0.1') {
+      return 'http://localhost:8000';
+    }
+
+    final String scheme = pageUri.scheme == 'https' ? 'https' : 'http';
+    return '$scheme://$host:8000';
   }
 
   void dispose() {

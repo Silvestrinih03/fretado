@@ -12,7 +12,7 @@ class HomeShell extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF2F3F7),
-      drawer: const HomeDrawer(),
+      endDrawer: const HomeDrawer(),
       body: SafeArea(
         child: Column(
           children: [
@@ -38,19 +38,7 @@ class _HomeHeader extends StatelessWidget {
       ),
       child: Row(
         children: [
-          const SizedBox(width: 8),
-          Builder(
-            builder: (context) {
-              return IconButton(
-                onPressed: () => Scaffold.of(context).openDrawer(),
-                icon: const Icon(
-                  Icons.menu_rounded,
-                  color: FretColors.loginFooterLink,
-                ),
-              );
-            },
-          ),
-          const SizedBox(width: 10),
+          const SizedBox(width: 24),
           const Text(
             'FreteJá',
             style: TextStyle(
@@ -61,14 +49,24 @@ class _HomeHeader extends StatelessWidget {
             ),
           ),
           const Spacer(),
-          Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              color: FretColors.primary100,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: const Icon(Icons.person, color: FretColors.loginFooterLink),
+          Builder(
+            builder: (context) {
+              return IconButton(
+                onPressed: () => Scaffold.of(context).openEndDrawer(),
+                icon: Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: FretColors.primary100,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(
+                    Icons.person,
+                    color: FretColors.loginFooterLink,
+                  ),
+                ),
+              );
+            },
           ),
           const SizedBox(width: 16),
         ],

@@ -57,7 +57,10 @@ class _HomePageState extends State<HomePage> {
               firstName: firstName,
               userId: widget.userId ?? _myselfService.currentUserId ?? 5,
             ),
-          HomeProfileEnum.client => ClientHomeContent(userName: firstName),
+          HomeProfileEnum.client => ClientHomeContent(
+              userName: firstName,
+              userId: widget.userId ?? _myselfService.currentUserId ?? 5,
+            ),
         };
 
         return HomeShell(content: content);

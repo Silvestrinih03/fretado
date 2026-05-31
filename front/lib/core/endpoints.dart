@@ -17,6 +17,12 @@ abstract class Endpoints {
   static String updateVehicleById(int vehicleId) => '$vehicles/$vehicleId';
   static String deleteVehicleById(int vehicleId) => '$vehicles/$vehicleId';
 
+  static const String rides = '/rides';
+  static String rideGeocode(String query) =>
+      '$rides/geocode?q=${Uri.encodeQueryComponent(query.trim())}';
+  static const String rideQuote = '$rides/quote';
+  static const String createRide = rides;
+
   static const String vehicleTypes = '/vehicle-types';
   static String vehicleTypeById(int vehicleTypeId) =>
       '$vehicleTypes/$vehicleTypeId';

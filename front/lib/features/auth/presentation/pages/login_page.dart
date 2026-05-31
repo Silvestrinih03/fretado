@@ -103,12 +103,17 @@ class _LoginPageState extends State<LoginPage> {
       animation: _authController,
       builder: (context, _) {
         return Scaffold(
-          backgroundColor: FretColors.loginBackground,
+          backgroundColor: FretColors.white,
           body: SafeArea(
             child: AbsorbPointer(
               absorbing: _authController.isLoading,
               child: LayoutBuilder(
                 builder: (context, constraints) {
+                  final bool isCompact = constraints.maxWidth < 520;
+                  final double logoHeight =
+                      constraints.maxWidth < 390 ? 78 : isCompact ? 88 : 132;
+                  final double headerGap = isCompact ? 12 : 18;
+
                   return SingleChildScrollView(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 24,
@@ -125,14 +130,29 @@ class _LoginPageState extends State<LoginPage> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.stretch,
                               children: [
-                                const FretAuthBrandHeader(),
-                                const SizedBox(height: 44),
-                                const FretAuthHeading(text: 'Bem-vindo'),
-                                const SizedBox(height: 12),
-                                const FretAuthSubtitle(
-                                  text: 'Acesse sua conta para continuar.',
+                                Row(
+                                  crossAxisAlignment: CrossAxisAlignment.center,
+                                  children: [
+                                    FretAuthBrandHeader(height: logoHeight),
+                                    SizedBox(width: headerGap),
+                                    const Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          FretAuthHeading(text: 'Bem-vindo'),
+                                          SizedBox(height: 6),
+                                          FretAuthSubtitle(
+                                            text:
+                                                'Acesse ou cadastre-se para continuar.',
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                                const SizedBox(height: 44),
+                                const SizedBox(height: 40),
                                 const FretAuthFieldLabel(text: 'Email'),
                                 const SizedBox(height: 14),
                                 FretAuthTextField(

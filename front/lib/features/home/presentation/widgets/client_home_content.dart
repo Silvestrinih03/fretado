@@ -1,11 +1,17 @@
 import 'package:flutter/material.dart';
 
 import '../../../../app/design_system/design_system.dart';
+import '../../../rides/presentation/pages/request_ride_page.dart';
 
 class ClientHomeContent extends StatelessWidget {
   final String userName;
+  final int userId;
 
-  const ClientHomeContent({super.key, required this.userName});
+  const ClientHomeContent({
+    super.key,
+    required this.userName,
+    required this.userId,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -38,7 +44,7 @@ class ClientHomeContent extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 34),
-              const _FreightRequestCard(),
+              _FreightRequestCard(userId: userId),
               const SizedBox(height: 36),
               const _FreightsSectionHeader(),
             ],
@@ -65,7 +71,9 @@ class ClientHomeContent extends StatelessWidget {
 }
 
 class _FreightRequestCard extends StatelessWidget {
-  const _FreightRequestCard();
+  final int userId;
+
+  const _FreightRequestCard({required this.userId});
 
   @override
   Widget build(BuildContext context) {
@@ -109,7 +117,13 @@ class _FreightRequestCard extends StatelessWidget {
             width: double.infinity,
             height: 76,
             child: ElevatedButton(
-              onPressed: () {},
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => RequestRidePage(userId: userId),
+                  ),
+                );
+              },
               style: ElevatedButton.styleFrom(
                 elevation: 0,
                 backgroundColor: const Color(0xFFFFE16D),

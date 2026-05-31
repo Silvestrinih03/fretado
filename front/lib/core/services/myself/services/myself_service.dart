@@ -29,6 +29,10 @@ class MyselfService {
 
   bool get hasCurrentUserId => _currentUserId != null;
 
+  void logout() {
+    _currentUserId = null;
+  }
+
   Future<MyselfUserModel> getMyself(int userId) {
     return _repository.getUserById(userId);
   }

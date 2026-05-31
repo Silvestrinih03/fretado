@@ -65,7 +65,13 @@ class HomeDrawer extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.all(16),
               child: OutlinedButton.icon(
-                onPressed: () => Navigator.of(context).pop(),
+                onPressed: () {
+                  MyselfService().logout();
+                  Navigator.of(context).pushNamedAndRemoveUntil(
+                    '/',
+                    (route) => false,
+                  );
+                },
                 icon: const Icon(Icons.logout),
                 label: const Text('Sair'),
               ),

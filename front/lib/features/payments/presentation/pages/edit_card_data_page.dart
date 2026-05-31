@@ -2,9 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../../../app/design_system/design_system.dart';
+import '../../../../core/services/http_service.dart';
+import '../../../../core/services/myself/services/myself_service.dart';
+import '../../data/datasources/user_card_datasource.dart';
+import '../../data/repositories/user_card_repository_impl.dart';
+import '../stores/payment_cards_store.dart';
 
 class EditCardDataPage extends StatefulWidget {
-  const EditCardDataPage({super.key});
+  final int? userId;
+
+  const EditCardDataPage({super.key, this.userId});
 
   @override
   State<EditCardDataPage> createState() => _EditCardDataPageState();
@@ -22,15 +29,32 @@ class _EditCardDataPageState extends State<EditCardDataPage> {
   final TextEditingController _expirationController = TextEditingController();
   final TextEditingController _cvvController = TextEditingController();
 
+  late final HttpService _httpService;
+  late final PaymentCardsStore _store;
+  bool _isDefault = true;
+
   @override
   void initState() {
     super.initState();
+    final myselfService = MyselfService();
+    if (widget.userId != null) {
+      myselfService.currentUserId = widget.userId;
+    }
+
+    _httpService = HttpService();
+    _store = PaymentCardsStore(
+      UserCardRepositoryImpl(UserCardDatasource(_httpService)),
+      myselfService,
+      fallbackUserId: widget.userId,
+    );
     _cardNameController.addListener(_refreshPreview);
     _expirationController.addListener(_refreshPreview);
   }
 
   @override
   void dispose() {
+    _store.dispose();
+    _httpService.dispose();
     _cardNameController.removeListener(_refreshPreview);
     _expirationController.removeListener(_refreshPreview);
     _cardNumberController.dispose();
@@ -42,77 +66,120 @@ class _EditCardDataPageState extends State<EditCardDataPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: _screenBackground,
-      body: SafeArea(
-        child: Column(
-          children: [
-            const _EditCardHeader(),
-            Expanded(
-              child: ListView(
-                padding: const EdgeInsets.fromLTRB(19, 30, 19, 22),
-                children: [
-                  _CreditCardPreview(
-                    holderName: _cardNameController.text,
-                    expiration: _expirationController.text,
-                  ),
-                  const SizedBox(height: 34),
-                  _CardInputField(
-                    label: 'Número do cartão',
-                    hintText: '0000 0000 0000 0000',
-                    controller: _cardNumberController,
-                    keyboardType: TextInputType.number,
-                    suffixIcon: Icons.credit_card_rounded,
-                    inputFormatters: [
-                      FilteringTextInputFormatter.digitsOnly,
-                      LengthLimitingTextInputFormatter(16),
-                    ],
-                  ),
-                  const SizedBox(height: 24),
-                  _CardInputField(
-                    label: 'Nome no cartão',
-                    hintText: 'COMO IMPRESSO NO CARTÃO',
-                    controller: _cardNameController,
-                    textCapitalization: TextCapitalization.characters,
-                  ),
-                  const SizedBox(height: 24),
-                  Row(
+    return AnimatedBuilder(
+      animation: _store,
+      builder: (context, _) {
+        return Scaffold(
+          backgroundColor: _screenBackground,
+          body: SafeArea(
+            child: Column(
+              children: [
+                const _EditCardHeader(),
+                Expanded(
+                  child: ListView(
+                    padding: const EdgeInsets.fromLTRB(19, 30, 19, 22),
                     children: [
-                      Expanded(
-                        child: _CardInputField(
-                          label: 'Validade (MM/AA)',
-                          hintText: 'MM/AA',
-                          controller: _expirationController,
-                          keyboardType: TextInputType.number,
-                          inputFormatters: [
-                            FilteringTextInputFormatter.digitsOnly,
-                            LengthLimitingTextInputFormatter(4),
-                          ],
-                        ),
+                      _CreditCardPreview(
+                        holderName: _cardNameController.text,
+                        expiration: _expirationController.text,
                       ),
-                      const SizedBox(width: 15),
-                      Expanded(
-                        child: _CardInputField(
-                          label: 'CVV',
-                          hintText: '000',
-                          controller: _cvvController,
-                          keyboardType: TextInputType.number,
-                          suffixIcon: Icons.help_outline_rounded,
-                          inputFormatters: [
-                            FilteringTextInputFormatter.digitsOnly,
-                            LengthLimitingTextInputFormatter(4),
-                          ],
-                        ),
+                      const SizedBox(height: 34),
+                      _CardInputField(
+                        label: 'Numero do cartao',
+                        hintText: '0000 0000 0000 0000',
+                        controller: _cardNumberController,
+                        keyboardType: TextInputType.number,
+                        suffixIcon: Icons.credit_card_rounded,
+                        inputFormatters: [
+                          FilteringTextInputFormatter.digitsOnly,
+                          LengthLimitingTextInputFormatter(19),
+                        ],
+                      ),
+                      const SizedBox(height: 24),
+                      _CardInputField(
+                        label: 'Nome no cartao',
+                        hintText: 'COMO IMPRESSO NO CARTAO',
+                        controller: _cardNameController,
+                        textCapitalization: TextCapitalization.characters,
+                      ),
+                      const SizedBox(height: 24),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _CardInputField(
+                              label: 'Validade (MM/AA)',
+                              hintText: 'MM/AA',
+                              controller: _expirationController,
+                              keyboardType: TextInputType.number,
+                              inputFormatters: [
+                                FilteringTextInputFormatter.digitsOnly,
+                                LengthLimitingTextInputFormatter(4),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 15),
+                          Expanded(
+                            child: _CardInputField(
+                              label: 'CVV',
+                              hintText: '000',
+                              controller: _cvvController,
+                              keyboardType: TextInputType.number,
+                              suffixIcon: Icons.help_outline_rounded,
+                              inputFormatters: [
+                                FilteringTextInputFormatter.digitsOnly,
+                                LengthLimitingTextInputFormatter(4),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 21),
+                      _DefaultCardSwitch(
+                        value: _isDefault,
+                        onChanged: (value) {
+                          setState(() {
+                            _isDefault = value;
+                          });
+                        },
                       ),
                     ],
                   ),
-                  const SizedBox(height: 21),
-                ],
-              ),
+                ),
+                _SaveCardBar(
+                  isSaving: _store.isSaving,
+                  onPressed: _saveCard,
+                ),
+              ],
             ),
-            const _SaveCardBar(),
-          ],
-        ),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _saveCard() async {
+    FocusScope.of(context).unfocus();
+
+    final didSave = await _store.createCard(
+      cardholderName: _cardNameController.text,
+      cardNumber: _cardNumberController.text,
+      expiration: _expirationController.text,
+      cvv: _cvvController.text,
+      isDefault: _isDefault,
+    );
+
+    if (!mounted) {
+      return;
+    }
+
+    if (didSave) {
+      Navigator.of(context).pop(true);
+      return;
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(_store.saveErrorMessage ?? 'Nao foi possivel salvar.'),
       ),
     );
   }
@@ -149,7 +216,7 @@ class _EditCardHeader extends StatelessWidget {
             ),
           ),
           const Text(
-            'Dados do cartão',
+            'Dados do cartao',
             style: TextStyle(
               color: _EditCardDataPageState._primaryBlue,
               fontSize: 14,
@@ -173,10 +240,10 @@ class _CreditCardPreview extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final String displayName = holderName.trim().isEmpty
+    final displayName = holderName.trim().isEmpty
         ? 'SEU NOME AQUI'
         : holderName.trim().toUpperCase();
-    final String displayExpiration = expiration.trim().isEmpty
+    final displayExpiration = expiration.trim().isEmpty
         ? 'MM/AA'
         : _formatExpiration(expiration.trim());
 
@@ -270,7 +337,7 @@ class _CreditCardPreview extends StatelessWidget {
   }
 
   String _formatExpiration(String value) {
-    final String digits = value.replaceAll(RegExp(r'\D'), '');
+    final digits = value.replaceAll(RegExp(r'\D'), '');
     if (digits.length <= 2) {
       return digits;
     }
@@ -399,8 +466,55 @@ class _CardInputField extends StatelessWidget {
   }
 }
 
+class _DefaultCardSwitch extends StatelessWidget {
+  final bool value;
+  final ValueChanged<bool> onChanged;
+
+  const _DefaultCardSwitch({
+    required this.value,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      decoration: BoxDecoration(
+        color: FretColors.white,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: const Color(0xFFE2E3E8)),
+      ),
+      child: Row(
+        children: [
+          const Expanded(
+            child: Text(
+              'Definir como cartao padrao',
+              style: TextStyle(
+                color: _EditCardDataPageState._mutedText,
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+          Switch(
+            value: value,
+            onChanged: onChanged,
+            activeColor: _EditCardDataPageState._primaryBlue,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _SaveCardBar extends StatelessWidget {
-  const _SaveCardBar();
+  final bool isSaving;
+  final VoidCallback onPressed;
+
+  const _SaveCardBar({
+    required this.isSaving,
+    required this.onPressed,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -414,31 +528,41 @@ class _SaveCardBar extends StatelessWidget {
       child: SizedBox(
         height: 53,
         child: ElevatedButton(
-          onPressed: () => Navigator.of(context).maybePop(),
+          onPressed: isSaving ? null : onPressed,
           style: ElevatedButton.styleFrom(
             elevation: 10,
             shadowColor: const Color(0x33080A73),
             backgroundColor: _EditCardDataPageState._primaryBlue,
             foregroundColor: FretColors.white,
+            disabledBackgroundColor: const Color(0xFFB7B9D5),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(8),
             ),
           ),
-          child: const Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                'Salvar',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w800,
+          child: isSaving
+              ? const SizedBox(
+                  width: 22,
+                  height: 22,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2.4,
+                    valueColor: AlwaysStoppedAnimation<Color>(FretColors.white),
+                  ),
+                )
+              : const Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'Salvar',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    SizedBox(width: 8),
+                    Icon(Icons.check_circle_outline_rounded, size: 21),
+                  ],
                 ),
-              ),
-              SizedBox(width: 8),
-              Icon(Icons.check_circle_outline_rounded, size: 21),
-            ],
-          ),
         ),
       ),
     );

@@ -1,10 +1,18 @@
 import 'package:flutter/material.dart';
 
 import '../../../../app/design_system/design_system.dart';
+import '../../../../core/services/http_service.dart';
+import '../../../../core/services/myself/services/myself_service.dart';
+import '../../data/datasources/user_card_datasource.dart';
+import '../../data/models/user_card_model.dart';
+import '../../data/repositories/user_card_repository_impl.dart';
+import '../stores/payment_cards_store.dart';
 import 'edit_card_data_page.dart';
 
-class MyPaymentMethodsPage extends StatelessWidget {
-  const MyPaymentMethodsPage({super.key});
+class MyPaymentMethodsPage extends StatefulWidget {
+  final int? userId;
+
+  const MyPaymentMethodsPage({super.key, this.userId});
 
   static const Color _primaryBlue = Color(0xFF080A73);
   static const Color _screenBackground = Color(0xFFF7F8FA);
@@ -12,49 +20,140 @@ class MyPaymentMethodsPage extends StatelessWidget {
   static const Color _cardBorder = Color(0xFFC8C9D8);
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: _screenBackground,
-      body: SafeArea(
-        child: Column(
-          children: [
-            const _PaymentMethodsHeader(),
-            Expanded(
-              child: ListView(
-                padding: const EdgeInsets.fromLTRB(14, 34, 14, 24),
-                children: const [
-                  Text(
-                    'Cartões cadastrados',
-                    style: TextStyle(
-                      color: FretColors.neutral900,
-                      fontSize: 20,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                  SizedBox(height: 10),
-                  Text(
-                    'Gerencie seus métodos de pagamento para\nsolicitações rápidas.',
-                    style: TextStyle(
-                      color: _mutedText,
-                      fontSize: 13,
-                      height: 1.35,
-                      fontWeight: FontWeight.w400,
-                    ),
-                  ),
-                  SizedBox(height: 28),
-                  _RegisteredCard(),
-                ],
-              ),
-            ),
-          ],
-        ),
+  State<MyPaymentMethodsPage> createState() => _MyPaymentMethodsPageState();
+}
+
+class _MyPaymentMethodsPageState extends State<MyPaymentMethodsPage> {
+  late final HttpService _httpService;
+  late final PaymentCardsStore _store;
+
+  @override
+  void initState() {
+    super.initState();
+    final myselfService = MyselfService();
+    if (widget.userId != null) {
+      myselfService.currentUserId = widget.userId;
+    }
+
+    _httpService = HttpService();
+    _store = PaymentCardsStore(
+      UserCardRepositoryImpl(UserCardDatasource(_httpService)),
+      myselfService,
+      fallbackUserId: widget.userId,
+    );
+    _store.loadCards();
+  }
+
+  @override
+  void dispose() {
+    _store.dispose();
+    _httpService.dispose();
+    super.dispose();
+  }
+
+  Future<void> _openCardForm() async {
+    final bool? didSave = await Navigator.of(context).push<bool>(
+      MaterialPageRoute<bool>(
+        builder: (_) => EditCardDataPage(userId: widget.userId),
       ),
+    );
+
+    if (!mounted || didSave != true) {
+      return;
+    }
+
+    _store.loadCards();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _store,
+      builder: (context, _) {
+        return Scaffold(
+          backgroundColor: MyPaymentMethodsPage._screenBackground,
+          body: SafeArea(
+            child: Column(
+              children: [
+                _PaymentMethodsHeader(onAddTap: _openCardForm),
+                Expanded(
+                  child: ListView(
+                    padding: const EdgeInsets.fromLTRB(14, 34, 14, 24),
+                    children: [
+                      const Text(
+                        'Cartoes cadastrados',
+                        style: TextStyle(
+                          color: FretColors.neutral900,
+                          fontSize: 20,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      const Text(
+                        'Gerencie seus metodos de pagamento para\nsolicitacoes rapidas.',
+                        style: TextStyle(
+                          color: MyPaymentMethodsPage._mutedText,
+                          fontSize: 13,
+                          height: 1.35,
+                          fontWeight: FontWeight.w400,
+                        ),
+                      ),
+                      const SizedBox(height: 28),
+                      if (_store.isLoading)
+                        const Center(
+                          child: Padding(
+                            padding: EdgeInsets.only(top: 18),
+                            child: CircularProgressIndicator(),
+                          ),
+                        )
+                      else if (_store.loadErrorMessage != null)
+                        _PaymentMethodsStateCard(
+                          icon: Icons.error_outline_rounded,
+                          title: 'Nao foi possivel carregar os cartoes',
+                          subtitle: _store.loadErrorMessage!,
+                          actionLabel: 'Tentar novamente',
+                          onTap: _store.loadCards,
+                        )
+                      else if (_store.cards.isEmpty)
+                        _PaymentMethodsStateCard(
+                          icon: Icons.add_card_rounded,
+                          title: 'Nenhum cartao cadastrado',
+                          subtitle: 'Cadastre um cartao para usar nas viagens.',
+                          actionLabel: 'Cadastrar cartao',
+                          onTap: _openCardForm,
+                        )
+                      else ...[
+                        ..._store.cards.asMap().entries.map((entry) {
+                          final index = entry.key;
+                          final card = entry.value;
+
+                          return Column(
+                            children: [
+                              _RegisteredCard(card: card),
+                              if (index != _store.cards.length - 1)
+                                const SizedBox(height: 12),
+                            ],
+                          );
+                        }),
+                        const SizedBox(height: 16),
+                        _AddPaymentMethodButton(onTap: _openCardForm),
+                      ],
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }
 
 class _PaymentMethodsHeader extends StatelessWidget {
-  const _PaymentMethodsHeader();
+  final VoidCallback onAddTap;
+
+  const _PaymentMethodsHeader({required this.onAddTap});
 
   @override
   Widget build(BuildContext context) {
@@ -77,7 +176,7 @@ class _PaymentMethodsHeader extends StatelessWidget {
           const SizedBox(width: 8),
           const Expanded(
             child: Text(
-              'Métodos de pagamento',
+              'Metodos de pagamento',
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
@@ -85,6 +184,16 @@ class _PaymentMethodsHeader extends StatelessWidget {
                 fontSize: 14,
                 fontWeight: FontWeight.w800,
               ),
+            ),
+          ),
+          IconButton(
+            tooltip: 'Cadastrar cartao',
+            onPressed: onAddTap,
+            visualDensity: VisualDensity.compact,
+            icon: const Icon(
+              Icons.add_card_rounded,
+              color: MyPaymentMethodsPage._primaryBlue,
+              size: 24,
             ),
           ),
           const SizedBox(width: 8),
@@ -95,7 +204,9 @@ class _PaymentMethodsHeader extends StatelessWidget {
 }
 
 class _RegisteredCard extends StatelessWidget {
-  const _RegisteredCard();
+  final UserCardModel card;
+
+  const _RegisteredCard({required this.card});
 
   @override
   Widget build(BuildContext context) {
@@ -112,22 +223,22 @@ class _RegisteredCard extends StatelessWidget {
         children: [
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
-            children: const [
-              _CardIconBox(),
-              SizedBox(width: 12),
-              Expanded(child: _CardBrandDetails()),
-              SizedBox(width: 10),
-              _FretadoCardBrand(),
+            children: [
+              const _CardIconBox(),
+              const SizedBox(width: 12),
+              Expanded(child: _CardBrandDetails(card: card)),
+              const SizedBox(width: 10),
+              const _FretadoCardBrand(),
             ],
           ),
           const SizedBox(height: 28),
-          const FittedBox(
+          FittedBox(
             fit: BoxFit.scaleDown,
             alignment: Alignment.centerLeft,
             child: Text(
-              '* * * *  * * * *  * * * *  1234',
+              '* * * *  * * * *  * * * *  ${card.lastFour}',
               maxLines: 1,
-              style: TextStyle(
+              style: const TextStyle(
                 color: FretColors.neutral900,
                 fontSize: 18,
                 fontWeight: FontWeight.w400,
@@ -138,9 +249,9 @@ class _RegisteredCard extends StatelessWidget {
           const SizedBox(height: 29),
           Row(
             crossAxisAlignment: CrossAxisAlignment.end,
-            children: const [
-              Expanded(child: _ExpirationInfo()),
-              _EditPaymentButton(),
+            children: [
+              Expanded(child: _ExpirationInfo(card: card)),
+              if (card.isDefault) const _DefaultBadge(),
             ],
           ),
         ],
@@ -169,27 +280,29 @@ class _CardIconBox extends StatelessWidget {
 }
 
 class _CardBrandDetails extends StatelessWidget {
-  const _CardBrandDetails();
+  final UserCardModel card;
+
+  const _CardBrandDetails({required this.card});
 
   @override
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
-      children: const [
+      children: [
         Text(
-          'Mastercard Platinum',
+          card.brandLabel,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
-          style: TextStyle(
+          style: const TextStyle(
             color: FretColors.neutral900,
             fontSize: 14,
             fontWeight: FontWeight.w800,
           ),
         ),
-        SizedBox(height: 2),
+        const SizedBox(height: 2),
         Text(
-          'Final 1234',
-          style: TextStyle(
+          'Final ${card.lastFour}',
+          style: const TextStyle(
             color: MyPaymentMethodsPage._mutedText,
             fontSize: 11,
             fontWeight: FontWeight.w400,
@@ -208,7 +321,7 @@ class _FretadoCardBrand extends StatelessWidget {
     return const Padding(
       padding: EdgeInsets.only(top: 1),
       child: Text(
-        'FreteJá',
+        'FreteJa',
         style: TextStyle(
           color: MyPaymentMethodsPage._primaryBlue,
           fontSize: 15,
@@ -221,14 +334,16 @@ class _FretadoCardBrand extends StatelessWidget {
 }
 
 class _ExpirationInfo extends StatelessWidget {
-  const _ExpirationInfo();
+  final UserCardModel card;
+
+  const _ExpirationInfo({required this.card});
 
   @override
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
-      children: const [
-        Text(
+      children: [
+        const Text(
           'VENCIMENTO',
           style: TextStyle(
             color: MyPaymentMethodsPage._mutedText,
@@ -236,10 +351,10 @@ class _ExpirationInfo extends StatelessWidget {
             fontWeight: FontWeight.w500,
           ),
         ),
-        SizedBox(height: 5),
+        const SizedBox(height: 5),
         Text(
-          '03/2032',
-          style: TextStyle(
+          card.expirationText,
+          style: const TextStyle(
             color: FretColors.neutral900,
             fontSize: 12,
             fontWeight: FontWeight.w800,
@@ -250,30 +365,131 @@ class _ExpirationInfo extends StatelessWidget {
   }
 }
 
-class _EditPaymentButton extends StatelessWidget {
-  const _EditPaymentButton();
+class _DefaultBadge extends StatelessWidget {
+  const _DefaultBadge();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+      decoration: BoxDecoration(
+        color: const Color(0xFFEFF0FF),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: const Text(
+        'Padrao',
+        style: TextStyle(
+          color: MyPaymentMethodsPage._primaryBlue,
+          fontSize: 11,
+          fontWeight: FontWeight.w800,
+        ),
+      ),
+    );
+  }
+}
+
+class _PaymentMethodsStateCard extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final String actionLabel;
+  final VoidCallback onTap;
+
+  const _PaymentMethodsStateCard({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.actionLabel,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: FretColors.white,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: MyPaymentMethodsPage._cardBorder),
+      ),
+      child: Column(
+        children: [
+          Icon(icon, color: MyPaymentMethodsPage._primaryBlue, size: 34),
+          const SizedBox(height: 10),
+          Text(
+            title,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              color: FretColors.neutral900,
+              fontSize: 16,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            subtitle,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              color: MyPaymentMethodsPage._mutedText,
+              fontSize: 13,
+              height: 1.3,
+            ),
+          ),
+          const SizedBox(height: 14),
+          ElevatedButton(
+            onPressed: onTap,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: MyPaymentMethodsPage._primaryBlue,
+              foregroundColor: FretColors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+            child: Text(actionLabel),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AddPaymentMethodButton extends StatelessWidget {
+  final VoidCallback onTap;
+
+  const _AddPaymentMethodButton({required this.onTap});
 
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: MyPaymentMethodsPage._primaryBlue,
-      borderRadius: BorderRadius.circular(9),
+      color: FretColors.white,
+      borderRadius: BorderRadius.circular(8),
       child: InkWell(
-        onTap: () {
-          Navigator.of(context).push(
-            MaterialPageRoute<void>(
-              builder: (_) => const EditCardDataPage(),
-            ),
-          );
-        },
-        borderRadius: BorderRadius.circular(9),
-        child: const SizedBox(
-          width: 36,
-          height: 36,
-          child: Icon(
-            Icons.edit_rounded,
-            color: FretColors.white,
-            size: 19,
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(8),
+        child: Ink(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: MyPaymentMethodsPage._cardBorder),
+          ),
+          child: const Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.add_card_rounded,
+                color: MyPaymentMethodsPage._primaryBlue,
+              ),
+              SizedBox(width: 10),
+              Text(
+                'Cadastrar outro cartao',
+                style: TextStyle(
+                  color: MyPaymentMethodsPage._primaryBlue,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ],
           ),
         ),
       ),

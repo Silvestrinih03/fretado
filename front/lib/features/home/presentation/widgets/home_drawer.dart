@@ -59,7 +59,9 @@ class HomeDrawer extends StatelessWidget {
                 Navigator.of(context).pop();
                 Navigator.of(context).push(
                   MaterialPageRoute<void>(
-                    builder: (_) => const MyPaymentMethodsPage(),
+                    builder: (_) => MyPaymentMethodsPage(
+                      userId: MyselfService().currentUserId,
+                    ),
                   ),
                 );
               },

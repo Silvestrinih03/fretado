@@ -23,6 +23,14 @@ abstract class Endpoints {
   static const String rideQuote = '$rides/quote';
   static const String createRide = rides;
 
+  static const String cards = '/cards';
+  static String cardsByUser(int userId) => '$cards/user/$userId';
+  static String cardByUser({
+    required int userId,
+    required int cardId,
+  }) =>
+      '$cards/user/$userId/$cardId';
+
   static const String vehicleTypes = '/vehicle-types';
   static String vehicleTypeById(int vehicleTypeId) =>
       '$vehicleTypes/$vehicleTypeId';

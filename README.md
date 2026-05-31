@@ -40,3 +40,39 @@ fretado/
 * VS Code
 * Figma (protótipos)
 * Trello (gestão de tarefas)
+
+---
+
+## Publicação
+
+### API
+
+A API pode ser publicada no Render usando a pasta `back/`.
+
+```bash
+pip install -r requirements.txt
+uvicorn app.main:app --host 0.0.0.0 --port $PORT
+```
+
+Configure as variáveis de ambiente do serviço:
+
+```env
+DATABASE_URL=sua_url_do_supabase_com_sslmode_require
+SECRET_KEY=sua_chave_secreta
+CORS_ALLOW_ORIGINS=https://fretado.pages.dev
+CORS_ALLOW_ORIGIN_REGEX=
+```
+
+O banco pode ser criado no Supabase executando `sql/schema.sql` e os arquivos de `sql/seeds/`.
+
+### Front/PWA
+
+O front pode ser publicado na Cloudflare Pages como PWA.
+
+```bash
+cd front
+flutter build web --release --dart-define=API_BASE_URL=https://fretado-api.onrender.com
+npx wrangler pages deploy build/web --project-name=fretado
+```
+
+Depois do deploy, acesse `https://fretado.pages.dev` no celular e use a opção do navegador para instalar/adicionar à tela inicial.

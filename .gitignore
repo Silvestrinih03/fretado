@@ -47,6 +47,7 @@ front/.flutter-plugins-dependencies
 front/.pub-cache/
 front/build/
 front/.wrangler/
+front/lib/core/config.dart
 
 # Android / iOS gerados
 front/android/.gradle/

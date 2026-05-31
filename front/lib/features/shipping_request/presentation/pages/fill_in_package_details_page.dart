@@ -1,10 +1,16 @@
 import 'package:flutter/material.dart';
 
 import '../../../../app/design_system/design_system.dart';
+import '../models/freight_address_data.dart';
 import 'shipping_resume_page.dart';
 
 class FillInPackageDetailsPage extends StatefulWidget {
-  const FillInPackageDetailsPage({super.key});
+  final FreightAddressData? addressData;
+
+  const FillInPackageDetailsPage({
+    super.key,
+    this.addressData,
+  });
 
   @override
   State<FillInPackageDetailsPage> createState() =>

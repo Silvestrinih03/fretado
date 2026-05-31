@@ -28,11 +28,11 @@ class SelectVehicleType extends StatelessWidget {
           style: TextStyle(
             color: Color(0xFF6D7080),
             fontWeight: FontWeight.w700,
-            letterSpacing: 1.6,
-            fontSize: 15,
+            letterSpacing: 0,
+            fontSize: 12,
           ),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 8),
         if (isLoading)
           const Padding(
             padding: EdgeInsets.symmetric(vertical: 10),
@@ -54,8 +54,8 @@ class SelectVehicleType extends StatelessWidget {
           )
         else
           Wrap(
-            spacing: 10,
-            runSpacing: 10,
+            spacing: 8,
+            runSpacing: 8,
             children: vehicleTypes.map((vehicleType) {
               final bool isSelected = selectedVehicleTypeId == vehicleType.id;
               return ChoiceChip(
@@ -70,17 +70,17 @@ class SelectVehicleType extends StatelessWidget {
                       : const Color(0xFFB8BDCC),
                 ),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
+                  borderRadius: BorderRadius.circular(10),
                 ),
                 labelStyle: TextStyle(
                   color: isSelected ? Colors.white : const Color(0xFF2C2F3A),
                   fontWeight: FontWeight.w600,
-                  fontSize: 15,
+                  fontSize: 12,
                 ),
                 showCheckmark: false,
                 padding: const EdgeInsets.symmetric(
-                  horizontal: 14,
-                  vertical: 10,
+                  horizontal: 10,
+                  vertical: 6,
                 ),
               );
             }).toList(),

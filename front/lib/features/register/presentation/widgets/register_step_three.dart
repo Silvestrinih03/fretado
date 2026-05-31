@@ -32,12 +32,12 @@ class RegisterStepThree extends StatelessWidget {
           subtitle: 'Preencha seus dados pessoais para finalizar.',
           titleColor: FretColors.loginFooterLink,
         ),
-        const SizedBox(height: 34),
+        const SizedBox(height: 22),
         Container(
-          padding: const EdgeInsets.fromLTRB(20, 22, 20, 20),
+          padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
           decoration: BoxDecoration(
             color: FretColors.neutral050,
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(12),
             border: Border.all(color: FretColors.neutral200),
           ),
           child: Column(
@@ -54,7 +54,7 @@ class RegisterStepThree extends StatelessWidget {
                       ),
                     ),
                   ),
-                  const SizedBox(width: 14),
+                  const SizedBox(width: 10),
                   Expanded(
                     child: _LabeledInput(
                       label: 'Sobrenome',
@@ -66,7 +66,7 @@ class RegisterStepThree extends StatelessWidget {
                   ),
                 ],
               ),
-              const SizedBox(height: 22),
+              const SizedBox(height: 14),
               _LabeledInput(
                 label: 'Data de nascimento',
                 child: RegisterInputField(
@@ -75,7 +75,7 @@ class RegisterStepThree extends StatelessWidget {
                   keyboardType: TextInputType.number,
                   inputFormatters: const [_BirthDateInputFormatter()],
                   suffixIcon: const Padding(
-                    padding: EdgeInsetsDirectional.only(end: 14),
+                    padding: EdgeInsetsDirectional.only(end: 10),
                     child: Icon(
                       Icons.calendar_today_outlined,
                       color: FretColors.neutral500,
@@ -83,7 +83,7 @@ class RegisterStepThree extends StatelessWidget {
                   ),
                 ),
               ),
-              const SizedBox(height: 22),
+              const SizedBox(height: 14),
               _LabeledInput(
                 label: 'Telefone de contato',
                 child: RegisterInputField(
@@ -91,7 +91,7 @@ class RegisterStepThree extends StatelessWidget {
                   hintText: '(00) 0000-0000',
                   keyboardType: TextInputType.phone,
                   suffixIcon: const Padding(
-                    padding: EdgeInsetsDirectional.only(end: 14),
+                    padding: EdgeInsetsDirectional.only(end: 10),
                     child: Icon(
                       Icons.call_outlined,
                       color: FretColors.neutral500,
@@ -99,17 +99,17 @@ class RegisterStepThree extends StatelessWidget {
                   ),
                 ),
               ),
-              const SizedBox(height: 28),
+              const SizedBox(height: 18),
               FretPrimaryGradientButton(
                 label: isLoading ? 'Finalizando...' : 'Finalizar cadastro',
                 onPressed: onFinish,
               ),
-              const SizedBox(height: 22),
+              const SizedBox(height: 14),
               RichText(
                 textAlign: TextAlign.center,
                 text: const TextSpan(
                   style: TextStyle(
-                    fontSize: 18,
+                    fontSize: 12,
                     height: 1.35,
                     color: FretColors.neutral700,
                   ),
@@ -184,12 +184,13 @@ class _LabeledInput extends StatelessWidget {
         Text(
           label,
           style: const TextStyle(
-            fontSize: 18,
+            fontSize: 13,
+            height: 1.2,
             fontWeight: FontWeight.w700,
             color: FretColors.neutral700,
           ),
         ),
-        const SizedBox(height: 10),
+        const SizedBox(height: 6),
         child,
       ],
     );

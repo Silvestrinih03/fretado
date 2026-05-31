@@ -19,12 +19,12 @@ class RegisterStepOne extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const SizedBox(height: 18),
+        const SizedBox(height: 8),
         const RegisterSectionTitle(
           title: 'Você é \nmotorista ou cliente?',
           subtitle: 'Escolha como você vai usar o app',
         ),
-        const SizedBox(height: 50),
+        const SizedBox(height: 28),
         Row(
           children: [
             Expanded(
@@ -36,7 +36,7 @@ class RegisterStepOne extends StatelessWidget {
                 onTap: () => onTypeSelected(UserTypeEnum.driver),
               ),
             ),
-            const SizedBox(width: 20),
+            const SizedBox(width: 12),
             Expanded(
               child: _AccountTypeOptionCard(
                 imageIcon: Icons.person_outline,
@@ -48,7 +48,7 @@ class RegisterStepOne extends StatelessWidget {
             ),
           ],
         ),
-        const SizedBox(height: 54),
+        const SizedBox(height: 28),
         // const RegisterInfoBanner(
         //   icon: Icons.info,
         //   text: 'Você poderá alterar o tipo de perfil mais tarde nas configurações.',
@@ -81,28 +81,28 @@ class _AccountTypeOptionCard extends StatelessWidget {
       child: Column(
         children: [
           Container(
-            height: 168,
+            height: 112,
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(22),
+              borderRadius: BorderRadius.circular(14),
               color: FretColors.neutral300,
               border: Border.all(
                 color: selected ? FretColors.loginFooterLink : FretColors.neutral200,
-                width: selected ? 3 : 1,
+                width: selected ? 2 : 1,
               ),
             ),
             child: Center(
               child: Icon(
                 imageIcon,
-                size: 58,
+                size: 38,
                 color: FretColors.neutral700,
               ),
             ),
           ),
-          const SizedBox(height: 18),
+          const SizedBox(height: 10),
           Text(
             title,
             style: const TextStyle(
-              fontSize: 24,
+              fontSize: 18,
               fontWeight: FontWeight.w500,
               color: FretColors.neutral900,
             ),
@@ -111,10 +111,10 @@ class _AccountTypeOptionCard extends StatelessWidget {
           Text(
             subtitle,
             style: const TextStyle(
-              fontSize: 20,
+              fontSize: 15,
               fontWeight: FontWeight.w700,
               color: FretColors.loginFooterLink,
-              letterSpacing: 0.6,
+              letterSpacing: 0,
             ),
           ),
         ],

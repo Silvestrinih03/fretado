@@ -131,7 +131,7 @@ class _RegisteredCard extends StatelessWidget {
                 color: FretColors.neutral900,
                 fontSize: 18,
                 fontWeight: FontWeight.w400,
-                letterSpacing: 1.3,
+                letterSpacing: 0,
               ),
             ),
           ),

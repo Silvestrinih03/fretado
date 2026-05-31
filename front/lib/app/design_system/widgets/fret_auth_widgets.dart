@@ -9,7 +9,7 @@ class FretAuthCard extends StatelessWidget {
   const FretAuthCard({
     super.key,
     required this.child,
-    this.padding = const EdgeInsets.fromLTRB(32, 34, 32, 28),
+    this.padding = const EdgeInsets.fromLTRB(24, 24, 24, 22),
   });
 
   @override
@@ -19,12 +19,12 @@ class FretAuthCard extends StatelessWidget {
       padding: padding,
       decoration: BoxDecoration(
         color: FretColors.white,
-        borderRadius: BorderRadius.circular(36),
+        borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.06),
-            blurRadius: 30,
-            offset: const Offset(0, 16),
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 18,
+            offset: const Offset(0, 8),
           ),
         ],
       ),
@@ -40,7 +40,7 @@ class FretAuthBrandHeader extends StatelessWidget {
   const FretAuthBrandHeader({
     super.key,
     this.assetPath = 'assets/images/logo.png',
-    this.height = 132,
+    this.height = 104,
   });
 
   @override
@@ -67,8 +67,8 @@ class FretAuthHeading extends StatelessWidget {
     return Text(
       text,
       style: const TextStyle(
-        fontSize: 26,
-        height: 1.12,
+        fontSize: 22,
+        height: 1.15,
         fontWeight: FontWeight.w700,
         color: FretColors.loginTitle,
         letterSpacing: 0,
@@ -87,7 +87,7 @@ class FretAuthSubtitle extends StatelessWidget {
     return Text(
       text,
       style: const TextStyle(
-        fontSize: 14,
+        fontSize: 13,
         height: 1.35,
         fontWeight: FontWeight.w400,
         color: FretColors.loginSubtitle,
@@ -107,7 +107,7 @@ class FretAuthFieldLabel extends StatelessWidget {
     return Text(
       text,
       style: const TextStyle(
-        fontSize: 14,
+        fontSize: 13,
         height: 1.15,
         fontWeight: FontWeight.w700,
         color: FretColors.loginFieldLabel,
@@ -142,7 +142,7 @@ class FretAuthTextField extends StatelessWidget {
       keyboardType: keyboardType,
       obscureText: obscureText,
       style: const TextStyle(
-        fontSize: 16,
+        fontSize: 14,
         height: 1.2,
         fontWeight: FontWeight.w500,
         color: FretColors.loginInputText,
@@ -150,18 +150,18 @@ class FretAuthTextField extends StatelessWidget {
       decoration: InputDecoration(
         hintText: hintText,
         hintStyle: const TextStyle(
-          fontSize: 16,
+          fontSize: 14,
           fontWeight: FontWeight.w500,
           color: FretColors.loginInputHint,
         ),
         filled: true,
         fillColor: FretColors.loginInputBackground,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 22),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
         prefixIcon: Padding(
-          padding: const EdgeInsetsDirectional.only(start: 18, end: 14),
+          padding: const EdgeInsetsDirectional.only(start: 14, end: 10),
           child: Icon(
             prefixIcon,
-            size: 28,
+            size: 22,
             color: FretColors.loginInputIcon,
           ),
         ),
@@ -174,7 +174,7 @@ class FretAuthTextField extends StatelessWidget {
               ),
         suffixIconConstraints: const BoxConstraints(minWidth: 0, minHeight: 0),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide.none,
         ),
       ),
@@ -203,17 +203,17 @@ class FretPrimaryGradientButton extends StatelessWidget {
           begin: Alignment.centerLeft,
           end: Alignment.centerRight,
         ),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: FretColors.loginButtonEnd.withOpacity(0.28),
-            blurRadius: 24,
-            offset: const Offset(0, 12),
+            color: FretColors.loginButtonEnd.withOpacity(0.22),
+            blurRadius: 16,
+            offset: const Offset(0, 7),
           ),
         ],
       ),
       child: SizedBox(
-        height: 72,
+        height: 52,
         child: ElevatedButton(
           onPressed: onPressed,
           style: ElevatedButton.styleFrom(
@@ -221,7 +221,7 @@ class FretPrimaryGradientButton extends StatelessWidget {
             shadowColor: Colors.transparent,
             elevation: 0,
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(12),
             ),
           ),
           child: Row(
@@ -231,16 +231,16 @@ class FretPrimaryGradientButton extends StatelessWidget {
               Text(
                 label,
                 style: const TextStyle(
-                  fontSize: 24,
+                  fontSize: 18,
                   fontWeight: FontWeight.w700,
                   color: FretColors.white,
                 ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 8),
               const Icon(
                 Icons.arrow_forward_rounded,
                 color: FretColors.white,
-                size: 28,
+                size: 22,
               ),
             ],
           ),
@@ -270,7 +270,7 @@ class FretAuthForgotPasswordLink extends StatelessWidget {
         child: const Text(
           'Esqueci minha senha',
           style: TextStyle(
-            fontSize: 17,
+            fontSize: 14,
             fontWeight: FontWeight.w600,
           ),
         ),
@@ -296,7 +296,7 @@ class FretAuthFooterPrompt extends StatelessWidget {
           const Text(
             'Não possui uma conta?',
             style: TextStyle(
-              fontSize: 18,
+              fontSize: 14,
               fontWeight: FontWeight.w400,
               color: FretColors.loginFooterText,
             ),
@@ -312,7 +312,7 @@ class FretAuthFooterPrompt extends StatelessWidget {
             child: const Text(
               'Cadastre-se',
               style: TextStyle(
-                fontSize: 18,
+                fontSize: 14,
                 fontWeight: FontWeight.w700,
               ),
             ),

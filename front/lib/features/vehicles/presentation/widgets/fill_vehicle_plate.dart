@@ -43,7 +43,7 @@ class _UnderlineInputCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: const Color(0xFFF7F7FA),
         borderRadius: BorderRadius.circular(12),
@@ -56,7 +56,7 @@ class _UnderlineInputCard extends StatelessWidget {
             label,
             style: const TextStyle(
               color: Color(0xFFB2B5C4),
-              fontSize: 14,
+              fontSize: 11,
               fontWeight: FontWeight.w700,
             ),
           ),
@@ -67,16 +67,16 @@ class _UnderlineInputCard extends StatelessWidget {
             validator: validator,
             textCapitalization: textCapitalization,
             style: const TextStyle(
-              fontSize: 34,
+              fontSize: 24,
               fontWeight: FontWeight.w700,
               color: Color(0xFFDBDDE5),
-              letterSpacing: 0.4,
+              letterSpacing: 0,
             ),
             decoration: InputDecoration(
               isDense: true,
               hintText: hint,
               hintStyle: const TextStyle(
-                fontSize: 34,
+                fontSize: 24,
                 fontWeight: FontWeight.w700,
                 color: Color(0xFFD8DAE3),
               ),

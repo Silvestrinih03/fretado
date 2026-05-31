@@ -31,7 +31,7 @@ class _SplashPageState extends State<SplashPage> {
         child: Center(
           child: Image(
             image: AssetImage('assets/images/logo.png'),
-            width: 180,
+            width: 140,
             fit: BoxFit.contain,
           ),
         ),

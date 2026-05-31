@@ -155,10 +155,10 @@ class _RegisterVehiclePageState extends State<RegisterVehiclePage> {
             child: Form(
               key: _formKey,
               child: ListView(
-                padding: const EdgeInsets.fromLTRB(24, 0, 24, 28),
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 18),
                 children: [
                   _buildHeader(context),
-                  const SizedBox(height: 14),
+                  const SizedBox(height: 10),
                   SelectVehicleType(
                     isLoading: _store.isLoadingVehicleTypes,
                     errorMessage: _store.vehicleTypesError,
@@ -171,7 +171,7 @@ class _RegisterVehiclePageState extends State<RegisterVehiclePage> {
                       }
                     },
                   ),
-                  const SizedBox(height: 18),
+                  const SizedBox(height: 12),
                   FillVehicleBrandData(
                     registerMode: _registerMode,
                     onRegisterModeChanged: (value) {
@@ -208,31 +208,31 @@ class _RegisterVehiclePageState extends State<RegisterVehiclePage> {
                     },
                     requiredValidator: _requiredValidator,
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 10),
                   FillVehiclePlate(
                     controller: _plateController,
                     requiredValidator: _requiredValidator,
                   ),
-                  const SizedBox(height: 14),
+                  const SizedBox(height: 10),
                   FillVehicleLoadCapacity(
                     controller: _loadCapacityController,
                     requiredValidator: _requiredValidator,
                   ),
-                  const SizedBox(height: 14),
+                  const SizedBox(height: 10),
                   FillVehicleDetailedData(
                     colorController: _colorController,
                     widthController: _widthController,
                     heightController: _heightController,
                     lengthController: _lengthController,
                   ),
-                  const SizedBox(height: 14),
+                  const SizedBox(height: 10),
                   // FillVehicleActivation(
                   //   isActive: _isActive,
                   //   onChanged: (value) {
                   //     setState(() => _isActive = value);
                   //   },
                   // ),
-                  const SizedBox(height: 18),
+                  const SizedBox(height: 12),
                   _buildBottomActionBar(context),
                   const SizedBox(height: 10),
                 ],
@@ -246,8 +246,8 @@ class _RegisterVehiclePageState extends State<RegisterVehiclePage> {
 
   Widget _buildHeader(BuildContext context) {
     return Container(
-      height: 72,
-      padding: const EdgeInsets.symmetric(horizontal: 14),
+      height: 58,
+      padding: const EdgeInsets.symmetric(horizontal: 6),
       decoration: const BoxDecoration(
         color: Color(0xFFF1F2F6),
         border: Border(bottom: BorderSide(color: Color(0xFFE2E4EC))),
@@ -262,12 +262,12 @@ class _RegisterVehiclePageState extends State<RegisterVehiclePage> {
               color: Color(0xFF111B83),
             ),
           ),
-          const SizedBox(width: 6),
+          const SizedBox(width: 4),
           const Text(
             'Cadastrar veículo',
             style: TextStyle(
               color: Color(0xFF111B83),
-              fontSize: 34,
+              fontSize: 22,
               fontWeight: FontWeight.w700,
             ),
           ),
@@ -280,7 +280,7 @@ class _RegisterVehiclePageState extends State<RegisterVehiclePage> {
     // mudar para widget separado, melhorar tbm
     return Container(
       color: const Color(0xFFF1F2F6),
-      padding: const EdgeInsets.fromLTRB(0, 12, 0, 12),
+      padding: const EdgeInsets.fromLTRB(0, 8, 0, 8),
       child: SafeArea(
         top: false,
         child: Column(
@@ -288,7 +288,7 @@ class _RegisterVehiclePageState extends State<RegisterVehiclePage> {
           children: [
             SizedBox(
               width: double.infinity,
-              height: 56,
+              height: 48,
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF121B85),
@@ -303,25 +303,25 @@ class _RegisterVehiclePageState extends State<RegisterVehiclePage> {
                       ? 'Cadastrando...'
                       : 'Cadastrar veículo',
                   style: const TextStyle(
-                    fontSize: 18,
+                    fontSize: 15,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
               ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 8),
             TextButton(
               onPressed: () => Navigator.of(context).maybePop(),
               child: const Text(
                 'Cancelar',
                 style: TextStyle(
                   color: Color(0xFFB15D16),
-                  fontSize: 18,
+                  fontSize: 14,
                   fontWeight: FontWeight.w600,
                 ),
               ),
             ),
-            const SizedBox(height: 6),
+            const SizedBox(height: 4),
             const Text(
               'FreteJá - 2026',
               style: TextStyle(

@@ -67,7 +67,7 @@ class _MyVehiclesPageState extends State<MyVehiclesPage> {
                 _MyVehiclesHeader(onAddTap: openRegisterVehicle),
                 Expanded(
                   child: ListView(
-                    padding: const EdgeInsets.fromLTRB(24, 22, 24, 24),
+                    padding: const EdgeInsets.fromLTRB(16, 14, 16, 18),
                     children: [
                       if (_store.isLoading) ...[
                         const Padding(
@@ -110,11 +110,11 @@ class _MyVehiclesPageState extends State<MyVehiclesPage> {
                                     : const Color(0xFF4B505D),
                               ),
                               if (index != _store.vehicles.length - 1)
-                                const SizedBox(height: 16),
+                                const SizedBox(height: 10),
                             ],
                           );
                         }),
-                        const SizedBox(height: 20),
+                        const SizedBox(height: 14),
                         _NewVehicleCallout(onTap: openRegisterVehicle),
                       ],
                     ],
@@ -143,7 +143,7 @@ class _EmptyState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
@@ -153,15 +153,15 @@ class _EmptyState extends StatelessWidget {
         children: [
           const Icon(
             Icons.local_shipping_outlined,
-            size: 44,
+            size: 34,
             color: Color(0xFF9CA0C8),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 8),
           Text(
             title,
             textAlign: TextAlign.center,
             style: const TextStyle(
-              fontSize: 20,
+              fontSize: 16,
               fontWeight: FontWeight.w700,
               color: Color(0xFF121E84),
             ),
@@ -171,7 +171,7 @@ class _EmptyState extends StatelessWidget {
             subtitle,
             textAlign: TextAlign.center,
             style: const TextStyle(
-              fontSize: 15,
+              fontSize: 13,
               color: Color(0xFF6B7285),
             ),
           ),
@@ -201,9 +201,9 @@ class _MyVehiclesHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 94,
+      height: 66,
       width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(16, 10, 16, 8),
+      padding: const EdgeInsets.fromLTRB(10, 8, 12, 8),
       decoration: const BoxDecoration(
         color: Color(0xFFF3F4F8),
         border: Border(
@@ -217,15 +217,15 @@ class _MyVehiclesHeader extends StatelessWidget {
             icon: const Icon(
               Icons.arrow_back_ios_new_rounded,
               color: Color(0xFF121E84),
-              size: 24,
+              size: 20,
             ),
           ),
-          const SizedBox(width: 6),
+          const SizedBox(width: 4),
           const Expanded(
             child: Text(
               'Meus veículos',
               style: TextStyle(
-                fontSize: 32,
+                fontSize: 22,
                 fontWeight: FontWeight.w700,
                 color: Color(0xFF121E84),
               ),
@@ -233,18 +233,18 @@ class _MyVehiclesHeader extends StatelessWidget {
           ),
           InkWell(
             onTap: onAddTap,
-            borderRadius: BorderRadius.circular(18),
+            borderRadius: BorderRadius.circular(12),
             child: Container(
-              width: 78,
-              height: 62,
+              width: 46,
+              height: 42,
               decoration: BoxDecoration(
                 color: const Color(0xFF0E1386),
-                borderRadius: BorderRadius.circular(18),
+                borderRadius: BorderRadius.circular(12),
               ),
               child: const Icon(
                 Icons.add_rounded,
                 color: Colors.white,
-                size: 36,
+                size: 26,
               ),
             ),
           ),
@@ -265,7 +265,7 @@ class _NewVehicleCallout extends StatelessWidget {
       onTap: onTap,
       borderRadius: BorderRadius.circular(14),
       child: Ink(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         decoration: BoxDecoration(
           color: const Color(0xFFF7F8FC),
           borderRadius: BorderRadius.circular(14),
@@ -278,25 +278,25 @@ class _NewVehicleCallout extends StatelessWidget {
         child: const Column(
           children: [
             CircleAvatar(
-              radius: 21,
+              radius: 17,
               backgroundColor: Color(0xFF6C74B7),
-              child: Icon(Icons.add_rounded, color: Colors.white, size: 30),
+              child: Icon(Icons.add_rounded, color: Colors.white, size: 24),
             ),
-            SizedBox(height: 14),
+            SizedBox(height: 10),
             Text(
               'Novo Veículo',
               style: TextStyle(
-                fontSize: 20,
+                fontSize: 16,
                 color: Color(0xFF5A61A3),
                 fontWeight: FontWeight.w700,
               ),
             ),
-            SizedBox(height: 8),
+            SizedBox(height: 4),
             Text(
               'Cadastre um novo veículo no sistema.',
               textAlign: TextAlign.center,
               style: TextStyle(
-                fontSize: 16,
+                fontSize: 13,
                 height: 1.3,
                 color: Color(0xFF8B8F9E),
                 fontWeight: FontWeight.w500,

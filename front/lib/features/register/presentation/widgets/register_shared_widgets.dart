@@ -23,18 +23,18 @@ class RegisterSectionTitle extends StatelessWidget {
         Text(
           title,
           style: TextStyle(
-            fontSize: 40,
-            height: 1.1,
+            fontSize: 28,
+            height: 1.16,
             fontWeight: FontWeight.w700,
             color: titleColor,
-            letterSpacing: -1.2,
+            letterSpacing: 0,
           ),
         ),
-        const SizedBox(height: 14),
+        const SizedBox(height: 8),
         Text(
           subtitle,
           style: const TextStyle(
-            fontSize: 22,
+            fontSize: 15,
             height: 1.35,
             color: FretColors.neutral700,
           ),
@@ -54,10 +54,10 @@ class RegisterInputLabel extends StatelessWidget {
     return Text(
       text,
       style: const TextStyle(
-        fontSize: 17,
+        fontSize: 12,
         fontWeight: FontWeight.w700,
         color: FretColors.neutral700,
-        letterSpacing: 1.2,
+        letterSpacing: 0,
       ),
     );
   }
@@ -89,22 +89,22 @@ class RegisterInputField extends StatelessWidget {
       keyboardType: keyboardType,
       inputFormatters: inputFormatters,
       style: const TextStyle(
-        fontSize: 20,
+        fontSize: 15,
         color: FretColors.neutral700,
         fontWeight: FontWeight.w500,
       ),
       decoration: InputDecoration(
         hintText: hintText,
         hintStyle: const TextStyle(
-          fontSize: 20,
+          fontSize: 15,
           color: FretColors.neutral500,
           fontWeight: FontWeight.w500,
         ),
         filled: true,
         fillColor: FretColors.neutral200,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 26, vertical: 24),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(18),
+          borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide.none,
         ),
         suffixIcon: suffixIcon,
@@ -129,10 +129,10 @@ class RegisterInfoBanner extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 24),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
         color: FretColors.neutral100,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(color: FretColors.neutral200),
       ),
       child: Row(
@@ -140,14 +140,14 @@ class RegisterInfoBanner extends StatelessWidget {
         children: [
           Padding(
             padding: const EdgeInsets.only(top: 2),
-            child: Icon(icon, color: iconColor, size: 28),
+            child: Icon(icon, color: iconColor, size: 20),
           ),
-          const SizedBox(width: 16),
+          const SizedBox(width: 10),
           Expanded(
             child: Text(
               text,
               style: const TextStyle(
-                fontSize: 20,
+                fontSize: 14,
                 height: 1.32,
                 color: FretColors.neutral700,
                 fontWeight: FontWeight.w500,

@@ -18,21 +18,21 @@ class HomeDrawer extends StatelessWidget {
           children: [
             Container(
               color: FretColors.loginFooterLink,
-              padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 18),
               child: const Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   CircleAvatar(
-                    radius: 26,
+                    radius: 22,
                     backgroundColor: FretColors.white,
                     child: Icon(
                       Icons.person,
                       color: FretColors.loginFooterLink,
                     ),
                   ),
-                  SizedBox(height: 12),
+                  SizedBox(height: 8),
                   _DrawerUserName(),
-                  SizedBox(height: 4),
+                  SizedBox(height: 2),
                   Text(
                     'Gerencie seus dados',
                     style: TextStyle(color: FretColors.primary100),
@@ -125,7 +125,8 @@ class _DrawerUserNameState extends State<_DrawerUserName> {
           overflow: TextOverflow.ellipsis,
           style: const TextStyle(
             color: FretColors.white,
-            fontSize: 22,
+            fontSize: 18,
+            height: 1.15,
             fontWeight: FontWeight.w700,
           ),
         );

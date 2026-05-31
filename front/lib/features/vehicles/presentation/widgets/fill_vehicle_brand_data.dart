@@ -72,7 +72,7 @@ class FillVehicleBrandData extends StatelessWidget {
             ],
           ),
         ),
-        const SizedBox(height: 18),
+        const SizedBox(height: 12),
         _formCard(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -82,10 +82,10 @@ class FillVehicleBrandData extends StatelessWidget {
                 style: TextStyle(
                   color: Color(0xFF0F187C),
                   fontWeight: FontWeight.w700,
-                  fontSize: 20,
+                  fontSize: 16,
                 ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 10),
               if (errorMessage != null) ...[
                 Text(
                   errorMessage!,
@@ -95,7 +95,7 @@ class FillVehicleBrandData extends StatelessWidget {
                     fontWeight: FontWeight.w600,
                   ),
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: 8),
               ],
               if (registerMode == 'fipe') ...[
                 _selectField(
@@ -108,7 +108,7 @@ class FillVehicleBrandData extends StatelessWidget {
                   validator: (value) =>
                       value == null ? 'Selecione a marca' : null,
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 8),
                 _selectField(
                   label: 'Modelo',
                   hint: 'Selecione o modelo',
@@ -119,7 +119,7 @@ class FillVehicleBrandData extends StatelessWidget {
                   validator: (value) =>
                       value == null ? 'Selecione o modelo' : null,
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 8),
                 _selectField(
                   label: 'Ano/Versao',
                   hint: 'Selecione o ano',
@@ -131,7 +131,7 @@ class FillVehicleBrandData extends StatelessWidget {
                       value == null ? 'Selecione o ano/versao' : null,
                 ),
                 if (isLoadingFipe) ...[
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 8),
                   const LinearProgressIndicator(minHeight: 3),
                 ],
               ] else ...[
@@ -140,13 +140,13 @@ class FillVehicleBrandData extends StatelessWidget {
                   controller: manualBrandController,
                   validator: (value) => requiredValidator(value, 'a marca'),
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 8),
                 _filledTextField(
                   label: 'Modelo',
                   controller: manualModelController,
                   validator: (value) => requiredValidator(value, 'o modelo'),
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 8),
                 _filledTextField(
                   label: 'Ano',
                   controller: manualYearController,
@@ -163,7 +163,7 @@ class FillVehicleBrandData extends StatelessWidget {
 
   Widget _formCard({required Widget child}) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: const Color(0xFFF7F7FA),
         borderRadius: BorderRadius.circular(12),
@@ -191,7 +191,7 @@ class FillVehicleBrandData extends StatelessWidget {
             fontWeight: FontWeight.w700,
           ),
         ),
-        const SizedBox(height: 6),
+        const SizedBox(height: 4),
         TextFormField(
           controller: controller,
           keyboardType: keyboardType,
@@ -201,8 +201,8 @@ class FillVehicleBrandData extends StatelessWidget {
             filled: true,
             fillColor: const Color(0xFFE2E4EA),
             contentPadding: const EdgeInsets.symmetric(
-              horizontal: 14,
-              vertical: 14,
+              horizontal: 12,
+              vertical: 10,
             ),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
@@ -231,11 +231,11 @@ class FillVehicleBrandData extends StatelessWidget {
           label,
           style: const TextStyle(
             color: Color(0xFFB6B9C6),
-            fontSize: 14,
+            fontSize: 12,
             fontWeight: FontWeight.w700,
           ),
         ),
-        const SizedBox(height: 6),
+        const SizedBox(height: 4),
         DropdownButtonFormField<String>(
           value: value,
           validator: validator,
@@ -244,12 +244,12 @@ class FillVehicleBrandData extends StatelessWidget {
           dropdownColor: const Color(0xFFE2E4EA),
           decoration: InputDecoration(
             hintText: hint,
-            hintStyle: const TextStyle(color: Color(0xFF2B2D35), fontSize: 18),
+            hintStyle: const TextStyle(color: Color(0xFF2B2D35), fontSize: 14),
             filled: true,
             fillColor: const Color(0xFFDCDDDF),
             contentPadding: const EdgeInsets.symmetric(
-              horizontal: 14,
-              vertical: 13,
+              horizontal: 12,
+              vertical: 10,
             ),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
@@ -288,7 +288,7 @@ class _ModeButton extends StatelessWidget {
       borderRadius: BorderRadius.circular(10),
       onTap: onTap,
       child: Ink(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 11),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
         decoration: BoxDecoration(
           color: selected ? const Color(0xFFF7F8FB) : Colors.transparent,
           borderRadius: BorderRadius.circular(10),
@@ -301,7 +301,7 @@ class _ModeButton extends StatelessWidget {
                 ? const Color(0xFF121C84)
                 : const Color(0xFF272A36),
             fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-            fontSize: 16,
+            fontSize: 12,
             height: 1.2,
           ),
         ),

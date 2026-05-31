@@ -111,21 +111,21 @@ class _LoginPageState extends State<LoginPage> {
                 builder: (context, constraints) {
                   final bool isCompact = constraints.maxWidth < 520;
                   final double logoHeight =
-                      constraints.maxWidth < 390 ? 78 : isCompact ? 88 : 132;
-                  final double headerGap = isCompact ? 12 : 18;
+                      constraints.maxWidth < 390 ? 58 : isCompact ? 68 : 96;
+                  final double headerGap = isCompact ? 8 : 14;
 
                   return SingleChildScrollView(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 24,
-                      vertical: 20,
+                      horizontal: 16,
+                      vertical: 12,
                     ),
                     child: ConstrainedBox(
                       constraints: BoxConstraints(
-                        minHeight: constraints.maxHeight - 40,
+                        minHeight: constraints.maxHeight - 24,
                       ),
                       child: Center(
                         child: ConstrainedBox(
-                          constraints: const BoxConstraints(maxWidth: 640),
+                          constraints: const BoxConstraints(maxWidth: 480),
                           child: FretAuthCard(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -152,18 +152,18 @@ class _LoginPageState extends State<LoginPage> {
                                     ),
                                   ],
                                 ),
-                                const SizedBox(height: 40),
+                                const SizedBox(height: 24),
                                 const FretAuthFieldLabel(text: 'Email'),
-                                const SizedBox(height: 14),
+                                const SizedBox(height: 8),
                                 FretAuthTextField(
                                   controller: _emailController,
                                   hintText: 'nome@email.com',
                                   keyboardType: TextInputType.emailAddress,
                                   prefixIcon: Icons.mail_outline_rounded,
                                 ),
-                                const SizedBox(height: 24),
+                                const SizedBox(height: 16),
                                 const FretAuthFieldLabel(text: 'Senha'),
-                                const SizedBox(height: 14),
+                                const SizedBox(height: 8),
                                 FretAuthTextField(
                                   controller: _passwordController,
                                   hintText: '•••••••••',
@@ -176,30 +176,30 @@ class _LoginPageState extends State<LoginPage> {
                                           ? Icons.visibility_outlined
                                           : Icons.visibility_off_outlined,
                                       color: FretColors.loginInputIcon,
-                                      size: 28,
+                                      size: 22,
                                     ),
                                   ),
                                 ),
-                                const SizedBox(height: 10),
+                                const SizedBox(height: 8),
                                 FretAuthForgotPasswordLink(onPressed: () {}),
-                                const SizedBox(height: 32),
+                                const SizedBox(height: 22),
                                 FretPrimaryGradientButton(
                                   label: _authController.isLoading
                                       ? 'Entrando...'
                                       : 'Entrar',
                                   onPressed: _login,
                                 ),
-                                const SizedBox(height: 34),
+                                const SizedBox(height: 24),
                                 const Divider(
                                   color: FretColors.loginDivider,
                                   height: 1,
                                 ),
-                                const SizedBox(height: 34),
+                                const SizedBox(height: 24),
                                 FretAuthFooterPrompt(
                                   onSignUpPressed: _openRegisterPage,
                                 ),
                                 if (_authController.isLoading) ...[
-                                  const SizedBox(height: 18),
+                                  const SizedBox(height: 12),
                                   const LinearProgressIndicator(
                                     color: FretColors.loginButtonStart,
                                     minHeight: 3,

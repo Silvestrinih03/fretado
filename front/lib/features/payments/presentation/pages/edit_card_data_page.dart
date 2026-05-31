@@ -240,9 +240,9 @@ class _CreditCardPreview extends StatelessWidget {
               maxLines: 1,
               style: TextStyle(
                 color: FretColors.white,
-                fontSize: 26,
+                fontSize: 22,
                 fontWeight: FontWeight.w700,
-                letterSpacing: 7,
+                letterSpacing: 0,
               ),
             ),
           ),

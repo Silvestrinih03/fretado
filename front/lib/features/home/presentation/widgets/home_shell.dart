@@ -31,21 +31,21 @@ class _HomeHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 88,
+      height: 62,
       decoration: const BoxDecoration(
         color: FretColors.neutral050,
         border: Border(bottom: BorderSide(color: FretColors.neutral200)),
       ),
       child: Row(
         children: [
-          const SizedBox(width: 24),
+          const SizedBox(width: 16),
           const Text(
             'FreteJá',
             style: TextStyle(
               color: FretColors.loginFooterLink,
-              fontSize: 32,
+              fontSize: 22,
               fontWeight: FontWeight.w700,
-              letterSpacing: 0.4,
+              letterSpacing: 0,
             ),
           ),
           const Spacer(),
@@ -54,11 +54,11 @@ class _HomeHeader extends StatelessWidget {
               return IconButton(
                 onPressed: () => Scaffold.of(context).openEndDrawer(),
                 icon: Container(
-                  width: 44,
-                  height: 44,
+                  width: 34,
+                  height: 34,
                   decoration: BoxDecoration(
                     color: FretColors.primary100,
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(10),
                   ),
                   child: const Icon(
                     Icons.person,
@@ -68,7 +68,7 @@ class _HomeHeader extends StatelessWidget {
               );
             },
           ),
-          const SizedBox(width: 16),
+          const SizedBox(width: 10),
         ],
       ),
     );

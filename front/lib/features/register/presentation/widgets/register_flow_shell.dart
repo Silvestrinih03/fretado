@@ -33,12 +33,12 @@ class RegisterFlowShell extends StatelessWidget {
             ),
             Expanded(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(32, 40, 32, 24),
+                padding: const EdgeInsets.fromLTRB(20, 22, 20, 18),
                 child: child,
               ),
             ),
             Padding(
-              padding: const EdgeInsets.only(bottom: 28),
+              padding: const EdgeInsets.only(bottom: 18),
               child: _StepDots(
                 currentStep: stepIndex,
                 totalSteps: totalSteps,
@@ -64,7 +64,7 @@ class _RegisterHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 84,
+      height: 60,
       decoration: const BoxDecoration(
         border: Border(
           bottom: BorderSide(color: FretColors.neutral200),
@@ -73,15 +73,15 @@ class _RegisterHeader extends StatelessWidget {
       child: Row(
         children: [
           SizedBox(
-            width: 56,
+            width: 48,
             child: showBackButton
                 ? IconButton(
                     onPressed: onBackPressed,
-                    splashRadius: 22,
+                    splashRadius: 18,
                     icon: const Icon(
                       Icons.arrow_back,
                       color: FretColors.loginFooterLink,
-                      size: 30,
+                      size: 22,
                     ),
                   )
                 : const SizedBox.shrink(),
@@ -91,15 +91,15 @@ class _RegisterHeader extends StatelessWidget {
               child: Text(
                 'Crie sua conta',
                 style: TextStyle(
-                  fontSize: 24,
+                  fontSize: 18,
                   fontWeight: FontWeight.w700,
                   color: FretColors.loginFooterLink,
-                  letterSpacing: -1,
+                  letterSpacing: 0,
                 ),
               ),
             ),
           ),
-          const SizedBox(width: 56),
+          const SizedBox(width: 48),
         ],
       ),
     );
@@ -126,8 +126,8 @@ class _StepDots extends StatelessWidget {
         return AnimatedContainer(
           duration: const Duration(milliseconds: 180),
           margin: const EdgeInsets.symmetric(horizontal: 8),
-          width: 20,
-          height: 20,
+          width: 12,
+          height: 12,
           decoration: BoxDecoration(
             color: isActive ? activeColor : FretColors.neutral300,
             shape: BoxShape.circle,

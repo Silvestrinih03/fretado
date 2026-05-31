@@ -127,7 +127,7 @@ class _AddressRouteCard extends StatelessWidget {
         children: [
           const SizedBox(
             width: 28,
-            height: 86,
+            height: 72,
             child: _RouteIcons(),
           ),
           const SizedBox(width: 15),

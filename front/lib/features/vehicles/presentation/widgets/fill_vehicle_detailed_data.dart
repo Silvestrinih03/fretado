@@ -27,15 +27,15 @@ class FillVehicleDetailedData extends StatelessWidget {
                 style: TextStyle(
                   color: Color(0xFF0F187C),
                   fontWeight: FontWeight.w700,
-                  fontSize: 20,
+                  fontSize: 16,
                 ),
               ),
-              SizedBox(width: 8),
+              SizedBox(width: 6),
               Text(
                 '(opcional)',
                 style: TextStyle(
                   color: Color(0xFFB2B5C4),
-                  fontSize: 14,
+                  fontSize: 12,
                   fontWeight: FontWeight.w500,
                 ),
               ),
@@ -43,7 +43,7 @@ class FillVehicleDetailedData extends StatelessWidget {
               Icon(Icons.straighten, color: Color(0xFFB2B5C4)),
             ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 10),
           Row(
             children: [
               Expanded(
@@ -53,7 +53,7 @@ class FillVehicleDetailedData extends StatelessWidget {
                   controller: colorController,
                 ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 8),
               Expanded(
                 child: _FilledTextField(
                   label: 'LARGURA (CM)',
@@ -64,7 +64,7 @@ class FillVehicleDetailedData extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 8),
           Row(
             children: [
               Expanded(
@@ -75,7 +75,7 @@ class FillVehicleDetailedData extends StatelessWidget {
                   keyboardType: TextInputType.number,
                 ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 8),
               Expanded(
                 child: _FilledTextField(
                   label: 'COMP. (CM)',
@@ -100,7 +100,7 @@ class _FormCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: const Color(0xFFF7F7FA),
         borderRadius: BorderRadius.circular(12),
@@ -137,7 +137,7 @@ class _FilledTextField extends StatelessWidget {
             fontWeight: FontWeight.w700,
           ),
         ),
-        const SizedBox(height: 6),
+        const SizedBox(height: 4),
         TextFormField(
           controller: controller,
           keyboardType: keyboardType,
@@ -146,8 +146,8 @@ class _FilledTextField extends StatelessWidget {
             filled: true,
             fillColor: const Color(0xFFE2E4EA),
             contentPadding: const EdgeInsets.symmetric(
-              horizontal: 14,
-              vertical: 14,
+              horizontal: 12,
+              vertical: 10,
             ),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),

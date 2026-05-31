@@ -101,11 +101,11 @@ class _ChangePasswordPopupState extends State<ChangePasswordPopup> {
   @override
   Widget build(BuildContext context) {
     return Dialog(
-      insetPadding: const EdgeInsets.symmetric(horizontal: 28),
+      insetPadding: const EdgeInsets.symmetric(horizontal: 20),
       backgroundColor: FretColors.white,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(24, 26, 24, 24),
+        padding: const EdgeInsets.fromLTRB(18, 20, 18, 18),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -115,7 +115,7 @@ class _ChangePasswordPopupState extends State<ChangePasswordPopup> {
               textAlign: TextAlign.left,
               style: TextStyle(
                 color: FretColors.loginFooterLink,
-                fontSize: 24,
+                fontSize: 20,
                 fontWeight: FontWeight.w800,
               ),
             ),
@@ -125,21 +125,21 @@ class _ChangePasswordPopupState extends State<ChangePasswordPopup> {
               textAlign: TextAlign.left,
               style: TextStyle(
                 color: FretColors.neutral500,
-                fontSize: 15,
+                fontSize: 13,
                 fontWeight: FontWeight.w500,
               ),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 14),
             _PasswordPopupField(
               controller: _currentPasswordController,
               hintText: 'Senha atual.',
             ),
-            const SizedBox(height: 30),
+            const SizedBox(height: 14),
             _PasswordPopupField(
               controller: _newPasswordController,
               hintText: 'Digite a nova senha.',
             ),
-            const SizedBox(height: 14),
+            const SizedBox(height: 10),
             _PasswordPopupField(
               controller: _confirmPasswordController,
               hintText: 'Confirme a nova senha.',
@@ -155,12 +155,12 @@ class _ChangePasswordPopupState extends State<ChangePasswordPopup> {
                 ),
               ),
             ],
-            const SizedBox(height: 26),
+            const SizedBox(height: 18),
             Align(
               alignment: Alignment.center,
               child: SizedBox(
-                width: 190,
-                height: 52,
+                width: 150,
+                height: 44,
                 child: ElevatedButton(
                   onPressed: _isLoading ? null : _save,
                   style: ElevatedButton.styleFrom(
@@ -174,7 +174,7 @@ class _ChangePasswordPopupState extends State<ChangePasswordPopup> {
                   child: Text(
                     _isLoading ? 'Salvando...' : 'Salvar',
                     style: const TextStyle(
-                      fontSize: 18,
+                      fontSize: 15,
                       fontWeight: FontWeight.w800,
                     ),
                   ),
@@ -243,24 +243,24 @@ class _PasswordPopupField extends StatelessWidget {
       obscureText: true,
       style: const TextStyle(
         color: FretColors.neutral900,
-        fontSize: 17,
+        fontSize: 15,
         fontWeight: FontWeight.w500,
       ),
       decoration: InputDecoration(
         hintText: hintText,
         hintStyle: const TextStyle(
           color: FretColors.neutral500,
-          fontSize: 16,
+          fontSize: 14,
           fontWeight: FontWeight.w500,
         ),
         filled: true,
         fillColor: const Color(0xFFF0F1F3),
         contentPadding: const EdgeInsets.symmetric(
-          horizontal: 18,
-          vertical: 18,
+          horizontal: 14,
+          vertical: 12,
         ),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(10),
           borderSide: BorderSide.none,
         ),
       ),

@@ -261,7 +261,7 @@ class _MyDriversLicensePageState extends State<MyDriversLicensePage> {
             borderRadius: BorderRadius.circular(16),
           ),
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(24, 24, 24, 20),
+            padding: const EdgeInsets.fromLTRB(18, 18, 18, 16),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -270,27 +270,27 @@ class _MyDriversLicensePageState extends State<MyDriversLicensePage> {
                   'Alterar dados da CNH',
                   style: TextStyle(
                     color: FretColors.loginFooterLink,
-                    fontSize: 22,
+                    fontSize: 18,
                     fontWeight: FontWeight.w800,
                     height: 1.15,
                   ),
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 8),
                 Text(
                   subtitle,
                   style: const TextStyle(
                     color: FretColors.neutral700,
-                    fontSize: 16,
+                    fontSize: 14,
                     fontWeight: FontWeight.w500,
                     height: 1.35,
                   ),
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 16),
                 Row(
                   children: [
                     Expanded(
                       child: SizedBox(
-                        height: 48,
+                        height: 42,
                         child: ElevatedButton(
                           onPressed: () => Navigator.of(context).pop(),
                           style: ElevatedButton.styleFrom(
@@ -304,17 +304,17 @@ class _MyDriversLicensePageState extends State<MyDriversLicensePage> {
                           child: const Text(
                             'Cancelar',
                             style: TextStyle(
-                              fontSize: 16,
+                              fontSize: 14,
                               fontWeight: FontWeight.w800,
                             ),
                           ),
                         ),
                       ),
                     ),
-                    const SizedBox(width: 12),
+                    const SizedBox(width: 8),
                     Expanded(
                       child: SizedBox(
-                        height: 48,
+                        height: 42,
                         child: ElevatedButton(
                           onPressed: () {
                             Navigator.of(context).pop();
@@ -334,7 +334,7 @@ class _MyDriversLicensePageState extends State<MyDriversLicensePage> {
                           child: const Text(
                             'Alterar',
                             style: TextStyle(
-                              fontSize: 16,
+                              fontSize: 14,
                               fontWeight: FontWeight.w800,
                             ),
                           ),
@@ -366,7 +366,7 @@ class _MyDriversLicensePageState extends State<MyDriversLicensePage> {
           child: Stack(
             children: [
               Padding(
-                padding: const EdgeInsets.fromLTRB(22, 24, 22, 22),
+            padding: const EdgeInsets.fromLTRB(18, 18, 18, 16),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -376,9 +376,9 @@ class _MyDriversLicensePageState extends State<MyDriversLicensePage> {
                         const Icon(
                           Icons.warning_amber_rounded,
                           color: FretColors.destructive600,
-                          size: 34,
+                          size: 26,
                         ),
-                        const SizedBox(width: 12),
+                        const SizedBox(width: 8),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -387,17 +387,17 @@ class _MyDriversLicensePageState extends State<MyDriversLicensePage> {
                                 'Documento vencido',
                                 style: TextStyle(
                                   color: FretColors.destructive600,
-                                  fontSize: 22,
+                                  fontSize: 18,
                                   fontWeight: FontWeight.w800,
                                   height: 1.15,
                                 ),
                               ),
-                              SizedBox(height: 10),
+                              SizedBox(height: 8),
                               Text(
                                 'Seu documento Carteira Nacional de Habilitação está com prazo de validade expirado. Atualize imediatamente para continuar suas entregas.',
                                 style: TextStyle(
                                   color: FretColors.neutral700,
-                                  fontSize: 16,
+                                  fontSize: 14,
                                   fontWeight: FontWeight.w500,
                                   height: 1.35,
                                 ),
@@ -407,10 +407,10 @@ class _MyDriversLicensePageState extends State<MyDriversLicensePage> {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 16),
                     SizedBox(
                       width: double.infinity,
-                      height: 50,
+                      height: 44,
                       child: ElevatedButton(
                         onPressed: () {
                           Navigator.of(context).pop();
@@ -430,7 +430,7 @@ class _MyDriversLicensePageState extends State<MyDriversLicensePage> {
                         child: const Text(
                           'Atualizar agora',
                           style: TextStyle(
-                            fontSize: 16,
+                            fontSize: 14,
                             fontWeight: FontWeight.w900,
                           ),
                         ),
@@ -543,23 +543,23 @@ class _MyDriversLicensePageState extends State<MyDriversLicensePage> {
                 const _MyDriversLicenseHeader(),
                 Expanded(
                   child: ListView(
-                    padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 22),
                     children: [
                       const Text(
                         'Informações da Habilitação',
                         style: TextStyle(
                           color: FretColors.loginFooterLink,
-                          fontSize: 30,
+                          fontSize: 22,
                           fontWeight: FontWeight.w800,
                           height: 1.12,
                         ),
                       ),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: 6),
                       const Text(
                         'Mantenha seus dados de condutor atualizados para receber alertas de vencimento',
                         style: TextStyle(
                           color: Color(0xFF6F727D),
-                          fontSize: 18,
+                          fontSize: 14,
                           fontWeight: FontWeight.w400,
                           height: 1.45,
                         ),
@@ -603,9 +603,9 @@ class _MyDriversLicenseHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 89,
+      height: 62,
       width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(16, 10, 24, 8),
+      padding: const EdgeInsets.fromLTRB(10, 8, 16, 8),
       decoration: const BoxDecoration(
         color: Color(0xFFF7F8FA),
         border: Border(
@@ -619,17 +619,17 @@ class _MyDriversLicenseHeader extends StatelessWidget {
             icon: const Icon(
               Icons.arrow_back_ios_new_rounded,
               color: FretColors.loginFooterLink,
-              size: 28,
+              size: 20,
             ),
           ),
-          const SizedBox(width: 24),
+          const SizedBox(width: 8),
           const Expanded(
             child: Text(
               'Minha CNH',
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
-                fontSize: 29,
+                fontSize: 21,
                 fontWeight: FontWeight.w700,
                 color: FretColors.loginFooterLink,
               ),
@@ -674,7 +674,7 @@ class _DriversLicenseFormCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(24, 31, 24, 44),
+      padding: const EdgeInsets.fromLTRB(16, 18, 16, 22),
       decoration: BoxDecoration(
         color: FretColors.white,
         borderRadius: BorderRadius.circular(12),
@@ -692,7 +692,7 @@ class _DriversLicenseFormCard extends StatelessWidget {
           const _DriversLicenseInputLabel(
             'Selecione a categoria da sua CNH',
           ),
-          const SizedBox(height: 19),
+          const SizedBox(height: 8),
           _DriversLicenseCategoryField(
             isReadOnly: isReadOnly,
             isLoading: isLoadingCategories,
@@ -702,9 +702,9 @@ class _DriversLicenseFormCard extends StatelessWidget {
             onChanged: onCategoryChanged,
             onRetry: onReloadCategories,
           ),
-          const SizedBox(height: 18),
+          const SizedBox(height: 12),
           const _DriversLicenseInputLabel('Nº de Registro'),
-          const SizedBox(height: 19),
+          const SizedBox(height: 8),
           _DriversLicenseTextField(
             isReadOnly: isReadOnly,
             controller: registrationController,
@@ -715,17 +715,17 @@ class _DriversLicenseFormCard extends StatelessWidget {
               LengthLimitingTextInputFormatter(11),
             ],
           ),
-          const SizedBox(height: 18),
+          const SizedBox(height: 12),
           const _DriversLicenseInputLabel('Data de emissão'),
-          const SizedBox(height: 19),
+          const SizedBox(height: 8),
           _DriversLicenseDateField(
             isReadOnly: isReadOnly,
             controller: issueDateController,
             onTap: onIssueDateTap,
           ),
-          const SizedBox(height: 18),
+          const SizedBox(height: 12),
           const _DriversLicenseInputLabel('Data de validade'),
-          const SizedBox(height: 19),
+          const SizedBox(height: 8),
           _DriversLicenseDateField(
             isReadOnly: isReadOnly,
             controller: expirationDateController,
@@ -748,7 +748,7 @@ class _DriversLicenseInputLabel extends StatelessWidget {
       label,
       style: const TextStyle(
         color: FretColors.loginFooterLink,
-        fontSize: 18,
+        fontSize: 14,
         fontWeight: FontWeight.w800,
         height: 1.12,
       ),
@@ -785,8 +785,8 @@ class _DriversLicenseCategoryField extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Container(
-          height: 76,
-          padding: const EdgeInsets.symmetric(horizontal: 28),
+          height: 50,
+          padding: const EdgeInsets.symmetric(horizontal: 14),
           decoration: BoxDecoration(
             color: FretColors.neutral200,
             borderRadius: BorderRadius.circular(12),
@@ -795,8 +795,8 @@ class _DriversLicenseCategoryField extends StatelessWidget {
               ? const Align(
                   alignment: Alignment.centerLeft,
                   child: SizedBox(
-                    width: 24,
-                    height: 24,
+                    width: 20,
+                    height: 20,
                     child: CircularProgressIndicator(strokeWidth: 2.4),
                   ),
                 )
@@ -810,7 +810,7 @@ class _DriversLicenseCategoryField extends StatelessWidget {
                         : const Icon(
                             Icons.keyboard_arrow_down_rounded,
                             color: FretColors.loginFooterLink,
-                            size: 34,
+                            size: 24,
                           ),
                     hint: Text(
                       categories.isEmpty
@@ -818,7 +818,7 @@ class _DriversLicenseCategoryField extends StatelessWidget {
                           : 'Selecionar categoria',
                       style: const TextStyle(
                         color: FretColors.black,
-                        fontSize: 18,
+                        fontSize: 14,
                         fontWeight: FontWeight.w400,
                       ),
                     ),
@@ -826,7 +826,7 @@ class _DriversLicenseCategoryField extends StatelessWidget {
                     borderRadius: BorderRadius.circular(12),
                     style: const TextStyle(
                       color: FretColors.black,
-                      fontSize: 18,
+                      fontSize: 14,
                       fontWeight: FontWeight.w400,
                     ),
                     items: categories.map((category) {
@@ -854,7 +854,7 @@ class _DriversLicenseCategoryField extends StatelessWidget {
                   errorMessage!,
                   style: const TextStyle(
                     color: FretColors.destructive600,
-                    fontSize: 14,
+                    fontSize: 12,
                     fontWeight: FontWeight.w600,
                     height: 1.25,
                   ),
@@ -870,7 +870,7 @@ class _DriversLicenseCategoryField extends StatelessWidget {
                     'Tentar novamente',
                     style: TextStyle(
                       color: FretColors.loginFooterLink,
-                      fontSize: 14,
+                      fontSize: 12,
                       fontWeight: FontWeight.w800,
                     ),
                   ),
@@ -909,21 +909,21 @@ class _DriversLicenseTextField extends StatelessWidget {
       inputFormatters: inputFormatters,
       style: const TextStyle(
         color: FretColors.black,
-        fontSize: 23,
+        fontSize: 16,
         fontWeight: FontWeight.w400,
       ),
       decoration: InputDecoration(
         hintText: hintText,
         hintStyle: const TextStyle(
           color: Color(0xFFA7A9B1),
-          fontSize: 18,
+          fontSize: 14,
           fontWeight: FontWeight.w400,
         ),
         filled: true,
         fillColor: FretColors.neutral200,
         contentPadding: const EdgeInsets.symmetric(
-          horizontal: 28,
-          vertical: 24,
+          horizontal: 14,
+          vertical: 14,
         ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
@@ -954,28 +954,28 @@ class _DriversLicenseDateField extends StatelessWidget {
       onTap: isReadOnly ? null : onTap,
       style: const TextStyle(
         color: FretColors.black,
-        fontSize: 23,
+        fontSize: 16,
         fontWeight: FontWeight.w400,
       ),
       decoration: InputDecoration(
         hintText: 'mm/dd/yyyy',
         hintStyle: const TextStyle(
           color: FretColors.black,
-          fontSize: 18,
+          fontSize: 14,
           fontWeight: FontWeight.w400,
         ),
         filled: true,
         fillColor: FretColors.neutral200,
         contentPadding: const EdgeInsets.symmetric(
-          horizontal: 28,
-          vertical: 24,
+          horizontal: 14,
+          vertical: 14,
         ),
         suffixIcon: const Padding(
-          padding: EdgeInsets.only(right: 24),
+          padding: EdgeInsets.only(right: 14),
           child: Icon(
             Icons.calendar_today_outlined,
             color: FretColors.black,
-            size: 24,
+            size: 18,
           ),
         ),
         suffixIconConstraints: const BoxConstraints(
@@ -1008,7 +1008,7 @@ class _SaveDriversLicenseFooter extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(24, 24, 24, 21),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
       decoration: const BoxDecoration(
         color: Color(0xFFF7F8FA),
         border: Border(
@@ -1022,17 +1022,17 @@ class _SaveDriversLicenseFooter extends StatelessWidget {
             begin: Alignment.centerLeft,
             end: Alignment.centerRight,
           ),
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(12),
           boxShadow: [
             BoxShadow(
               color: FretColors.loginButtonEnd.withOpacity(0.24),
-              blurRadius: 24,
-              offset: const Offset(0, 12),
+              blurRadius: 14,
+              offset: const Offset(0, 6),
             ),
           ],
         ),
         child: SizedBox(
-          height: 76,
+          height: 52,
           child: ElevatedButton(
             onPressed: isSaving
                 || isDisabled
@@ -1045,14 +1045,14 @@ class _SaveDriversLicenseFooter extends StatelessWidget {
               shadowColor: Colors.transparent,
               elevation: 0,
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(12),
               ),
             ),
             child: Text(
               label,
               style: const TextStyle(
                 color: FretColors.white,
-                fontSize: 24,
+                fontSize: 16,
                 fontWeight: FontWeight.w800,
               ),
             ),

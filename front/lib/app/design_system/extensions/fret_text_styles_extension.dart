@@ -33,58 +33,58 @@ class FretTextStylesExtension
   static FretTextStylesExtension get() {
     return FretTextStylesExtension(
       headingH1: GoogleFonts.mavenPro(
-        fontSize: 36,
+        fontSize: 30,
         fontWeight: FontWeight.normal,
         color: FretColors.neutral900,
-        letterSpacing: -0.02 * 36,
+        letterSpacing: 0,
       ),
       headingH2: GoogleFonts.mavenPro(
-        fontSize: 32,
+        fontSize: 26,
         fontWeight: FontWeight.normal,
         color: FretColors.neutral900,
-        letterSpacing: -0.02 * 32,
+        letterSpacing: 0,
       ),
       headingH3: GoogleFonts.mavenPro(
-        fontSize: 28,
+        fontSize: 22,
         fontWeight: FontWeight.normal,
         color: FretColors.neutral900,
-        letterSpacing: -0.02 * 28,
+        letterSpacing: 0,
       ),
       headingH4: GoogleFonts.mavenPro(
-        fontSize: 24,
-        fontWeight: FontWeight.normal,
-        color: FretColors.neutral900,
-        letterSpacing: -0.02 * 24,
-      ),
-      headingH5: GoogleFonts.mavenPro(
         fontSize: 20,
         fontWeight: FontWeight.normal,
         color: FretColors.neutral900,
-        letterSpacing: -0.02 * 20,
+        letterSpacing: 0,
+      ),
+      headingH5: GoogleFonts.mavenPro(
+        fontSize: 18,
+        fontWeight: FontWeight.normal,
+        color: FretColors.neutral900,
+        letterSpacing: 0,
       ),
       headingH6: GoogleFonts.mavenPro(
-        fontSize: 18,
+        fontSize: 16,
         fontWeight: FontWeight.normal,
         color: FretColors.neutral900,
-        letterSpacing: -0.02 * 18,
+        letterSpacing: 0,
       ),
       paragraphLarge: GoogleFonts.mavenPro(
-        fontSize: 18,
-        fontWeight: FontWeight.normal,
-        color: FretColors.neutral900,
-      ),
-      paragraphMedium: GoogleFonts.mavenPro(
         fontSize: 16,
         fontWeight: FontWeight.normal,
         color: FretColors.neutral900,
       ),
-      paragraphSmall: GoogleFonts.mavenPro(
+      paragraphMedium: GoogleFonts.mavenPro(
         fontSize: 14,
         fontWeight: FontWeight.normal,
         color: FretColors.neutral900,
       ),
+      paragraphSmall: GoogleFonts.mavenPro(
+        fontSize: 13,
+        fontWeight: FontWeight.normal,
+        color: FretColors.neutral900,
+      ),
       paragraphXSmall: GoogleFonts.mavenPro(
-        fontSize: 12,
+        fontSize: 11,
         fontWeight: FontWeight.normal,
         color: FretColors.neutral900,
       ),

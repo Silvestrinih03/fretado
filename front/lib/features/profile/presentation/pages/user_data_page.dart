@@ -143,7 +143,7 @@ class _UserDataPageState extends State<UserDataPage> {
                   }
 
                   return SingleChildScrollView(
-                    padding: const EdgeInsets.fromLTRB(28, 32, 28, 24),
+                    padding: const EdgeInsets.fromLTRB(16, 18, 16, 18),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
@@ -156,7 +156,7 @@ class _UserDataPageState extends State<UserDataPage> {
                                 ).displayName
                               : '',
                         ),
-                        const SizedBox(height: 32),
+                        const SizedBox(height: 20),
                         Row(
                           children: [
                             Expanded(
@@ -165,7 +165,7 @@ class _UserDataPageState extends State<UserDataPage> {
                                 controller: _firstNameController,
                               ),
                             ),
-                            const SizedBox(width: 16),
+                            const SizedBox(width: 10),
                             Expanded(
                               child: _ProfileTextField(
                                 label: 'SOBRENOME',
@@ -174,13 +174,13 @@ class _UserDataPageState extends State<UserDataPage> {
                             ),
                           ],
                         ),
-                        const SizedBox(height: 20),
+                        const SizedBox(height: 14),
                         _ProfileTextField(
                           label: 'E-MAIL',
                           controller: _emailController,
                           keyboardType: TextInputType.emailAddress,
                         ),
-                        const SizedBox(height: 20),
+                        const SizedBox(height: 14),
                         _ProfileTextField(
                           label: 'CPF',
                           controller: _cpfController,
@@ -189,20 +189,20 @@ class _UserDataPageState extends State<UserDataPage> {
                           canRequestFocus: false,
                           suffixIcon: Icons.check_rounded,
                         ),
-                        const SizedBox(height: 20),
+                        const SizedBox(height: 14),
                         _ProfileTextField(
                           label: 'DATA DE NASCIMENTO',
                           controller: _birthDateController,
                           keyboardType: TextInputType.datetime,
                           suffixIcon: Icons.calendar_today_outlined,
                         ),
-                        const SizedBox(height: 20),
+                        const SizedBox(height: 14),
                         _ProfileTextField(
                           label: 'TELEFONE',
                           controller: _phoneController,
                           keyboardType: TextInputType.phone,
                         ),
-                        const SizedBox(height: 20),
+                        const SizedBox(height: 14),
                         _ProfileTextField(
                           label: 'SENHA',
                           controller: _passwordController,
@@ -237,28 +237,28 @@ class _UserDataHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 96,
+      height: 62,
       decoration: const BoxDecoration(
         color: FretColors.white,
         border: Border(bottom: BorderSide(color: Color(0xFFE9EAEE))),
       ),
       child: Row(
         children: [
-          const SizedBox(width: 16),
+          const SizedBox(width: 8),
           IconButton(
             onPressed: () => Navigator.of(context).maybePop(),
             icon: const Icon(
               Icons.arrow_back_rounded,
               color: FretColors.loginFooterLink,
-              size: 36,
+              size: 24,
             ),
           ),
-          const SizedBox(width: 20),
+          const SizedBox(width: 8),
           const Text(
             'Dados pessoais',
             style: TextStyle(
               color: FretColors.loginFooterLink,
-              fontSize: 30,
+              fontSize: 21,
               fontWeight: FontWeight.w700,
             ),
           ),
@@ -287,12 +287,12 @@ class _ProfileSummary extends StatelessWidget {
           clipBehavior: Clip.none,
           children: [
             Container(
-              width: 128,
-              height: 128,
+              width: 82,
+              height: 82,
               decoration: BoxDecoration(
                 color: const Color(0xFFE3E4E6),
-                borderRadius: BorderRadius.circular(18),
-                border: Border.all(color: FretColors.white, width: 3),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: FretColors.white, width: 2),
                 boxShadow: const [
                   BoxShadow(
                     color: Color(0x14000000),
@@ -304,18 +304,18 @@ class _ProfileSummary extends StatelessWidget {
               child: const Icon(
                 Icons.account_circle_outlined,
                 color: Color(0xFF4A4B55),
-                size: 76,
+                size: 48,
               ),
             ),
             Positioned(
               right: -2,
               bottom: -2,
               child: Container(
-                width: 46,
-                height: 46,
+                width: 34,
+                height: 34,
                 decoration: BoxDecoration(
                   color: FretColors.secondaryVariation700,
-                  borderRadius: BorderRadius.circular(18),
+                  borderRadius: BorderRadius.circular(12),
                   boxShadow: const [
                     BoxShadow(
                       color: Color(0x33000000),
@@ -327,13 +327,13 @@ class _ProfileSummary extends StatelessWidget {
                 child: const Icon(
                   Icons.photo_camera_outlined,
                   color: FretColors.white,
-                  size: 21,
+                  size: 16,
                 ),
               ),
             ),
           ],
         ),
-        const SizedBox(width: 28),
+        const SizedBox(width: 16),
         Expanded(
           child: AnimatedBuilder(
             animation: Listenable.merge([
@@ -354,17 +354,17 @@ class _ProfileSummary extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
                       color: FretColors.loginFooterLink,
-                      fontSize: 28,
+                      fontSize: 20,
                       height: 1.05,
                       fontWeight: FontWeight.w800,
                     ),
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 4),
                   Text(
                     userTypeLabel,
                     style: const TextStyle(
                       color: Color(0xFF4D4E57),
-                      fontSize: 20,
+                      fontSize: 14,
                       fontWeight: FontWeight.w500,
                     ),
                   ), 
@@ -408,12 +408,12 @@ class _ProfileTextField extends StatelessWidget {
           label,
           style: const TextStyle(
             color: Color(0xFF7A7D88),
-            fontSize: 14,
+            fontSize: 11,
             fontWeight: FontWeight.w800,
-            letterSpacing: 1.1,
+            letterSpacing: 0,
           ),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 5),
         TextField(
           controller: controller,
           keyboardType: keyboardType,
@@ -422,15 +422,15 @@ class _ProfileTextField extends StatelessWidget {
           canRequestFocus: canRequestFocus,
           style: const TextStyle(
             color: FretColors.black,
-            fontSize: 20,
+            fontSize: 15,
             fontWeight: FontWeight.w500,
           ),
           decoration: InputDecoration(
             filled: true,
             fillColor: const Color(0xFFF0F1F3),
-            contentPadding: const EdgeInsets.fromLTRB(20, 18, 12, 18),
+            contentPadding: const EdgeInsets.fromLTRB(14, 12, 10, 12),
             border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(14),
+              borderRadius: BorderRadius.circular(10),
               borderSide: BorderSide.none,
             ),
             suffixIcon: IconButton(
@@ -461,20 +461,20 @@ class _SaveBar extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(42, 24, 42, 22),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
       decoration: const BoxDecoration(
         color: FretColors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(34)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
         boxShadow: [
           BoxShadow(
             color: Color(0x12000000),
-            blurRadius: 22,
-            offset: Offset(0, -8),
+            blurRadius: 12,
+            offset: Offset(0, -4),
           ),
         ],
       ),
       child: SizedBox(
-        height: 62,
+        height: 50,
         child: ElevatedButton(
           onPressed: isLoading
               ? null
@@ -493,7 +493,7 @@ class _SaveBar extends StatelessWidget {
           child: Text(
             isLoading ? 'Salvando...' : 'Salvar',
             style: const TextStyle(
-              fontSize: 21,
+              fontSize: 16,
               fontWeight: FontWeight.w800,
             ),
           ),

@@ -17,24 +17,24 @@ class DriverHomeContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListView(
-      padding: const EdgeInsets.fromLTRB(24, 18, 24, 24),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 18),
       children: [
         Text(
           'Olá, $firstName!',
           style: const TextStyle(
-            fontSize: 44,
+            fontSize: 30,
             fontWeight: FontWeight.w800,
             color: FretColors.loginFooterLink,
           ),
         ),
-        const SizedBox(height: 4),
+        const SizedBox(height: 2),
         const Text(
           'Gerencie suas viagens, veículos e documentos aqui.',
-          style: TextStyle(fontSize: 22, color: FretColors.neutral700),
+          style: TextStyle(fontSize: 15, color: FretColors.neutral700),
         ),
-        const SizedBox(height: 22),
+        const SizedBox(height: 14),
         const _BalanceCard(),
-        const SizedBox(height: 16),
+        const SizedBox(height: 10),
         _SimpleMetricCard(
           icon: Icons.local_shipping_rounded,
           title: 'Meus veículos',
@@ -48,7 +48,7 @@ class DriverHomeContent extends StatelessWidget {
             );
           },
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 10),
         _SimpleMetricCard(
           icon: Icons.description_outlined,
           title: 'Meus documentos',
@@ -61,13 +61,13 @@ class DriverHomeContent extends StatelessWidget {
             );
           },
         ),
-        const SizedBox(height: 22),
+        const SizedBox(height: 16),
         const Row(
           children: [
             Text(
               'Minhas corridas',
               style: TextStyle(
-                fontSize: 38,
+                fontSize: 24,
                 fontWeight: FontWeight.w800,
                 color: FretColors.loginFooterLink,
               ),
@@ -78,12 +78,12 @@ class DriverHomeContent extends StatelessWidget {
               style: TextStyle(
                 color: FretColors.secondaryVariation700,
                 fontWeight: FontWeight.w700,
-                fontSize: 16,
+                fontSize: 12,
               ),
             ),
           ],
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 8),
         const _TripCard(
           title: 'Rota Industrial Sul',
           subtitle: 'Placa: ABC-1234 • Motorista: Carlos R.',
@@ -92,7 +92,7 @@ class DriverHomeContent extends StatelessWidget {
           sideColor: Color(0xFFD0A900),
           icon: Icons.route,
         ),
-        const SizedBox(height: 10),
+        const SizedBox(height: 8),
         const _TripCard(
           title: 'Transporte Executivo',
           subtitle: 'Hoje, 09:30 • Placa: XYZ-9876',
@@ -101,7 +101,7 @@ class DriverHomeContent extends StatelessWidget {
           sideColor: FretColors.loginFooterLink,
           icon: Icons.check_circle,
         ),
-        const SizedBox(height: 10),
+        const SizedBox(height: 8),
         const _TripCard(
           title: 'Fretado Universitário',
           subtitle: 'Hoje, 18:45 • Placa: KJK-4421',
@@ -110,7 +110,7 @@ class DriverHomeContent extends StatelessWidget {
           sideColor: Color(0xFFBABDCA),
           icon: Icons.schedule,
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 12),
         // const _TrafficCard(),
       ],
     );
@@ -124,7 +124,7 @@ class _BalanceCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(14),
         gradient: const LinearGradient(
           colors: [Color(0xFF1B2397), Color(0xFF151E8C)],
           begin: Alignment.topLeft,
@@ -133,12 +133,12 @@ class _BalanceCard extends StatelessWidget {
         boxShadow: [
           BoxShadow(
             color: FretColors.loginFooterLink.withOpacity(0.25),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
+            blurRadius: 12,
+            offset: const Offset(0, 6),
           ),
         ],
       ),
-      padding: const EdgeInsets.fromLTRB(24, 22, 24, 22),
+      padding: const EdgeInsets.fromLTRB(18, 16, 18, 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -148,7 +148,7 @@ class _BalanceCard extends StatelessWidget {
                 'SALDO DISPONÍVEL',
                 style: TextStyle(
                   color: Color(0xFFD1D5FF),
-                  letterSpacing: 2,
+                  letterSpacing: 0,
                   fontWeight: FontWeight.w500,
                 ),
               ),
@@ -156,21 +156,21 @@ class _BalanceCard extends StatelessWidget {
               Icon(Icons.account_balance_wallet, color: Color(0xFFAFB6F3)),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 8),
           const Text(
             'R\$ 42.850,00',
             style: TextStyle(
               color: FretColors.white,
-              fontSize: 54,
+              fontSize: 34,
               fontWeight: FontWeight.w700,
             ),
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 10),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
             decoration: BoxDecoration(
               color: const Color(0xFF313CA3),
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(10),
             ),
             child: const Row(
               children: [
@@ -179,7 +179,7 @@ class _BalanceCard extends StatelessWidget {
                   style: TextStyle(
                     color: FretColors.white,
                     fontWeight: FontWeight.w700,
-                    fontSize: 18,
+                    fontSize: 14,
                   ),
                 ),
                 Spacer(),
@@ -220,31 +220,31 @@ class _SimpleMetricCard extends StatelessWidget {
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(14),
         child: Ink(
-          padding: const EdgeInsets.all(22),
+          padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             color: FretColors.neutral050,
-            borderRadius: BorderRadius.circular(18),
+            borderRadius: BorderRadius.circular(14),
             border: Border.all(color: FretColors.neutral200),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Container(
-                width: 54,
-                height: 54,
+                width: 40,
+                height: 40,
                 decoration: BoxDecoration(
                   color: FretColors.neutral100,
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(icon, color: FretColors.loginFooterLink),
               ),
-              const SizedBox(height: 14),
+              const SizedBox(height: 10),
               Text(
                 title,
                 style: const TextStyle(
-                  fontSize: 22,
+                  fontSize: 17,
                   fontWeight: FontWeight.w700,
                   color: FretColors.loginFooterLink,
                 ),
@@ -253,11 +253,11 @@ class _SimpleMetricCard extends StatelessWidget {
               Text(
                 subtitle,
                 style: const TextStyle(
-                  fontSize: 16,
+                  fontSize: 13,
                   color: FretColors.neutral700,
                 ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 8),
               if (urgencyTag != null)
                 Container(
                   padding: const EdgeInsets.symmetric(
@@ -328,7 +328,7 @@ class _TripCard extends StatelessWidget {
         children: [
           Container(
             width: 4,
-            height: 86,
+            height: 68,
             decoration: BoxDecoration(
               color: sideColor,
               borderRadius: const BorderRadius.only(
@@ -339,19 +339,19 @@ class _TripCard extends StatelessWidget {
           ),
           Expanded(
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
               child: Row(
                 children: [
                   Container(
-                    width: 54,
-                    height: 54,
+                    width: 40,
+                    height: 40,
                     decoration: BoxDecoration(
                       color: FretColors.primary100,
-                      borderRadius: BorderRadius.circular(14),
+                      borderRadius: BorderRadius.circular(10),
                     ),
                     child: Icon(icon, color: FretColors.loginFooterLink),
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 8),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -363,13 +363,13 @@ class _TripCard extends StatelessWidget {
                                 title,
                                 overflow: TextOverflow.ellipsis,
                                 style: const TextStyle(
-                                  fontSize: 20,
+                                  fontSize: 15,
                                   color: FretColors.loginFooterLink,
                                   fontWeight: FontWeight.w700,
                                 ),
                               ),
                             ),
-                            const SizedBox(width: 8),
+                            const SizedBox(width: 6),
                             Container(
                               padding: const EdgeInsets.symmetric(
                                 horizontal: 8,
@@ -382,7 +382,7 @@ class _TripCard extends StatelessWidget {
                               child: Text(
                                 statusLabel,
                                 style: const TextStyle(
-                                  fontSize: 12,
+                                  fontSize: 10,
                                   fontWeight: FontWeight.w700,
                                   color: FretColors.neutral700,
                                 ),
@@ -390,11 +390,11 @@ class _TripCard extends StatelessWidget {
                             ),
                           ],
                         ),
-                        const SizedBox(height: 4),
+                        const SizedBox(height: 2),
                         Text(
                           subtitle,
                           style: const TextStyle(
-                            fontSize: 14,
+                            fontSize: 12,
                             color: FretColors.neutral700,
                           ),
                         ),

@@ -439,7 +439,7 @@ class _PriceConfirmationCard extends StatelessWidget {
                 TextSpan(
                   text: '150',
                   style: TextStyle(
-                    fontSize: 43,
+                    fontSize: 34,
                     fontWeight: FontWeight.w900,
                     height: 0.9,
                   ),

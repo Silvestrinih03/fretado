@@ -54,6 +54,7 @@ class _RequestRidePageState extends State<RequestRidePage> {
         title: const Text('Solicitar corrida'),
         backgroundColor: FretColors.neutral050,
         foregroundColor: FretColors.loginFooterLink,
+        toolbarHeight: 52,
       ),
       body: SafeArea(
         child: Column(
@@ -112,8 +113,8 @@ class _RequestRidePageState extends State<RequestRidePage> {
   Widget _buildPanel() {
     return Container(
       width: double.infinity,
-      constraints: const BoxConstraints(maxHeight: 470),
-      padding: const EdgeInsets.fromLTRB(18, 14, 18, 18),
+      constraints: const BoxConstraints(maxHeight: 410),
+      padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
       decoration: const BoxDecoration(
         color: FretColors.white,
         border: Border(top: BorderSide(color: FretColors.neutral200)),
@@ -139,21 +140,21 @@ class _RequestRidePageState extends State<RequestRidePage> {
               selected: {_mode},
               onSelectionChanged: (value) => setState(() => _mode = value.first),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 8),
             _AddressSearchField(
               controller: _pickupController,
               label: 'Endereço de coleta',
               selected: _pickup != null,
               onSearch: () => _searchAddress(_RidePointMode.pickup),
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 8),
             _AddressSearchField(
               controller: _deliveryController,
               label: 'Endereço de entrega',
               selected: _delivery != null,
               onSearch: () => _searchAddress(_RidePointMode.delivery),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 8),
             if (!_detailsVisible)
               _PrimaryButton(
                 label: 'Prosseguir',
@@ -179,7 +180,7 @@ class _RequestRidePageState extends State<RequestRidePage> {
             Expanded(child: _NumberField(controller: _heightController, label: 'Altura')),
           ],
         ),
-        const SizedBox(height: 10),
+        const SizedBox(height: 8),
         Row(
           children: [
             Expanded(child: _NumberField(controller: _lengthController, label: 'Comprimento')),
@@ -187,9 +188,9 @@ class _RequestRidePageState extends State<RequestRidePage> {
             Expanded(child: _NumberField(controller: _weightController, label: 'Peso')),
           ],
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 8),
         if (_quote != null) _QuoteBox(quote: _quote!),
-        const SizedBox(height: 12),
+        const SizedBox(height: 8),
         _PrimaryButton(
           label: _quote == null ? 'Calcular valor' : 'Solicitar corrida',
           loading: _loading,
@@ -334,12 +335,12 @@ class _RequestRidePageState extends State<RequestRidePage> {
       context: context,
       isScrollControlled: true,
       builder: (context) => Padding(
-        padding: EdgeInsets.fromLTRB(18, 18, 18, MediaQuery.of(context).viewInsets.bottom + 18),
+        padding: EdgeInsets.fromLTRB(14, 14, 14, MediaQuery.of(context).viewInsets.bottom + 14),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text('Pagamento no cartão', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
-            const SizedBox(height: 12),
+            const Text('Pagamento no cartão', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800)),
+            const SizedBox(height: 8),
             TextField(controller: number, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Número do cartão')),
             TextField(controller: name, textCapitalization: TextCapitalization.words, decoration: const InputDecoration(labelText: 'Nome impresso')),
             Row(
@@ -349,7 +350,7 @@ class _RequestRidePageState extends State<RequestRidePage> {
                 Expanded(child: TextField(controller: cvv, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'CVV'))),
               ],
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 12),
             _PrimaryButton(
               label: 'Confirmar pagamento',
               onPressed: () => Navigator.of(context).pop(true),
@@ -469,13 +470,13 @@ class _PrimaryButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 54,
+      height: 48,
       child: ElevatedButton(
         onPressed: loading ? null : onPressed,
         style: ElevatedButton.styleFrom(
           backgroundColor: const Color(0xFFFFE16D),
           foregroundColor: const Color(0xFF080A73),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         ),
         child: loading
             ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2))
@@ -493,7 +494,7 @@ class _QuoteBox extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: const Color(0xFFF7F8FC),
         borderRadius: BorderRadius.circular(8),
@@ -509,7 +510,7 @@ class _QuoteBox extends StatelessWidget {
           ),
           Text(
             'R\$ ${quote.totalPrice.toStringAsFixed(2)}',
-            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: FretColors.loginFooterLink),
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: FretColors.loginFooterLink),
           ),
         ],
       ),

@@ -18,46 +18,46 @@ class ClientHomeContent extends StatelessWidget {
     final String greetingName = userName.trim().isEmpty ? 'Cliente' : userName;
 
     return ListView(
-      padding: const EdgeInsets.fromLTRB(24, 6, 0, 24),
+      padding: const EdgeInsets.fromLTRB(16, 6, 0, 18),
       children: [
         Padding(
-          padding: const EdgeInsets.only(right: 24),
+          padding: const EdgeInsets.only(right: 16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
                 'Olá, $greetingName!',
                 style: const TextStyle(
-                  fontSize: 44,
+                  fontSize: 30,
                   fontWeight: FontWeight.w800,
                   color: FretColors.loginFooterLink,
                 ),
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 6),
               const Text(
                 'Para onde vamos hoje? Encontre fretes rápidos e seguros.',
                 style: TextStyle(
-                  fontSize: 24,
+                  fontSize: 16,
                   height: 1.35,
                   fontWeight: FontWeight.w500,
                   color: Color(0xFF656671),
                 ),
               ),
-              const SizedBox(height: 34),
+              const SizedBox(height: 20),
               _FreightRequestCard(userId: userId),
-              const SizedBox(height: 36),
+              const SizedBox(height: 22),
               const _FreightsSectionHeader(),
             ],
           ),
         ),
-        const SizedBox(height: 18),
+        const SizedBox(height: 12),
         SizedBox(
-          height: 296,
+          height: 226,
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.only(right: 24),
+            padding: const EdgeInsets.only(right: 16),
             itemCount: _freights.length,
-            separatorBuilder: (_, __) => const SizedBox(width: 16),
+            separatorBuilder: (_, __) => const SizedBox(width: 12),
             itemBuilder: (context, index) {
               final freight = _freights[index];
 
@@ -79,15 +79,15 @@ class _FreightRequestCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(32, 34, 32, 38),
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 22),
       decoration: BoxDecoration(
         color: const Color(0xFF080A73),
-        borderRadius: BorderRadius.circular(30),
+        borderRadius: BorderRadius.circular(18),
         boxShadow: const [
           BoxShadow(
             color: Color(0x14080A73),
-            blurRadius: 18,
-            offset: Offset(0, 10),
+            blurRadius: 12,
+            offset: Offset(0, 6),
           ),
         ],
       ),
@@ -98,24 +98,24 @@ class _FreightRequestCard extends StatelessWidget {
             'Solicitação de frete',
             style: TextStyle(
               color: FretColors.white,
-              fontSize: 32,
+              fontSize: 22,
               fontWeight: FontWeight.w800,
             ),
           ),
-          const SizedBox(height: 18),
+          const SizedBox(height: 10),
           const Text(
             'Precisando de alguém para transportar um produto? Nós fretamos para você',
             style: TextStyle(
               color: Color(0xFFE2E5FF),
-              fontSize: 22,
+              fontSize: 15,
               height: 1.45,
               fontWeight: FontWeight.w500,
             ),
           ),
-          const SizedBox(height: 34),
+          const SizedBox(height: 20),
           SizedBox(
             width: double.infinity,
-            height: 76,
+            height: 52,
             child: ElevatedButton(
               onPressed: () {
                 Navigator.of(context).push(
@@ -129,13 +129,13 @@ class _FreightRequestCard extends StatelessWidget {
                 backgroundColor: const Color(0xFFFFE16D),
                 foregroundColor: const Color(0xFF080A73),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(12),
                 ),
               ),
               child: const Text(
                 'SOLICITAR AGORA',
                 style: TextStyle(
-                  fontSize: 22,
+                  fontSize: 15,
                   fontWeight: FontWeight.w900,
                 ),
               ),
@@ -159,7 +159,7 @@ class _FreightsSectionHeader extends StatelessWidget {
             'Fretes em Andamento',
             maxLines: 2,
             style: TextStyle(
-              fontSize: 28,
+              fontSize: 20,
               fontWeight: FontWeight.w800,
               color: FretColors.loginFooterLink,
             ),
@@ -174,7 +174,7 @@ class _FreightsSectionHeader extends StatelessWidget {
           child: const Text(
             'VER TODOS',
             style: TextStyle(
-              fontSize: 16,
+              fontSize: 12,
               fontWeight: FontWeight.w800,
             ),
           ),
@@ -192,11 +192,11 @@ class _FreightProgressCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 290,
-      padding: const EdgeInsets.fromLTRB(24, 24, 24, 20),
+      width: 230,
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 14),
       decoration: BoxDecoration(
         color: FretColors.white,
-        borderRadius: BorderRadius.circular(28),
+        borderRadius: BorderRadius.circular(16),
         boxShadow: const [
           BoxShadow(
             color: Color(0x11000000),
@@ -222,11 +222,11 @@ class _FreightProgressCard extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 24),
-          _RouteLine(origin: freight.origin, destination: freight.destination),
-          const SizedBox(height: 20),
-          const Divider(height: 1, color: Color(0xFFE8E8EC)),
           const SizedBox(height: 16),
+          _RouteLine(origin: freight.origin, destination: freight.destination),
+          const SizedBox(height: 12),
+          const Divider(height: 1, color: Color(0xFFE8E8EC)),
+          const SizedBox(height: 10),
           _FreightInfo(
             icon: freight.infoIcon,
             label: freight.infoLabel,
@@ -246,18 +246,18 @@ class _StatusPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 44,
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+      height: 32,
+      padding: const EdgeInsets.symmetric(horizontal: 10),
       alignment: Alignment.center,
       decoration: BoxDecoration(
         color: const Color(0xFFF4EDC8),
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(10),
       ),
       child: Text(
         label,
         style: const TextStyle(
           color: Color(0xFF3D3312),
-          fontSize: 14,
+          fontSize: 11,
           fontWeight: FontWeight.w800,
         ),
       ),
@@ -321,13 +321,13 @@ class _RoutePoint extends StatelessWidget {
               if (showConnector)
                 Container(
                   width: 1,
-                  height: 34,
+                  height: 24,
                   color: const Color(0xFFE0E2EA),
                 ),
             ],
           ),
         ),
-        const SizedBox(width: 12),
+        const SizedBox(width: 8),
         Expanded(
           child: Padding(
             padding: EdgeInsets.only(bottom: showConnector ? 22 : 0),
@@ -336,7 +336,7 @@ class _RoutePoint extends StatelessWidget {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: const TextStyle(
-                fontSize: 23,
+                fontSize: 16,
                 fontWeight: FontWeight.w700,
                 color: FretColors.neutral900,
               ),
@@ -364,15 +364,15 @@ class _FreightInfo extends StatelessWidget {
     return Row(
       children: [
         Container(
-          width: 46,
-          height: 46,
+          width: 34,
+          height: 34,
           decoration: BoxDecoration(
             color: const Color(0xFFEFF0F2),
             borderRadius: BorderRadius.circular(8),
           ),
-          child: Icon(icon, color: const Color(0xFF5E606A), size: 24),
+          child: Icon(icon, color: const Color(0xFF5E606A), size: 18),
         ),
-        const SizedBox(width: 14),
+        const SizedBox(width: 10),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -380,8 +380,8 @@ class _FreightInfo extends StatelessWidget {
               Text(
                 label,
                 style: const TextStyle(
-                  fontSize: 14,
-                  letterSpacing: 1,
+                  fontSize: 10,
+                  letterSpacing: 0,
                   fontWeight: FontWeight.w800,
                   color: Color(0xFF5E606A),
                 ),
@@ -392,7 +392,7 @@ class _FreightInfo extends StatelessWidget {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
-                  fontSize: 17,
+                  fontSize: 13,
                   fontWeight: FontWeight.w700,
                   color: FretColors.neutral900,
                 ),

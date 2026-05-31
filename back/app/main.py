@@ -7,7 +7,9 @@ from app.api.routes.vehicle_catalog import router as vehicle_catalog_router
 from app.api.routes.vehicle_type import router as vehicle_type_router
 from app.api.routes.driver_license_category import router as driver_license_category_router
 from app.api.routes.driver_document import router as driver_document_router
+from app.api.routes.payments import router as payments_router
 from app.api.routes.ride import router as ride_router
+from app.api.routes.ride_offers import router as ride_offers_router
 from app.api.routes.user_cards import router as user_cards_router
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
@@ -34,6 +36,8 @@ app.include_router(vehicle_type_router)
 app.include_router(driver_license_category_router)
 app.include_router(driver_document_router)
 app.include_router(ride_router)
+app.include_router(payments_router)
+app.include_router(ride_offers_router)
 app.include_router(user_cards_router)
 
 @app.on_event("startup")

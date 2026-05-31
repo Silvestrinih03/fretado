@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../app/design_system/design_system.dart';
 import '../../../../core/services/myself/models/myself_user_model.dart';
 import '../../../../core/services/myself/services/myself_service.dart';
+import '../../../payments/presentation/pages/my_payment_methods_page.dart';
 import '../../../profile/presentation/pages/user_data_page.dart';
 
 class HomeDrawer extends StatelessWidget {
@@ -54,7 +55,14 @@ class HomeDrawer extends StatelessWidget {
             _DrawerItem(
               icon: Icons.credit_card_outlined,
               label: 'Métodos de pagamento',
-              onTap: () => Navigator.of(context).pop(),
+              onTap: () {
+                Navigator.of(context).pop();
+                Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const MyPaymentMethodsPage(),
+                  ),
+                );
+              },
             ),
             _DrawerItem(
               icon: Icons.history_outlined,

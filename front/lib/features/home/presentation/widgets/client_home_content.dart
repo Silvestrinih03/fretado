@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../app/design_system/design_system.dart';
-import '../../../rides/presentation/pages/request_ride_page.dart';
+import '../../../shipping_request/presentation/pages/address_map_page.dart';
 
 class ClientHomeContent extends StatelessWidget {
   final String userName;
@@ -120,7 +120,7 @@ class _FreightRequestCard extends StatelessWidget {
               onPressed: () {
                 Navigator.of(context).push(
                   MaterialPageRoute<void>(
-                    builder: (_) => RequestRidePage(userId: userId),
+                    builder: (_) => const AddressMapPage(),
                   ),
                 );
               },

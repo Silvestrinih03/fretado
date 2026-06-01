@@ -3,14 +3,29 @@ import 'package:flutter/material.dart';
 import '../../../../app/design_system/design_system.dart';
 import '../../../../core/services/myself/models/myself_user_model.dart';
 import '../../../../core/services/myself/services/myself_service.dart';
+import '../../../documents/presentation/pages/my_documents.dart';
 import '../../../payments/presentation/pages/my_payment_methods_page.dart';
 import '../../../profile/presentation/pages/user_data_page.dart';
+import '../../../vehicles/presentation/pages/my_vehicles.dart';
+
+const int _clientUserTypeId = 1;
+const int _driverUserTypeId = 2;
 
 class HomeDrawer extends StatelessWidget {
-  const HomeDrawer({super.key});
+  final int? userId;
+  final int? userTypeId;
+
+  const HomeDrawer({
+    super.key,
+    this.userId,
+    this.userTypeId,
+  });
 
   @override
   Widget build(BuildContext context) {
+    final int? resolvedUserTypeId =
+        userTypeId ?? MyselfService().currentUserTypeId;
+
     return Drawer(
       child: SafeArea(
         child: Column(
@@ -19,10 +34,10 @@ class HomeDrawer extends StatelessWidget {
             Container(
               color: FretColors.loginFooterLink,
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 18),
-              child: const Column(
+              child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  CircleAvatar(
+                  const CircleAvatar(
                     radius: 22,
                     backgroundColor: FretColors.white,
                     child: Icon(
@@ -30,10 +45,10 @@ class HomeDrawer extends StatelessWidget {
                       color: FretColors.loginFooterLink,
                     ),
                   ),
-                  SizedBox(height: 8),
-                  _DrawerUserName(),
-                  SizedBox(height: 2),
-                  Text(
+                  const SizedBox(height: 8),
+                  _DrawerUserName(userId: userId),
+                  const SizedBox(height: 2),
+                  const Text(
                     'Gerencie seus dados',
                     style: TextStyle(color: FretColors.primary100),
                   ),
@@ -52,25 +67,51 @@ class HomeDrawer extends StatelessWidget {
                 );
               },
             ),
-            _DrawerItem(
-              icon: Icons.credit_card_outlined,
-              label: 'Métodos de pagamento',
-              onTap: () {
-                Navigator.of(context).pop();
-                Navigator.of(context).push(
-                  MaterialPageRoute<void>(
-                    builder: (_) => MyPaymentMethodsPage(
-                      userId: MyselfService().currentUserId,
+            if (resolvedUserTypeId == _driverUserTypeId) ...[
+              _DrawerItem(
+                icon: Icons.local_shipping_outlined,
+                label: 'Veículos',
+                onTap: () {
+                  Navigator.of(context).pop();
+                  Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => MyVehiclesPage(
+                        userId: userId ?? MyselfService().currentUserId,
+                      ),
                     ),
-                  ),
-                );
-              },
-            ),
-            _DrawerItem(
-              icon: Icons.history_outlined,
-              label: 'Histórico de ???',
-              onTap: () => Navigator.of(context).pop(),
-            ),
+                  );
+                },
+              ),
+              _DrawerItem(
+                icon: Icons.article_outlined,
+                label: 'Documentos',
+                onTap: () {
+                  Navigator.of(context).pop();
+                  Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => MyDocumentsPage(
+                        userId: userId ?? MyselfService().currentUserId,
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ] else if (resolvedUserTypeId == _clientUserTypeId) ...[
+              _DrawerItem(
+                icon: Icons.credit_card_outlined,
+                label: 'Métodos de pagamento',
+                onTap: () {
+                  Navigator.of(context).pop();
+                  Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => MyPaymentMethodsPage(
+                        userId: userId ?? MyselfService().currentUserId,
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ],
             const Spacer(),
             Padding(
               padding: const EdgeInsets.all(16),
@@ -94,7 +135,9 @@ class HomeDrawer extends StatelessWidget {
 }
 
 class _DrawerUserName extends StatefulWidget {
-  const _DrawerUserName();
+  final int? userId;
+
+  const _DrawerUserName({this.userId});
 
   @override
   State<_DrawerUserName> createState() => _DrawerUserNameState();
@@ -107,7 +150,7 @@ class _DrawerUserNameState extends State<_DrawerUserName> {
   void initState() {
     super.initState();
     final MyselfService myselfService = MyselfService();
-    final int userId = myselfService.currentUserId ?? 5;
+    final int userId = widget.userId ?? myselfService.currentUserId ?? 5;
 
     _myselfFuture = myselfService.getMyself(userId);
   }

@@ -89,12 +89,17 @@ class _LoginPageState extends State<LoginPage> {
       myselfService.currentUserId = _authController.currentUser?.id;
 
       final int userTypeId = _authController.currentUser?.userTypeId ?? 2;
+      myselfService.currentUserTypeId = userTypeId;
       final HomeProfileEnum profile = HomeProfileMapper.fromUserTypeId(userTypeId);
       final int? userId = _authController.currentUser?.id;
 
       Navigator.of(context).pushReplacement(
         MaterialPageRoute<void>(
-          builder: (_) => HomePage(profile: profile, userId: userId),
+          builder: (_) => HomePage(
+            profile: profile,
+            userId: userId,
+            userTypeId: userTypeId,
+          ),
         ),
       );
       return;

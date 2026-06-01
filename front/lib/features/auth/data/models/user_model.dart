@@ -13,10 +13,20 @@ class UserModel {
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
     return UserModel(
-      id: json['id'] as int,
-      email: json['email'] as String,
-      cpf: json['cpf'] as String,
-      userTypeId: json['user_type_id'] as int,
+      id: _readInt(json['id']) ?? 0,
+      email: json['email']?.toString() ?? '',
+      cpf: json['cpf']?.toString() ?? '',
+      userTypeId: _readInt(json['user_type_id']) ?? 1,
     );
+  }
+
+  static int? _readInt(dynamic value) {
+    if (value is int) {
+      return value;
+    }
+    if (value is String) {
+      return int.tryParse(value);
+    }
+    return null;
   }
 }

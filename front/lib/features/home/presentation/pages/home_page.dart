@@ -10,11 +10,13 @@ import '../widgets/home_shell.dart';
 class HomePage extends StatefulWidget {
   final HomeProfileEnum profile;
   final int? userId;
+  final int? userTypeId;
 
   const HomePage({
     super.key,
     this.profile = HomeProfileEnum.driver,
     this.userId,
+    this.userTypeId,
   });
 
   @override
@@ -31,6 +33,9 @@ class _HomePageState extends State<HomePage> {
     _myselfService = MyselfService();
     if (widget.userId != null) {
       _myselfService.currentUserId = widget.userId;
+    }
+    if (widget.userTypeId != null) {
+      _myselfService.currentUserTypeId = widget.userTypeId;
     }
 
     _myselfFuture = _myselfService.getMyself(
@@ -51,8 +56,14 @@ class _HomePageState extends State<HomePage> {
         final String firstName = snapshot.data?.firstName.isNotEmpty == true
             ? snapshot.data!.firstName
             : '';
+        final int? userTypeId = widget.userTypeId ??
+            _myselfService.currentUserTypeId ??
+            snapshot.data?.userTypeId;
+        final HomeProfileEnum profile = userTypeId != null
+            ? HomeProfileMapper.fromUserTypeId(userTypeId)
+            : widget.profile;
 
-        final Widget content = switch (widget.profile) {
+        final Widget content = switch (profile) {
           HomeProfileEnum.driver => DriverHomeContent(
               firstName: firstName,
               userId: widget.userId ?? _myselfService.currentUserId ?? 5,
@@ -63,7 +74,11 @@ class _HomePageState extends State<HomePage> {
             ),
         };
 
-        return HomeShell(content: content);
+        return HomeShell(
+          content: content,
+          userId: widget.userId ?? _myselfService.currentUserId,
+          userTypeId: userTypeId,
+        );
       },
     );
   }

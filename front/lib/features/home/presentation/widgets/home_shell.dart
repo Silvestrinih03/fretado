@@ -5,14 +5,21 @@ import 'home_drawer.dart';
 
 class HomeShell extends StatelessWidget {
   final Widget content;
+  final int? userId;
+  final int? userTypeId;
 
-  const HomeShell({super.key, required this.content});
+  const HomeShell({
+    super.key,
+    required this.content,
+    this.userId,
+    this.userTypeId,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF2F3F7),
-      endDrawer: const HomeDrawer(),
+      endDrawer: HomeDrawer(userId: userId, userTypeId: userTypeId),
       body: SafeArea(
         child: Column(
           children: [

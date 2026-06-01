@@ -167,7 +167,9 @@ class _UserDataPageState extends State<UserDataPage> {
                           lastNameController: _lastNameController,
                           userTypeLabel: snapshot.hasData
                               ? RegisterAccountTypeApiMapper.fromUserTypeId(
-                                  snapshot.data!.userTypeId,
+                                  snapshot.data!.userTypeId ??
+                                      MyselfService().currentUserTypeId ??
+                                      1,
                                 ).displayName
                               : '',
                         ),

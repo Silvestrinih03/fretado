@@ -1,6 +1,17 @@
 from datetime import datetime
+from typing import Optional
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel
+
+
+class RideOfferCreate(BaseModel):
+    ride_id: int
+    driver_user_id: int
+    status_id: int
+
+
+class RideOfferUpdate(BaseModel):
+    status_id: Optional[int] = None
 
 
 class RideOfferResponse(BaseModel):
@@ -8,22 +19,8 @@ class RideOfferResponse(BaseModel):
     ride_id: int
     driver_user_id: int
     status_id: int
-    status: str
     created_at: datetime
+    updated_at: datetime
 
-    model_config = ConfigDict(from_attributes=True)
-
-
-class RideDispatchResponse(BaseModel):
-    ride_id: int
-    offer: RideOfferResponse | None
-    message: str
-
-
-class RideOfferDecisionResponse(BaseModel):
-    ride_id: int
-    offer: RideOfferResponse
-    ride_status_id: int | None = None
-    ride_status: str | None = None
-    next_offer: RideOfferResponse | None = None
-    message: str
+    class Config:
+        from_attributes = True

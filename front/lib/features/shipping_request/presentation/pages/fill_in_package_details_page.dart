@@ -1,15 +1,21 @@
 import 'package:flutter/material.dart';
 
 import '../../../../app/design_system/design_system.dart';
+import '../../../../core/endpoints.dart';
+import '../../../../core/services/http_service.dart';
 import '../models/freight_address_data.dart';
+import '../models/freight_package_data.dart';
+import '../models/freight_quote_model.dart';
 import 'shipping_resume_page.dart';
 
 class FillInPackageDetailsPage extends StatefulWidget {
-  final FreightAddressData? addressData;
+  final int userId;
+  final FreightAddressData addressData;
 
   const FillInPackageDetailsPage({
     super.key,
-    this.addressData,
+    required this.userId,
+    required this.addressData,
   });
 
   @override
@@ -30,10 +36,19 @@ class _FillInPackageDetailsPageState extends State<FillInPackageDetailsPage> {
   final TextEditingController _heightController = TextEditingController();
   final TextEditingController _lengthController = TextEditingController();
   final TextEditingController _weightController = TextEditingController();
+  late final HttpService _httpService;
   AutovalidateMode _autovalidateMode = AutovalidateMode.disabled;
+  bool _isQuoting = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _httpService = HttpService();
+  }
 
   @override
   void dispose() {
+    _httpService.dispose();
     _widthController.dispose();
     _heightController.dispose();
     _lengthController.dispose();
@@ -95,14 +110,17 @@ class _FillInPackageDetailsPageState extends State<FillInPackageDetailsPage> {
                 ),
               ),
             ),
-            _BottomCalculateBar(onPressed: _goToResume),
+            _BottomCalculateBar(
+              loading: _isQuoting,
+              onPressed: _goToResume,
+            ),
           ],
         ),
       ),
     );
   }
 
-  void _goToResume() {
+  Future<void> _goToResume() async {
     FocusScope.of(context).unfocus();
 
     final bool isFormValid = _formKey.currentState?.validate() ?? false;
@@ -113,11 +131,64 @@ class _FillInPackageDetailsPageState extends State<FillInPackageDetailsPage> {
       return;
     }
 
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (_) => const ShippingResumePage(),
-      ),
+    final packageData = FreightPackageData(
+      widthCm: _parseMetric(_widthController.text),
+      heightCm: _parseMetric(_heightController.text),
+      lengthCm: _parseMetric(_lengthController.text),
+      weightKg: _parseMetric(_weightController.text),
     );
+
+    setState(() => _isQuoting = true);
+    try {
+      final response = await _httpService.post(
+        Endpoints.rideQuote,
+        body: {
+          'origin_latitude': widget.addressData.pickupLatitude,
+          'origin_longitude': widget.addressData.pickupLongitude,
+          'destination_latitude': widget.addressData.deliveryLatitude,
+          'destination_longitude': widget.addressData.deliveryLongitude,
+          ...packageData.toQuoteJson(),
+        },
+      );
+      final quote = FreightQuoteModel.fromJson(response);
+
+      if (!mounted) {
+        return;
+      }
+
+      Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (_) => ShippingResumePage(
+            userId: widget.userId,
+            addressData: widget.addressData,
+            packageData: packageData,
+            quote: quote,
+          ),
+        ),
+      );
+    } on HttpServiceException catch (e) {
+      _showMessage(e.message);
+    } catch (_) {
+      _showMessage('Nao foi possivel calcular o frete agora.');
+    } finally {
+      if (mounted) {
+        setState(() => _isQuoting = false);
+      }
+    }
+  }
+
+  double _parseMetric(String value) {
+    return double.parse(value.trim().replaceAll(',', '.'));
+  }
+
+  void _showMessage(String message) {
+    if (!mounted) {
+      return;
+    }
+
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 }
 
@@ -209,6 +280,7 @@ class _PackageDetailsCard extends StatelessWidget {
             controller: weightController,
             icon: Icons.shopping_bag,
             iconColor: _FillInPackageDetailsPageState._primaryBlue,
+            unit: 'kg',
           ),
         ],
       ),
@@ -341,8 +413,12 @@ String? _validatePositiveMetric(String? value, String label) {
 
 class _BottomCalculateBar extends StatelessWidget {
   final VoidCallback onPressed;
+  final bool loading;
 
-  const _BottomCalculateBar({required this.onPressed});
+  const _BottomCalculateBar({
+    required this.onPressed,
+    required this.loading,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -353,7 +429,7 @@ class _BottomCalculateBar extends StatelessWidget {
       child: SizedBox(
         height: 42,
         child: ElevatedButton(
-          onPressed: onPressed,
+          onPressed: loading ? null : onPressed,
           style: ElevatedButton.styleFrom(
             elevation: 0,
             backgroundColor: _FillInPackageDetailsPageState._primaryBlue,
@@ -362,21 +438,30 @@ class _BottomCalculateBar extends StatelessWidget {
               borderRadius: BorderRadius.circular(5),
             ),
           ),
-          child: const Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                'Calcular Valor',
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w800,
+          child: loading
+              ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: FretColors.white,
+                  ),
+                )
+              : const Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'Calcular Valor',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    SizedBox(width: 8),
+                    Icon(Icons.calculate_outlined, size: 14),
+                  ],
                 ),
-              ),
-              SizedBox(width: 8),
-              Icon(Icons.calculate_outlined, size: 14),
-            ],
-          ),
         ),
       ),
     );

@@ -120,7 +120,7 @@ class _FreightRequestCard extends StatelessWidget {
               onPressed: () {
                 Navigator.of(context).push(
                   MaterialPageRoute<void>(
-                    builder: (_) => const AddressMapPage(),
+                    builder: (_) => AddressMapPage(userId: userId),
                   ),
                 );
               },

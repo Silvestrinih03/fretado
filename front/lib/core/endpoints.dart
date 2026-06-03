@@ -23,6 +23,9 @@ abstract class Endpoints {
   static const String rideQuote = '$rides/quote';
   static const String createRide = rides;
 
+  static const String payments = '/payments';
+  static const String simulatePayment = '$payments/simulate';
+
   static const String cards = '/cards';
   static String cardsByUser(int userId) => '$cards/user/$userId';
   static String cardByUser({

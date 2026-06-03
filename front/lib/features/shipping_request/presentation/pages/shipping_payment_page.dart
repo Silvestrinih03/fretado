@@ -1,9 +1,28 @@
 import 'package:flutter/material.dart';
 
 import '../../../../app/design_system/design_system.dart';
+import '../../../../core/endpoints.dart';
+import '../../../../core/services/http_service.dart';
+import '../../../payments/data/datasources/user_card_datasource.dart';
+import '../../../payments/data/models/user_card_model.dart';
+import '../../../payments/presentation/pages/edit_card_data_page.dart';
+import '../models/freight_address_data.dart';
+import '../models/freight_package_data.dart';
+import '../models/freight_quote_model.dart';
 
 class ShippingPaymentPage extends StatefulWidget {
-  const ShippingPaymentPage({super.key});
+  final int userId;
+  final FreightAddressData addressData;
+  final FreightPackageData packageData;
+  final FreightQuoteModel quote;
+
+  const ShippingPaymentPage({
+    super.key,
+    required this.userId,
+    required this.addressData,
+    required this.packageData,
+    required this.quote,
+  });
 
   @override
   State<ShippingPaymentPage> createState() => _ShippingPaymentPageState();
@@ -15,7 +34,190 @@ class _ShippingPaymentPageState extends State<ShippingPaymentPage> {
   static const Color _screenBackground = Color(0xFFF7F8FA);
   static const Color _mutedText = Color(0xFF3F4050);
 
-  String _selectedPaymentMethod = 'credit_card';
+  late final HttpService _httpService;
+  late final UserCardDatasource _cardDatasource;
+
+  List<UserCardModel> _cards = <UserCardModel>[];
+  UserCardModel? _selectedCard;
+  bool _isLoadingCards = true;
+  bool _isPaying = false;
+  String? _loadErrorMessage;
+
+  @override
+  void initState() {
+    super.initState();
+    _httpService = HttpService();
+    _cardDatasource = UserCardDatasource(_httpService);
+    _loadCards();
+  }
+
+  @override
+  void dispose() {
+    _httpService.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadCards() async {
+    setState(() {
+      _isLoadingCards = true;
+      _loadErrorMessage = null;
+    });
+
+    try {
+      final cards = await _cardDatasource.listCardsByUser(widget.userId);
+      final defaultCard = _findDefaultCard(cards);
+
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _cards = cards;
+        _selectedCard = defaultCard ?? (cards.isNotEmpty ? cards.first : null);
+      });
+    } on UserCardDatasourceException catch (e) {
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _cards = <UserCardModel>[];
+        _selectedCard = null;
+        _loadErrorMessage = e.message;
+      });
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _cards = <UserCardModel>[];
+        _selectedCard = null;
+        _loadErrorMessage = 'Nao foi possivel carregar seus cartoes.';
+      });
+    } finally {
+      if (mounted) {
+        setState(() => _isLoadingCards = false);
+      }
+    }
+  }
+
+  Future<void> _openCardForm() async {
+    final bool? didSave = await Navigator.of(context).push<bool>(
+      MaterialPageRoute<bool>(
+        builder: (_) => EditCardDataPage(userId: widget.userId),
+      ),
+    );
+
+    if (!mounted || didSave != true) {
+      return;
+    }
+
+    await _loadCards();
+  }
+
+  Future<void> _confirmShipping() async {
+    final selectedCard = _selectedCard;
+    if (selectedCard == null) {
+      _showMessage('Selecione ou cadastre um cartao para continuar.');
+      return;
+    }
+
+    setState(() => _isPaying = true);
+    try {
+      final response = await _httpService.post(
+        Endpoints.simulatePayment,
+        body: {
+          'client_user_id': widget.userId,
+          'card_id': selectedCard.id,
+          'force_result': 'APPROVED',
+          'origin_latitude': widget.addressData.pickupLatitude,
+          'origin_longitude': widget.addressData.pickupLongitude,
+          'destination_latitude': widget.addressData.deliveryLatitude,
+          'destination_longitude': widget.addressData.deliveryLongitude,
+          ...widget.packageData.toQuoteJson(),
+        },
+      );
+
+      final approved = response['approved'] == true;
+      final message = response['message']?.toString() ??
+          (approved
+              ? 'Pagamento aprovado e frete solicitado.'
+              : 'Pagamento recusado.');
+
+      if (!mounted) {
+        return;
+      }
+
+      if (!approved) {
+        _showMessage(message);
+        return;
+      }
+
+      final ride = response['ride'] is Map<String, dynamic>
+          ? response['ride'] as Map<String, dynamic>
+          : <String, dynamic>{};
+      final rideId = ride['id']?.toString();
+      final status = ride['status']?.toString();
+
+      await showDialog<void>(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => AlertDialog(
+          title: const Text('Frete solicitado'),
+          content: Text(
+            [
+              if (rideId != null) 'Corrida #$rideId criada com sucesso.',
+              if (status != null) 'Status: $status.',
+              message,
+            ].join('\n'),
+          ),
+          actions: [
+            FilledButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Ok'),
+            ),
+          ],
+        ),
+      );
+
+      if (mounted) {
+        Navigator.of(context).popUntil((route) => route.isFirst);
+      }
+    } on HttpServiceException catch (e) {
+      _showMessage(e.message);
+    } catch (_) {
+      _showMessage('Nao foi possivel finalizar o pagamento agora.');
+    } finally {
+      if (mounted) {
+        setState(() => _isPaying = false);
+      }
+    }
+  }
+
+  void _selectCard(UserCardModel card) {
+    setState(() => _selectedCard = card);
+  }
+
+  UserCardModel? _findDefaultCard(List<UserCardModel> cards) {
+    for (final card in cards) {
+      if (card.isDefault) {
+        return card;
+      }
+    }
+
+    return null;
+  }
+
+  void _showMessage(String message) {
+    if (!mounted) {
+      return;
+    }
+
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -49,7 +251,7 @@ class _ShippingPaymentPageState extends State<ShippingPaymentPage> {
                   ),
                   const SizedBox(height: 8),
                   const Text(
-                    'Selecione como deseja pagar pelo seu frete.',
+                    'Selecione um cartao cadastrado para confirmar.',
                     style: TextStyle(
                       color: _mutedText,
                       fontSize: 13,
@@ -57,27 +259,42 @@ class _ShippingPaymentPageState extends State<ShippingPaymentPage> {
                     ),
                   ),
                   const SizedBox(height: 24),
-                  const _FreightSummaryCard(),
+                  _FreightSummaryCard(
+                    addressData: widget.addressData,
+                    packageData: widget.packageData,
+                    quote: widget.quote,
+                  ),
                   const SizedBox(height: 26),
-                  const Text(
-                    'Forma de Pagamento',
-                    style: TextStyle(
-                      color: FretColors.neutral900,
-                      fontSize: 15,
-                      fontWeight: FontWeight.w800,
-                    ),
+                  Row(
+                    children: [
+                      const Expanded(
+                        child: Text(
+                          'Forma de Pagamento',
+                          style: TextStyle(
+                            color: FretColors.neutral900,
+                            fontSize: 15,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        tooltip: 'Cadastrar cartao',
+                        onPressed: _isPaying ? null : _openCardForm,
+                        icon: const Icon(
+                          Icons.add_card_rounded,
+                          color: _primaryBlue,
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 12),
-                  _PaymentOptionTile(
-                    value: 'credit_card',
-                    selectedValue: _selectedPaymentMethod,
-                    icon: Icons.credit_card_rounded,
-                    title: 'Cartão de Crédito',
-                    subtitle: '**** 1234',
-                    onChanged: _selectPaymentMethod,
-                  ),
+                  _buildPaymentMethods(),
                   const SizedBox(height: 24),
-                  const _ConfirmShippingButton(),
+                  _ConfirmShippingButton(
+                    loading: _isPaying,
+                    enabled: !_isLoadingCards && _selectedCard != null,
+                    onPressed: _confirmShipping,
+                  ),
                 ],
               ),
             ),
@@ -87,8 +304,50 @@ class _ShippingPaymentPageState extends State<ShippingPaymentPage> {
     );
   }
 
-  void _selectPaymentMethod(String value) {
-    setState(() => _selectedPaymentMethod = value);
+  Widget _buildPaymentMethods() {
+    if (_isLoadingCards) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.symmetric(vertical: 18),
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+
+    if (_loadErrorMessage != null) {
+      return _PaymentStateCard(
+        icon: Icons.error_outline_rounded,
+        title: 'Nao foi possivel carregar os cartoes',
+        subtitle: _loadErrorMessage!,
+        actionLabel: 'Tentar novamente',
+        onTap: _loadCards,
+      );
+    }
+
+    if (_cards.isEmpty) {
+      return _PaymentStateCard(
+        icon: Icons.add_card_rounded,
+        title: 'Nenhum cartao cadastrado',
+        subtitle: 'Cadastre um cartao para confirmar e criar a corrida.',
+        actionLabel: 'Cadastrar cartao',
+        onTap: _openCardForm,
+      );
+    }
+
+    return Column(
+      children: [
+        ..._cards.map(
+          (card) => Padding(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: _PaymentOptionTile(
+              card: card,
+              selected: _selectedCard?.id == card.id,
+              onTap: () => _selectCard(card),
+            ),
+          ),
+        ),
+      ],
+    );
   }
 }
 
@@ -132,7 +391,15 @@ class _PaymentHeader extends StatelessWidget {
 }
 
 class _FreightSummaryCard extends StatelessWidget {
-  const _FreightSummaryCard();
+  final FreightAddressData addressData;
+  final FreightPackageData packageData;
+  final FreightQuoteModel quote;
+
+  const _FreightSummaryCard({
+    required this.addressData,
+    required this.packageData,
+    required this.quote,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -148,7 +415,7 @@ class _FreightSummaryCard extends StatelessWidget {
           Expanded(
             flex: 3,
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(18, 22, 8, 20),
+              padding: const EdgeInsets.fromLTRB(18, 20, 8, 18),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: const [
@@ -160,7 +427,7 @@ class _FreightSummaryCard extends StatelessWidget {
                       fontWeight: FontWeight.w800,
                     ),
                   ),
-                  SizedBox(height: 18),
+                  SizedBox(height: 16),
                   _SummaryLabel(text: 'Origem'),
                   SizedBox(height: 10),
                   _SummaryLabel(text: 'Destino'),
@@ -173,30 +440,33 @@ class _FreightSummaryCard extends StatelessWidget {
           Expanded(
             flex: 2,
             child: Container(
-              padding: const EdgeInsets.fromLTRB(8, 18, 12, 20),
+              padding: const EdgeInsets.fromLTRB(8, 18, 12, 18),
               color: const Color(0xFFF9F9FB),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
-                children: const [
+                children: [
                   FittedBox(
                     fit: BoxFit.scaleDown,
                     alignment: Alignment.centerRight,
                     child: Text(
-                      'R\$ 1.250,00',
+                      _formatMoney(quote.totalPrice),
                       maxLines: 1,
-                      style: TextStyle(
+                      style: const TextStyle(
                         color: FretColors.neutral900,
                         fontSize: 18,
                         fontWeight: FontWeight.w900,
                       ),
                     ),
                   ),
-                  SizedBox(height: 18),
-                  _SummaryValue(text: 'São Paulo, SP'),
-                  SizedBox(height: 10),
-                  _SummaryValue(text: 'Rio de Janeiro, RJ'),
-                  SizedBox(height: 10),
-                  _SummaryValue(text: 'Paletes (1.500 kg)'),
+                  const SizedBox(height: 16),
+                  _SummaryValue(text: addressData.pickupAddress),
+                  const SizedBox(height: 10),
+                  _SummaryValue(text: addressData.deliveryAddress),
+                  const SizedBox(height: 10),
+                  _SummaryValue(
+                    text:
+                        '${quote.vehicleLabel} - ${_formatMetric(packageData.weightKg)} kg',
+                  ),
                 ],
               ),
             ),
@@ -232,59 +502,46 @@ class _SummaryValue extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return FittedBox(
-      fit: BoxFit.scaleDown,
-      alignment: Alignment.centerRight,
-      child: Text(
-        text,
-        maxLines: 1,
-        textAlign: TextAlign.right,
-        style: const TextStyle(
-          color: FretColors.neutral900,
-          fontSize: 10,
-          fontWeight: FontWeight.w700,
-        ),
+    return Text(
+      text,
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+      textAlign: TextAlign.right,
+      style: const TextStyle(
+        color: FretColors.neutral900,
+        fontSize: 10,
+        fontWeight: FontWeight.w700,
       ),
     );
   }
 }
 
 class _PaymentOptionTile extends StatelessWidget {
-  final String value;
-  final String selectedValue;
-  final IconData icon;
-  final Color iconColor;
-  final String title;
-  final String subtitle;
-  final ValueChanged<String> onChanged;
+  final UserCardModel card;
+  final bool selected;
+  final VoidCallback onTap;
 
   const _PaymentOptionTile({
-    required this.value,
-    required this.selectedValue,
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-    required this.onChanged,
-    this.iconColor = _ShippingPaymentPageState._primaryBlue,
+    required this.card,
+    required this.selected,
+    required this.onTap,
   });
-
-  bool get _isSelected => value == selectedValue;
 
   @override
   Widget build(BuildContext context) {
     return InkWell(
-      onTap: () => onChanged(value),
+      onTap: onTap,
       borderRadius: BorderRadius.circular(4),
       child: Container(
         width: double.infinity,
-        height: 57,
+        constraints: const BoxConstraints(minHeight: 62),
         padding: const EdgeInsets.fromLTRB(8, 10, 12, 10),
         decoration: BoxDecoration(
           color: FretColors.white,
           borderRadius: BorderRadius.circular(4),
           border: Border.all(
-            color: _isSelected
-                ? FretColors.white
+            color: selected
+                ? _ShippingPaymentPageState._primaryBlue
                 : const Color(0xFFE3E5EC),
           ),
         ),
@@ -292,14 +549,10 @@ class _PaymentOptionTile extends StatelessWidget {
           children: [
             SizedBox(
               width: 26,
-              child: Radio<String>(
-                value: value,
-                groupValue: selectedValue,
-                onChanged: (newValue) {
-                  if (newValue != null) {
-                    onChanged(newValue);
-                  }
-                },
+              child: Radio<int>(
+                value: card.id,
+                groupValue: selected ? card.id : null,
+                onChanged: (_) => onTap(),
                 activeColor: _ShippingPaymentPageState._primaryBlue,
                 materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 visualDensity: VisualDensity.compact,
@@ -307,13 +560,17 @@ class _PaymentOptionTile extends StatelessWidget {
             ),
             const SizedBox(width: 10),
             Container(
-              width: 28,
-              height: 28,
+              width: 30,
+              height: 30,
               decoration: BoxDecoration(
                 color: const Color(0xFFF1F2F8),
                 borderRadius: BorderRadius.circular(4),
               ),
-              child: Icon(icon, color: iconColor, size: 18),
+              child: const Icon(
+                Icons.credit_card_rounded,
+                color: _ShippingPaymentPageState._primaryBlue,
+                size: 18,
+              ),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -322,18 +579,18 @@ class _PaymentOptionTile extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    title,
+                    card.brandLabel,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
                       color: FretColors.neutral900,
                       fontSize: 13,
-                      fontWeight: FontWeight.w500,
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
                   const SizedBox(height: 3),
                   Text(
-                    subtitle,
+                    'Final ${card.lastFour} - ${card.expirationText}',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
@@ -345,6 +602,22 @@ class _PaymentOptionTile extends StatelessWidget {
                 ],
               ),
             ),
+            if (card.isDefault)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFEFF0FF),
+                  borderRadius: BorderRadius.circular(7),
+                ),
+                child: const Text(
+                  'Padrao',
+                  style: TextStyle(
+                    color: _ShippingPaymentPageState._primaryBlue,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
           ],
         ),
       ),
@@ -352,8 +625,83 @@ class _PaymentOptionTile extends StatelessWidget {
   }
 }
 
+class _PaymentStateCard extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final String actionLabel;
+  final VoidCallback onTap;
+
+  const _PaymentStateCard({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.actionLabel,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: FretColors.white,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: const Color(0xFFC8C9D8)),
+      ),
+      child: Column(
+        children: [
+          Icon(icon, color: _ShippingPaymentPageState._primaryBlue, size: 34),
+          const SizedBox(height: 10),
+          Text(
+            title,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              color: FretColors.neutral900,
+              fontSize: 16,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            subtitle,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              color: _ShippingPaymentPageState._mutedText,
+              fontSize: 13,
+              height: 1.3,
+            ),
+          ),
+          const SizedBox(height: 14),
+          ElevatedButton.icon(
+            onPressed: onTap,
+            icon: const Icon(Icons.refresh_rounded, size: 18),
+            label: Text(actionLabel),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: _ShippingPaymentPageState._primaryBlue,
+              foregroundColor: FretColors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _ConfirmShippingButton extends StatelessWidget {
-  const _ConfirmShippingButton();
+  final bool loading;
+  final bool enabled;
+  final VoidCallback onPressed;
+
+  const _ConfirmShippingButton({
+    required this.loading,
+    required this.enabled,
+    required this.onPressed,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -361,32 +709,68 @@ class _ConfirmShippingButton extends StatelessWidget {
       width: double.infinity,
       height: 43,
       child: ElevatedButton(
-        onPressed: () {},
+        onPressed: loading || !enabled ? null : onPressed,
         style: ElevatedButton.styleFrom(
           elevation: 8,
           shadowColor: const Color(0x33080A73),
           backgroundColor: _ShippingPaymentPageState._primaryBlue,
           foregroundColor: FretColors.white,
+          disabledBackgroundColor: const Color(0xFFB7B9D5),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(5),
           ),
         ),
-        child: const Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              'Confirmar e Solicitar Frete',
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w800,
+        child: loading
+            ? const SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: FretColors.white,
+                ),
+              )
+            : const Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'Confirmar e Solicitar Frete',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  SizedBox(width: 12),
+                  Icon(Icons.arrow_forward_rounded, size: 22),
+                ],
               ),
-            ),
-            SizedBox(width: 12),
-            Icon(Icons.arrow_forward_rounded, size: 22),
-          ],
-        ),
       ),
     );
   }
+}
+
+String _formatMetric(double value) {
+  if (value == value.roundToDouble()) {
+    return value.toStringAsFixed(0);
+  }
+
+  return value.toStringAsFixed(1).replaceAll('.', ',');
+}
+
+String _formatMoney(double value) {
+  final fixed = value.toStringAsFixed(2);
+  final parts = fixed.split('.');
+  final integer = parts.first;
+  final decimals = parts.last;
+  final buffer = StringBuffer();
+
+  for (int i = 0; i < integer.length; i++) {
+    final reverseIndex = integer.length - i;
+    buffer.write(integer[i]);
+    if (reverseIndex > 1 && reverseIndex % 3 == 1) {
+      buffer.write('.');
+    }
+  }
+
+  return 'R\$ ${buffer.toString()},$decimals';
 }

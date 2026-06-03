@@ -14,7 +14,9 @@ import 'fill_in_package_details_page.dart';
 enum _AddressPointMode { pickup, delivery }
 
 class AddressMapPage extends StatefulWidget {
-  const AddressMapPage({super.key});
+  final int userId;
+
+  const AddressMapPage({super.key, required this.userId});
 
   @override
   State<AddressMapPage> createState() => _AddressMapPageState();
@@ -41,9 +43,11 @@ class _AddressMapPageState extends State<AddressMapPage> {
   LatLng? _userLocation;
   _AddressPointMode? _searchingMode;
   bool _loadingLocation = false;
+  bool _selectingPickupFromCurrentLocation = false;
   DateTime? _lastSearchAt;
 
-  bool get _isSearching => _searchingMode != null;
+  bool get _isSearching =>
+      _searchingMode != null || _selectingPickupFromCurrentLocation;
 
   @override
   void initState() {
@@ -84,7 +88,8 @@ class _AddressMapPageState extends State<AddressMapPage> {
                         pickupController: _pickupController,
                         deliveryController: _deliveryController,
                         isSearchingPickup:
-                            _searchingMode == _AddressPointMode.pickup,
+                            _searchingMode == _AddressPointMode.pickup ||
+                            _selectingPickupFromCurrentLocation,
                         isSearchingDelivery:
                             _searchingMode == _AddressPointMode.delivery,
                         pickupSelected: _pickupAddress != null,
@@ -125,10 +130,22 @@ class _AddressMapPageState extends State<AddressMapPage> {
                   Positioned(
                     right: 15,
                     bottom: 86,
-                    child: _MapActionButton(
-                      onPressed: _centerOnUserLocation,
-                      icon: Icons.my_location_rounded,
-                      loading: _loadingLocation,
+                    child: Column(
+                      children: [
+                        _MapActionButton(
+                          tooltip: 'Usar local atual como coleta',
+                          onPressed: _useCurrentLocationAsPickup,
+                          icon: Icons.add_location_alt_rounded,
+                          loading: _selectingPickupFromCurrentLocation,
+                        ),
+                        const SizedBox(height: 10),
+                        _MapActionButton(
+                          tooltip: 'Centralizar no local atual',
+                          onPressed: _centerOnUserLocation,
+                          icon: Icons.my_location_rounded,
+                          loading: _loadingLocation,
+                        ),
+                      ],
                     ),
                   ),
                   Positioned(
@@ -460,6 +477,102 @@ class _AddressMapPageState extends State<AddressMapPage> {
     await _loadCurrentLocation();
   }
 
+  Future<void> _useCurrentLocationAsPickup() async {
+    if (_selectingPickupFromCurrentLocation || _loadingLocation) {
+      return;
+    }
+
+    FocusScope.of(context).unfocus();
+    setState(() => _selectingPickupFromCurrentLocation = true);
+
+    try {
+      if (_userLocation == null) {
+        await _loadCurrentLocation();
+      }
+
+      final LatLng? location = _userLocation;
+      if (location == null) {
+        return;
+      }
+
+      final _AddressResult result = await _buildCurrentLocationAddress(
+        location,
+      );
+      if (!mounted) {
+        return;
+      }
+
+      _selectAddress(_AddressPointMode.pickup, result);
+      _showMessage('Localizacao atual selecionada para coleta.');
+    } finally {
+      if (mounted) {
+        setState(() => _selectingPickupFromCurrentLocation = false);
+      }
+    }
+  }
+
+  Future<_AddressResult> _buildCurrentLocationAddress(LatLng location) async {
+    if (_geoapifyApiKey.isEmpty) {
+      return _fallbackCurrentLocationAddress(location);
+    }
+
+    try {
+      final Uri uri = Uri.https(
+        'api.geoapify.com',
+        '/v1/geocode/reverse',
+        {
+          'lat': location.latitude.toString(),
+          'lon': location.longitude.toString(),
+          'format': 'geojson',
+          'lang': 'pt',
+          'apiKey': _geoapifyApiKey,
+        },
+      );
+
+      final http.Response response = await _httpClient.get(
+        uri,
+        headers: const {'Accept': 'application/json'},
+      );
+
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        return _fallbackCurrentLocationAddress(location);
+      }
+
+      final dynamic decoded = jsonDecode(response.body);
+      final List<dynamic> features = decoded is Map<String, dynamic>
+          ? decoded['features'] as List<dynamic>? ?? <dynamic>[]
+          : <dynamic>[];
+      final Map<String, dynamic>? firstFeature = _firstFeature(features);
+      if (firstFeature == null) {
+        return _fallbackCurrentLocationAddress(location);
+      }
+
+      return _AddressResult.fromGeoJsonFeature(firstFeature) ??
+          _fallbackCurrentLocationAddress(location);
+    } catch (_) {
+      return _fallbackCurrentLocationAddress(location);
+    }
+  }
+
+  _AddressResult _fallbackCurrentLocationAddress(LatLng location) {
+    return _AddressResult(
+      label: 'Minha localizacao atual',
+      point: location,
+      addressLine2:
+          '${location.latitude.toStringAsFixed(5)}, ${location.longitude.toStringAsFixed(5)}',
+    );
+  }
+
+  Map<String, dynamic>? _firstFeature(List<dynamic> features) {
+    for (final feature in features) {
+      if (feature is Map<String, dynamic>) {
+        return feature;
+      }
+    }
+
+    return null;
+  }
+
   void _clearSelectionIfEdited(_AddressPointMode mode, String value) {
     final _AddressResult? selected = _selectedAddressFor(mode);
     if (selected == null || selected.label == value.trim()) {
@@ -511,7 +624,10 @@ class _AddressMapPageState extends State<AddressMapPage> {
 
     Navigator.of(context).push(
       MaterialPageRoute<void>(
-        builder: (_) => FillInPackageDetailsPage(addressData: addressData),
+        builder: (_) => FillInPackageDetailsPage(
+          userId: widget.userId,
+          addressData: addressData,
+        ),
       ),
     );
   }
@@ -836,31 +952,40 @@ class _MapActionButton extends StatelessWidget {
   final VoidCallback onPressed;
   final IconData icon;
   final bool loading;
+  final String tooltip;
 
   const _MapActionButton({
     required this.onPressed,
     required this.icon,
+    required this.tooltip,
     this.loading = false,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: FretColors.white,
-      borderRadius: BorderRadius.circular(8),
-      elevation: 2,
-      child: InkWell(
-        onTap: onPressed,
+    return Tooltip(
+      message: tooltip,
+      child: Material(
+        color: FretColors.white,
         borderRadius: BorderRadius.circular(8),
-        child: SizedBox(
-          width: 48,
-          height: 48,
-          child: loading
-              ? const Padding(
-                  padding: EdgeInsets.all(14),
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
-              : Icon(icon, color: _AddressMapPageState._primaryBlue, size: 26),
+        elevation: 2,
+        child: InkWell(
+          onTap: loading ? null : onPressed,
+          borderRadius: BorderRadius.circular(8),
+          child: SizedBox(
+            width: 48,
+            height: 48,
+            child: loading
+                ? const Padding(
+                    padding: EdgeInsets.all(14),
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : Icon(
+                    icon,
+                    color: _AddressMapPageState._primaryBlue,
+                    size: 26,
+                  ),
+          ),
         ),
       ),
     );

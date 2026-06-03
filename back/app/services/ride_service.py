@@ -5,7 +5,19 @@ from app.enums.ride_status import RideStatusEnum
 from app.models.ride import Ride
 from app.models.ride_status import RideStatus
 from app.models.user import User
-from app.schemas.ride import RideCreate, RideUpdate
+from app.schemas.ride import (
+    RideCreate,
+    RideCreateRequest,
+    RideCreateResponse,
+    RideQuoteRequest,
+    RideQuoteResponse,
+    RideUpdate,
+)
+from app.services.ride_quote_service import RideQuoteService
+
+
+def calculate_ride_price(payload: RideQuoteRequest) -> RideQuoteResponse:
+    return RideQuoteService().quote(payload)
 
 
 def create_ride(db: Session, ride_data: RideCreate):
@@ -25,6 +37,69 @@ def create_ride(db: Session, ride_data: RideCreate):
     return ride
 
 
+def create_ride_after_payment(
+    db: Session,
+    payload: RideCreateRequest,
+    quote: RideQuoteResponse | None = None,
+):
+    if not payload.payment_confirmed:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Pagamento deve ser confirmado antes de criar a corrida.",
+        )
+
+    validate_user_exists(db, payload.client_user_id, "Cliente")
+    quote = quote or calculate_ride_price(payload)
+    ride_status = get_ride_status_by_id(db, int(RideStatusEnum.AGUARDANDO_ACEITE))
+
+    ride = Ride(
+        client_user_id=payload.client_user_id,
+        driver_user_id=None,
+        origin_latitude=payload.origin_latitude,
+        origin_longitude=payload.origin_longitude,
+        destination_latitude=payload.destination_latitude,
+        destination_longitude=payload.destination_longitude,
+        package_width=payload.package_width,
+        package_height=payload.package_height,
+        package_length=payload.package_length,
+        package_weight=payload.package_weight,
+        total_price=quote.total_price,
+        status_id=ride_status.id,
+    )
+
+    db.add(ride)
+    db.commit()
+    db.refresh(ride)
+
+    return ride, quote, ride_status
+
+
+def build_ride_create_response(
+    ride: Ride,
+    ride_status: RideStatus,
+    quote: RideQuoteResponse | None = None,
+) -> RideCreateResponse:
+    return RideCreateResponse(
+        id=ride.id,
+        client_user_id=ride.client_user_id,
+        driver_user_id=ride.driver_user_id,
+        origin_latitude=ride.origin_latitude,
+        origin_longitude=ride.origin_longitude,
+        destination_latitude=ride.destination_latitude,
+        destination_longitude=ride.destination_longitude,
+        package_width=ride.package_width,
+        package_height=ride.package_height,
+        package_length=ride.package_length,
+        package_weight=ride.package_weight,
+        total_price=ride.total_price,
+        status_id=ride.status_id,
+        status=ride_status.status,
+        created_at=ride.created_at,
+        updated_at=ride.updated_at,
+        quote=quote,
+    )
+
+
 def get_rides_by_client_user_id(db: Session, client_user_id: int):
     return db.query(Ride).filter(Ride.client_user_id == client_user_id).all()
 
@@ -37,7 +112,7 @@ def get_ride_by_id(db: Session, ride_id: int):
     ride = db.query(Ride).filter(Ride.id == ride_id).first()
 
     if not ride:
-        raise HTTPException(status_code=404, detail="Corrida não encontrada")
+        raise HTTPException(status_code=404, detail="Corrida nao encontrada")
 
     return ride
 
@@ -79,21 +154,27 @@ def validate_user_exists(db: Session, user_id: int | None, label: str) -> None:
     if not user:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"{label} não encontrado",
+            detail=f"{label} nao encontrado",
         )
 
 
 def validate_ride_status_exists(db: Session, status_id: int) -> None:
+    get_ride_status_by_id(db, status_id)
+
+
+def get_ride_status_by_id(db: Session, status_id: int) -> RideStatus:
     valid_status_ids = [int(status) for status in RideStatusEnum]
     if status_id not in valid_status_ids:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Status inválido. Use um dos valores: {valid_status_ids}",
+            detail=f"Status invalido. Use um dos valores: {valid_status_ids}",
         )
 
     ride_status = db.query(RideStatus).filter(RideStatus.id == status_id).first()
     if not ride_status:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Status informado não existe na tabela ride_status",
+            detail="Status informado nao existe na tabela ride_status",
         )
+
+    return ride_status

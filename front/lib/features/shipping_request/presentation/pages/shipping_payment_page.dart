@@ -126,39 +126,26 @@ class _ShippingPaymentPageState extends State<ShippingPaymentPage> {
     setState(() => _isPaying = true);
     try {
       final response = await _httpService.post(
-        Endpoints.simulatePayment,
+        Endpoints.createRide,
         body: {
           'client_user_id': widget.userId,
-          'card_id': selectedCard.id,
-          'force_result': 'APPROVED',
+          'driver_user_id': null,
           'origin_latitude': widget.addressData.pickupLatitude,
           'origin_longitude': widget.addressData.pickupLongitude,
           'destination_latitude': widget.addressData.deliveryLatitude,
           'destination_longitude': widget.addressData.deliveryLongitude,
           ...widget.packageData.toQuoteJson(),
+          'total_price': widget.quote.totalPrice,
+          'status_id': 1,
         },
       );
-
-      final approved = response['approved'] == true;
-      final message = response['message']?.toString() ??
-          (approved
-              ? 'Pagamento aprovado e frete solicitado.'
-              : 'Pagamento recusado.');
 
       if (!mounted) {
         return;
       }
 
-      if (!approved) {
-        _showMessage(message);
-        return;
-      }
-
-      final ride = response['ride'] is Map<String, dynamic>
-          ? response['ride'] as Map<String, dynamic>
-          : <String, dynamic>{};
-      final rideId = ride['id']?.toString();
-      final status = ride['status']?.toString();
+      final rideId = response['id']?.toString();
+      final statusId = response['status_id']?.toString();
 
       await showDialog<void>(
         context: context,
@@ -168,8 +155,8 @@ class _ShippingPaymentPageState extends State<ShippingPaymentPage> {
           content: Text(
             [
               if (rideId != null) 'Corrida #$rideId criada com sucesso.',
-              if (status != null) 'Status: $status.',
-              message,
+              if (statusId != null) 'Status: $statusId.',
+              'Pagamento aprovado com o cartao final ${selectedCard.lastFour}.',
             ].join('\n'),
           ),
           actions: [

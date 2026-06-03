@@ -21,7 +21,7 @@ abstract class Endpoints {
   static String rideGeocode(String query) =>
       '$rides/geocode?q=${Uri.encodeQueryComponent(query.trim())}';
   static const String rideQuote = '$rides/quote';
-  static const String createRide = rides;
+  static const String createRide = '$rides/create';
 
   static const String payments = '/payments';
   static const String simulatePayment = '$payments/simulate';

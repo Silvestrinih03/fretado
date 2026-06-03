@@ -2,8 +2,15 @@ from typing import List
 from fastapi import APIRouter, Depends, status
 from sqlalchemy.orm import Session
 from app.database.database import get_db
-from app.schemas.ride import RideCreate, RideResponse, RideUpdate
+from app.schemas.ride import (
+    RideCreate,
+    RideQuoteRequest,
+    RideQuoteResponse,
+    RideResponse,
+    RideUpdate,
+)
 from app.services.ride_service import (
+    calculate_ride_price,
     create_ride,
     get_ride_by_id,
     get_rides_by_client_user_id,
@@ -12,6 +19,16 @@ from app.services.ride_service import (
 )
 
 router = APIRouter(prefix="/rides", tags=["Rides"])
+
+
+@router.post("/quote", response_model=RideQuoteResponse, status_code=status.HTTP_200_OK)
+def quote(quote_data: RideQuoteRequest):
+    return calculate_ride_price(quote_data)
+
+
+@router.post("/create", response_model=RideResponse, status_code=status.HTTP_201_CREATED)
+def create_from_quote(ride_data: RideCreate, db: Session = Depends(get_db)):
+    return create_ride(db, ride_data)
 
 
 @router.post("", response_model=RideResponse, status_code=status.HTTP_201_CREATED)

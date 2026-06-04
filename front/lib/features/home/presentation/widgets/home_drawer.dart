@@ -161,8 +161,12 @@ class HomeDrawer extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.all(16),
               child: OutlinedButton.icon(
-                onPressed: () {
-                  MyselfService().logout();
+                onPressed: () async {
+                  await MyselfService().logout();
+                  if (!context.mounted) {
+                    return;
+                  }
+
                   Navigator.of(context).pushNamedAndRemoveUntil(
                     '/',
                     (route) => false,

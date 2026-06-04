@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 
 import '../../../../app/design_system/design_system.dart';
+import '../../../../core/enums/home_profile.dart';
 import '../../../../core/enums/register_account_type.dart';
 import '../../../../core/enums/register_step.dart';
 import '../../../../core/services/http_service.dart';
+import '../../../../core/services/myself/services/myself_service.dart';
+import '../../../home/presentation/pages/home_page.dart';
 import '../../data/datasources/register_datasource.dart';
 import '../../data/repositories/register_repository_impl.dart';
 import '../controllers/register_controller.dart';
@@ -143,10 +146,39 @@ class _RegisterPageState extends State<RegisterPage> {
     }
 
     if (success) {
+      final registeredUser = _registerController.registeredUser;
+      if (registeredUser == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Cadastro concluído com sucesso.')),
+        );
+        Navigator.of(context).pop(true);
+        return;
+      }
+
+      await MyselfService().saveSession(
+        userId: registeredUser.id,
+        userTypeId: registeredUser.userTypeId,
+      );
+
+      if (!mounted) {
+        return;
+      }
+
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Cadastro concluído com sucesso.')),
       );
-      Navigator.of(context).pop(true);
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute<void>(
+          builder: (_) => HomePage(
+            profile: HomeProfileMapper.fromUserTypeId(
+              registeredUser.userTypeId,
+            ),
+            userId: registeredUser.id,
+            userTypeId: registeredUser.userTypeId,
+          ),
+        ),
+        (route) => false,
+      );
       return;
     }
 

@@ -126,17 +126,15 @@ class _ShippingPaymentPageState extends State<ShippingPaymentPage> {
     setState(() => _isPaying = true);
     try {
       final response = await _httpService.post(
-        Endpoints.createRide,
+        Endpoints.simulatePayment,
         body: {
           'client_user_id': widget.userId,
-          'driver_user_id': null,
+          'card_id': selectedCard.id,
           'origin_latitude': widget.addressData.pickupLatitude,
           'origin_longitude': widget.addressData.pickupLongitude,
           'destination_latitude': widget.addressData.deliveryLatitude,
           'destination_longitude': widget.addressData.deliveryLongitude,
           ...widget.packageData.toQuoteJson(),
-          'total_price': widget.quote.totalPrice,
-          'status_id': 1,
         },
       );
 
@@ -144,8 +142,23 @@ class _ShippingPaymentPageState extends State<ShippingPaymentPage> {
         return;
       }
 
-      final rideId = response['id']?.toString();
-      final statusId = response['status_id']?.toString();
+      final bool approved = response['approved'] == true;
+      if (!approved) {
+        _showMessage(
+          response['message']?.toString() ?? 'Pagamento recusado.',
+        );
+        return;
+      }
+
+      final ride = response['ride'] is Map<String, dynamic>
+          ? response['ride'] as Map<String, dynamic>
+          : null;
+      final dispatchedOffer = response['dispatched_offer'] is Map<String, dynamic>
+          ? response['dispatched_offer'] as Map<String, dynamic>
+          : null;
+      final rideId = ride?['id']?.toString();
+      final statusId = ride?['status_id']?.toString();
+      final driverUserId = dispatchedOffer?['driver_user_id']?.toString();
 
       await showDialog<void>(
         context: context,
@@ -156,6 +169,10 @@ class _ShippingPaymentPageState extends State<ShippingPaymentPage> {
             [
               if (rideId != null) 'Corrida #$rideId criada com sucesso.',
               if (statusId != null) 'Status: $statusId.',
+              if (driverUserId != null)
+                'Oferta enviada ao motorista #$driverUserId.',
+              if (driverUserId == null)
+                'Nenhum motorista disponivel foi encontrado agora.',
               'Pagamento aprovado com o cartao final ${selectedCard.lastFour}.',
             ].join('\n'),
           ),

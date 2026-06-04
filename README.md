@@ -71,8 +71,10 @@ O front pode ser publicado na Cloudflare Pages como PWA.
 
 ```bash
 cd front
-flutter build web --release --dart-define=API_BASE_URL=https://fretado-api.onrender.com
+flutter build web --release --dart-define=API_BASE_URL=https://fretado-api.onrender.com --dart-define=APP_VERSION=0.0.1
 npx wrangler pages deploy build/web --project-name=fretado
 ```
+
+Atualize o valor de `APP_VERSION` a cada nova publicacao para a tela de login exibir a versao atual, por exemplo `V0.0.1`.
 
 Depois do deploy, acesse `https://fretado.pages.dev` no celular e use a opção do navegador para instalar/adicionar à tela inicial.

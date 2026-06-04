@@ -10,6 +10,11 @@ import '../../data/repositories/auth_repository_impl.dart';
 import '../controllers/auth_controller.dart';
 import '../../../register/presentation/pages/register_page.dart';
 
+const String _appVersion = String.fromEnvironment(
+  'APP_VERSION',
+  defaultValue: '0.0.0',
+);
+
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
 
@@ -59,7 +64,7 @@ class _LoginPageState extends State<LoginPage> {
 
     if (didRegister == true) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Cadastro realizado. Faça seu login.')),
+        const SnackBar(content: Text('Cadastro realizado.')),
       );
     }
   }
@@ -86,12 +91,16 @@ class _LoginPageState extends State<LoginPage> {
 
     if (isSuccess) {
       final MyselfService myselfService = MyselfService();
-      myselfService.currentUserId = _authController.currentUser?.id;
+      final int? userId = _authController.currentUser?.id;
 
       final int userTypeId = _authController.currentUser?.userTypeId ?? 2;
-      myselfService.currentUserTypeId = userTypeId;
+      if (userId != null) {
+        await myselfService.saveSession(
+          userId: userId,
+          userTypeId: userTypeId,
+        );
+      }
       final HomeProfileEnum profile = HomeProfileMapper.fromUserTypeId(userTypeId);
-      final int? userId = _authController.currentUser?.id;
 
       Navigator.of(context).pushReplacement(
         MaterialPageRoute<void>(
@@ -141,13 +150,17 @@ class _LoginPageState extends State<LoginPage> {
                       child: Center(
                         child: ConstrainedBox(
                           constraints: const BoxConstraints(maxWidth: 480),
-                          child: FretAuthCard(
-                            child: Form(
-                              key: _formKey,
-                              autovalidateMode: _autovalidateMode,
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.stretch,
-                                children: [
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              FretAuthCard(
+                                child: Form(
+                                  key: _formKey,
+                                  autovalidateMode: _autovalidateMode,
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.stretch,
+                                    children: [
                                 Row(
                                   crossAxisAlignment: CrossAxisAlignment.center,
                                   children: [
@@ -228,9 +241,21 @@ class _LoginPageState extends State<LoginPage> {
                                     minHeight: 3,
                                   ),
                                 ],
-                                ],
+                                    ],
+                                  ),
+                                ),
                               ),
-                            ),
+                              const SizedBox(height: 10),
+                              const Text(
+                                'V$_appVersion',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  color: FretColors.neutral500,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ),

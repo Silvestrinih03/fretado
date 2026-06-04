@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 
 import 'app/design_system/design_system.dart';
+import 'core/enums/home_profile.dart';
+import 'core/services/myself/services/myself_service.dart';
 import 'features/auth/presentation/pages/login_page.dart';
+import 'features/home/presentation/pages/home_page.dart';
 
 void main() {
   runApp(const FretadoApp());
@@ -52,7 +55,57 @@ class FretadoApp extends StatelessWidget {
           ),
         ),
       ),
-      home: const LoginPage(),
+      home: const SessionGate(),
+    );
+  }
+}
+
+class SessionGate extends StatefulWidget {
+  const SessionGate({super.key});
+
+  @override
+  State<SessionGate> createState() => _SessionGateState();
+}
+
+class _SessionGateState extends State<SessionGate> {
+  late final Future<void> _sessionFuture;
+  final MyselfService _myselfService = MyselfService();
+
+  @override
+  void initState() {
+    super.initState();
+    _sessionFuture = _myselfService.loadSavedSession();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<void>(
+      future: _sessionFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState != ConnectionState.done) {
+          return const Scaffold(
+            backgroundColor: FretColors.white,
+            body: Center(
+              child: CircularProgressIndicator(
+                color: FretColors.loginFooterLink,
+              ),
+            ),
+          );
+        }
+
+        final int? userId = _myselfService.currentUserId;
+        final int? userTypeId = _myselfService.currentUserTypeId;
+
+        if (userId == null || userTypeId == null) {
+          return const LoginPage();
+        }
+
+        return HomePage(
+          profile: HomeProfileMapper.fromUserTypeId(userTypeId),
+          userId: userId,
+          userTypeId: userTypeId,
+        );
+      },
     );
   }
 }

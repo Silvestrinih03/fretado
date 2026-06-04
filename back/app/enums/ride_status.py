@@ -1,6 +1,5 @@
 from enum import IntEnum
 
-
 class RideStatusEnum(IntEnum):
     AGUARDANDO_ACEITE = 1
     AGUARDANDO_INICIO = 2

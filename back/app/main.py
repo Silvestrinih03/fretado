@@ -12,6 +12,7 @@ from app.api.routes.user_cards import router as user_cards_router
 from app.api.routes.ride_offer import router as ride_offer_router
 from app.api.routes.driver_earnings import router as driver_earnings_router
 from app.api.routes.driver_wallets import router as driver_wallets_router
+from app.api.routes.wallet_transactions import router as wallet_transactions_router
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
 import webbrowser
@@ -41,6 +42,7 @@ app.include_router(ride_offer_router)
 app.include_router(user_cards_router)
 app.include_router(driver_earnings_router)
 app.include_router(driver_wallets_router)
+app.include_router(wallet_transactions_router)
 @app.on_event("startup")
 async def startup():
     webbrowser.open("http://127.0.0.1:8000/docs")

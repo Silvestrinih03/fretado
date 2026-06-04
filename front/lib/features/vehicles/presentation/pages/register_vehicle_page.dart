@@ -197,10 +197,21 @@ class _RegisterVehiclePageState extends State<RegisterVehiclePage> {
                         _store.loadVehicleFipeModels();
                       }
                     },
+                    onBrandSearchChanged: (value) {
+                      if (_registerMode == 'fipe') {
+                        _store.loadVehicleFipeBrands(search: value);
+                      }
+                    },
                     onModelChanged: (value) {
                       _store.selectVehicleFipeModel(value);
                       if (value != null && _registerMode == 'fipe') {
                         _store.loadVehicleFipeYears();
+                      }
+                    },
+                    onModelSearchChanged: (value) {
+                      if (_registerMode == 'fipe' &&
+                          _store.selectedVehicleFipeBrandCode != null) {
+                        _store.loadVehicleFipeModels(search: value);
                       }
                     },
                     onYearChanged: (value) {

@@ -3,6 +3,8 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
 class HttpService {
+  static const String _hostedApiBaseUrl = 'https://fretado-api.onrender.com';
+
   final String baseUrl;
   final http.Client _client;
 
@@ -217,8 +219,22 @@ class HttpService {
       return 'http://localhost:8000';
     }
 
+    if (_isLocalNetworkHost(host)) {
+      return 'http://$host:8000';
+    }
+
+    if (pageUri.scheme == 'https') {
+      return _hostedApiBaseUrl;
+    }
+
     final String scheme = pageUri.scheme == 'https' ? 'https' : 'http';
     return '$scheme://$host:8000';
+  }
+
+  static bool _isLocalNetworkHost(String host) {
+    return host.startsWith('10.') ||
+        host.startsWith('192.168.') ||
+        RegExp(r'^172\.(1[6-9]|2\d|3[0-1])\.').hasMatch(host);
   }
 
   void dispose() {

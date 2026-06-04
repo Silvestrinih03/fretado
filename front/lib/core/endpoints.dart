@@ -19,6 +19,8 @@ abstract class Endpoints {
 
   static const String rides = '/rides';
   static String rideById(int rideId) => '$rides/$rideId';
+  static String ridesByClient(int clientUserId) =>
+      '$rides/client/$clientUserId';
   static String ridesByDriver(int driverUserId) => '$rides/driver/$driverUserId';
   static String rideGeocode(String query) =>
       '$rides/geocode?q=${Uri.encodeQueryComponent(query.trim())}';
@@ -42,9 +44,6 @@ abstract class Endpoints {
   static const String walletTransactions = '/wallet_transactions';
   static String walletTransactionsByDriver(int driverUserId) =>
       '$walletTransactions/driver/$driverUserId';
-
-  static const String payments = '/payments';
-  static const String simulatePayment = '$payments/simulate';
 
   static const String cards = '/cards';
   static String cardsByUser(int userId) => '$cards/user/$userId';

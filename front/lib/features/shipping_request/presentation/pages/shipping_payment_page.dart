@@ -126,15 +126,17 @@ class _ShippingPaymentPageState extends State<ShippingPaymentPage> {
     setState(() => _isPaying = true);
     try {
       final response = await _httpService.post(
-        Endpoints.simulatePayment,
+        Endpoints.createRide,
         body: {
           'client_user_id': widget.userId,
-          'card_id': selectedCard.id,
+          'driver_user_id': null,
           'origin_latitude': widget.addressData.pickupLatitude,
           'origin_longitude': widget.addressData.pickupLongitude,
           'destination_latitude': widget.addressData.deliveryLatitude,
           'destination_longitude': widget.addressData.deliveryLongitude,
           ...widget.packageData.toQuoteJson(),
+          'total_price': widget.quote.totalPrice,
+          'status_id': 1,
         },
       );
 
@@ -142,23 +144,8 @@ class _ShippingPaymentPageState extends State<ShippingPaymentPage> {
         return;
       }
 
-      final bool approved = response['approved'] == true;
-      if (!approved) {
-        _showMessage(
-          response['message']?.toString() ?? 'Pagamento recusado.',
-        );
-        return;
-      }
-
-      final ride = response['ride'] is Map<String, dynamic>
-          ? response['ride'] as Map<String, dynamic>
-          : null;
-      final dispatchedOffer = response['dispatched_offer'] is Map<String, dynamic>
-          ? response['dispatched_offer'] as Map<String, dynamic>
-          : null;
-      final rideId = ride?['id']?.toString();
-      final statusId = ride?['status_id']?.toString();
-      final driverUserId = dispatchedOffer?['driver_user_id']?.toString();
+      final rideId = response['id']?.toString();
+      final statusId = response['status_id']?.toString();
 
       await showDialog<void>(
         context: context,
@@ -169,11 +156,7 @@ class _ShippingPaymentPageState extends State<ShippingPaymentPage> {
             [
               if (rideId != null) 'Corrida #$rideId criada com sucesso.',
               if (statusId != null) 'Status: $statusId.',
-              if (driverUserId != null)
-                'Oferta enviada ao motorista #$driverUserId.',
-              if (driverUserId == null)
-                'Nenhum motorista disponivel foi encontrado agora.',
-              'Pagamento aprovado com o cartao final ${selectedCard.lastFour}.',
+              'Metodo de pagamento verificado: cartao final ${selectedCard.lastFour}.',
             ].join('\n'),
           ),
           actions: [
@@ -720,9 +703,7 @@ class _ConfirmShippingButton extends StatelessWidget {
           backgroundColor: _ShippingPaymentPageState._primaryBlue,
           foregroundColor: FretColors.white,
           disabledBackgroundColor: const Color(0xFFB7B9D5),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(5),
-          ),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(5)),
         ),
         child: loading
             ? const SizedBox(
@@ -739,10 +720,7 @@ class _ConfirmShippingButton extends StatelessWidget {
                 children: [
                   Text(
                     'Confirmar e Solicitar Frete',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w800,
-                    ),
+                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800),
                   ),
                   SizedBox(width: 12),
                   Icon(Icons.arrow_forward_rounded, size: 22),

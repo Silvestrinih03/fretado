@@ -78,7 +78,7 @@ class RegisterVehicleStore extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> loadVehicleFipeBrands() async {
+  Future<void> loadVehicleFipeBrands({String? search}) async {
     if (_selectedVehicleTypeId == null) {
       _vehicleFipeError = 'Selecione o tipo de veículo.';
       notifyListeners();
@@ -91,6 +91,7 @@ class RegisterVehicleStore extends ChangeNotifier {
     try {
       _vehicleFipeBrands = await _vehicleFipeRepository.listBrands(
         vehicleTypeId: _selectedVehicleTypeId!,
+        search: search,
       );
       _vehicleFipeModels = <VehicleFipeOptionModel>[];
       _vehicleFipeYears = <VehicleFipeOptionModel>[];
@@ -103,7 +104,7 @@ class RegisterVehicleStore extends ChangeNotifier {
     }
   }
 
-  Future<void> loadVehicleFipeModels() async {
+  Future<void> loadVehicleFipeModels({String? search}) async {
     if (_selectedVehicleTypeId == null || _selectedVehicleFipeBrandCode == null) {
       _vehicleFipeError = 'Selecione o tipo e a marca do veículo.';
       notifyListeners();
@@ -117,6 +118,7 @@ class RegisterVehicleStore extends ChangeNotifier {
       _vehicleFipeModels = await _vehicleFipeRepository.listModels(
         vehicleTypeId: _selectedVehicleTypeId!,
         brandId: _selectedVehicleFipeBrandCode!,
+        search: search,
       );
       _vehicleFipeYears = <VehicleFipeOptionModel>[];
     } on VehicleFipeRepositoryException catch (e) {

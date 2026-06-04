@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 
 import '../../../../app/design_system/design_system.dart';
+import '../../../../core/endpoints.dart';
+import '../../../../core/services/http_service.dart';
+import '../../../driver_operations/data/models/driver_operation_models.dart';
 import '../../../shipping_request/presentation/pages/address_map_page.dart';
 
 class ClientHomeContent extends StatelessWidget {
@@ -18,53 +21,30 @@ class ClientHomeContent extends StatelessWidget {
     final String greetingName = userName.trim().isEmpty ? 'Cliente' : userName;
 
     return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 6, 0, 18),
+      padding: const EdgeInsets.fromLTRB(16, 6, 16, 18),
       children: [
-        Padding(
-          padding: const EdgeInsets.only(right: 16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Olá, $greetingName!',
-                style: const TextStyle(
-                  fontSize: 30,
-                  fontWeight: FontWeight.w800,
-                  color: FretColors.loginFooterLink,
-                ),
-              ),
-              const SizedBox(height: 6),
-              const Text(
-                'Para onde vamos hoje? Encontre fretes rápidos e seguros.',
-                style: TextStyle(
-                  fontSize: 16,
-                  height: 1.35,
-                  fontWeight: FontWeight.w500,
-                  color: Color(0xFF656671),
-                ),
-              ),
-              const SizedBox(height: 20),
-              _FreightRequestCard(userId: userId),
-              const SizedBox(height: 22),
-              const _FreightsSectionHeader(),
-            ],
+        Text(
+          'Ola, $greetingName!',
+          style: const TextStyle(
+            fontSize: 30,
+            fontWeight: FontWeight.w800,
+            color: FretColors.loginFooterLink,
           ),
         ),
-        const SizedBox(height: 12),
-        SizedBox(
-          height: 226,
-          child: ListView.separated(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.only(right: 16),
-            itemCount: _freights.length,
-            separatorBuilder: (_, __) => const SizedBox(width: 12),
-            itemBuilder: (context, index) {
-              final freight = _freights[index];
-
-              return _FreightProgressCard(freight: freight);
-            },
+        const SizedBox(height: 6),
+        const Text(
+          'Para onde vamos hoje? Encontre fretes rapidos e seguros.',
+          style: TextStyle(
+            fontSize: 16,
+            height: 1.35,
+            fontWeight: FontWeight.w500,
+            color: Color(0xFF656671),
           ),
         ),
+        const SizedBox(height: 20),
+        _FreightRequestCard(userId: userId),
+        const SizedBox(height: 22),
+        _ClientRideHistorySection(userId: userId),
       ],
     );
   }
@@ -95,7 +75,7 @@ class _FreightRequestCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            'Solicitação de frete',
+            'Solicitacao de frete',
             style: TextStyle(
               color: FretColors.white,
               fontSize: 22,
@@ -104,7 +84,7 @@ class _FreightRequestCard extends StatelessWidget {
           ),
           const SizedBox(height: 10),
           const Text(
-            'Precisando de alguém para transportar um produto? Nós fretamos para você',
+            'Precisando de alguem para transportar um produto? Nos fretamos para voce.',
             style: TextStyle(
               color: Color(0xFFE2E5FF),
               fontSize: 15,
@@ -147,8 +127,125 @@ class _FreightRequestCard extends StatelessWidget {
   }
 }
 
-class _FreightsSectionHeader extends StatelessWidget {
-  const _FreightsSectionHeader();
+class _ClientRideHistorySection extends StatefulWidget {
+  final int userId;
+
+  const _ClientRideHistorySection({required this.userId});
+
+  @override
+  State<_ClientRideHistorySection> createState() =>
+      _ClientRideHistorySectionState();
+}
+
+class _ClientRideHistorySectionState extends State<_ClientRideHistorySection> {
+  late final HttpService _httpService;
+  late Future<List<DriverRideModel>> _ridesFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _httpService = HttpService();
+    _ridesFuture = _loadRides();
+  }
+
+  @override
+  void didUpdateWidget(covariant _ClientRideHistorySection oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.userId != widget.userId) {
+      _ridesFuture = _loadRides();
+    }
+  }
+
+  @override
+  void dispose() {
+    _httpService.dispose();
+    super.dispose();
+  }
+
+  Future<List<DriverRideModel>> _loadRides() async {
+    final response = await _httpService.get(
+      Endpoints.ridesByClient(widget.userId),
+    );
+    final dynamic data = response['data'];
+
+    if (data is! List<dynamic>) {
+      return <DriverRideModel>[];
+    }
+
+    final rides = data
+        .whereType<Map<String, dynamic>>()
+        .map(DriverRideModel.fromJson)
+        .toList();
+
+    rides.sort((a, b) {
+      final DateTime aDate =
+          a.createdAt ?? DateTime.fromMillisecondsSinceEpoch(0);
+      final DateTime bDate =
+          b.createdAt ?? DateTime.fromMillisecondsSinceEpoch(0);
+      return bDate.compareTo(aDate);
+    });
+
+    return rides;
+  }
+
+  void _reload() {
+    setState(() {
+      _ridesFuture = _loadRides();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<List<DriverRideModel>>(
+      future: _ridesFuture,
+      builder: (context, snapshot) {
+        final bool isLoading = snapshot.connectionState != ConnectionState.done;
+        final List<DriverRideModel> rides =
+            snapshot.data ?? <DriverRideModel>[];
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _ClientRideHistoryHeader(onRefresh: isLoading ? null : _reload),
+            const SizedBox(height: 12),
+            if (isLoading)
+              const _RideHistoryStateCard(
+                icon: Icons.hourglass_top_rounded,
+                title: 'Carregando historico',
+                subtitle: 'Buscando suas corridas mais recentes.',
+              )
+            else if (snapshot.hasError)
+              _RideHistoryStateCard(
+                icon: Icons.error_outline_rounded,
+                title: 'Nao foi possivel carregar',
+                subtitle: 'Verifique sua conexao e tente novamente.',
+                actionLabel: 'Tentar novamente',
+                onTap: _reload,
+              )
+            else if (rides.isEmpty)
+              const _RideHistoryStateCard(
+                icon: Icons.route_outlined,
+                title: 'Nenhuma corrida encontrada',
+                subtitle: 'Quando voce solicitar um frete, ele aparecera aqui.',
+              )
+            else
+              ...rides.map(
+                (ride) => Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: _ClientRideHistoryCard(ride: ride),
+                ),
+              ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _ClientRideHistoryHeader extends StatelessWidget {
+  final VoidCallback? onRefresh;
+
+  const _ClientRideHistoryHeader({this.onRefresh});
 
   @override
   Widget build(BuildContext context) {
@@ -156,7 +253,7 @@ class _FreightsSectionHeader extends StatelessWidget {
       children: [
         const Expanded(
           child: Text(
-            'Fretes em Andamento',
+            'Historico de corridas',
             maxLines: 2,
             style: TextStyle(
               fontSize: 20,
@@ -165,18 +262,13 @@ class _FreightsSectionHeader extends StatelessWidget {
             ),
           ),
         ),
-        TextButton(
-          onPressed: () {},
-          style: TextButton.styleFrom(
-            foregroundColor: FretColors.secondaryVariation700,
-            padding: EdgeInsets.zero,
-          ),
-          child: const Text(
-            'VER TODOS',
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w800,
-            ),
+        IconButton(
+          tooltip: 'Atualizar historico',
+          onPressed: onRefresh,
+          icon: const Icon(
+            Icons.refresh_rounded,
+            color: FretColors.secondaryVariation700,
+            size: 22,
           ),
         ),
       ],
@@ -184,15 +276,15 @@ class _FreightsSectionHeader extends StatelessWidget {
   }
 }
 
-class _FreightProgressCard extends StatelessWidget {
-  final _FreightPreview freight;
+class _ClientRideHistoryCard extends StatelessWidget {
+  final DriverRideModel ride;
 
-  const _FreightProgressCard({required this.freight});
+  const _ClientRideHistoryCard({required this.ride});
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 230,
+      width: double.infinity,
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 14),
       decoration: BoxDecoration(
         color: FretColors.white,
@@ -210,10 +302,10 @@ class _FreightProgressCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              _StatusPill(label: freight.status),
+              _StatusPill(label: ride.statusLabel),
               const Spacer(),
               Text(
-                freight.code,
+                '#FR-${ride.id}',
                 style: const TextStyle(
                   fontSize: 17,
                   fontWeight: FontWeight.w800,
@@ -223,15 +315,108 @@ class _FreightProgressCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 16),
-          _RouteLine(origin: freight.origin, destination: freight.destination),
+          _RouteLine(
+            origin: _formatCoordinates(
+              ride.originLatitude,
+              ride.originLongitude,
+            ),
+            destination: _formatCoordinates(
+              ride.destinationLatitude,
+              ride.destinationLongitude,
+            ),
+          ),
           const SizedBox(height: 12),
           const Divider(height: 1, color: Color(0xFFE8E8EC)),
           const SizedBox(height: 10),
           _FreightInfo(
-            icon: freight.infoIcon,
-            label: freight.infoLabel,
-            value: freight.infoValue,
+            icon: Icons.payments_outlined,
+            label: 'VALOR',
+            value: _formatMoney(ride.totalPrice),
           ),
+          const SizedBox(height: 8),
+          _FreightInfo(
+            icon: Icons.inventory_2_outlined,
+            label: 'CARGA',
+            value: '${_formatMetric(ride.packageWeight)} kg',
+          ),
+          const SizedBox(height: 8),
+          _FreightInfo(
+            icon: Icons.person_outline_rounded,
+            label: 'MOTORISTA',
+            value: ride.driverUserId == null
+                ? 'Aguardando aceite'
+                : '#${ride.driverUserId}',
+          ),
+          if (ride.createdAt != null) ...[
+            const SizedBox(height: 8),
+            _FreightInfo(
+              icon: Icons.event_outlined,
+              label: 'DATA',
+              value: _formatDate(ride.createdAt!),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _RideHistoryStateCard extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final String? actionLabel;
+  final VoidCallback? onTap;
+
+  const _RideHistoryStateCard({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    this.actionLabel,
+    this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(18, 18, 18, 16),
+      decoration: BoxDecoration(
+        color: FretColors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE2E4EB)),
+      ),
+      child: Column(
+        children: [
+          Icon(icon, color: FretColors.loginFooterLink, size: 32),
+          const SizedBox(height: 10),
+          Text(
+            title,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              color: FretColors.neutral900,
+              fontSize: 15,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            subtitle,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              color: Color(0xFF656671),
+              fontSize: 13,
+              height: 1.3,
+            ),
+          ),
+          if (actionLabel != null && onTap != null) ...[
+            const SizedBox(height: 12),
+            TextButton.icon(
+              onPressed: onTap,
+              icon: const Icon(Icons.refresh_rounded, size: 18),
+              label: Text(actionLabel!),
+            ),
+          ],
         ],
       ),
     );
@@ -246,8 +431,8 @@ class _StatusPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 32,
-      padding: const EdgeInsets.symmetric(horizontal: 10),
+      constraints: const BoxConstraints(minHeight: 32),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       alignment: Alignment.center,
       decoration: BoxDecoration(
         color: const Color(0xFFF4EDC8),
@@ -255,6 +440,8 @@ class _StatusPill extends StatelessWidget {
       ),
       child: Text(
         label,
+        maxLines: 2,
+        overflow: TextOverflow.ellipsis,
         style: const TextStyle(
           color: Color(0xFF3D3312),
           fontSize: 11,
@@ -405,43 +592,40 @@ class _FreightInfo extends StatelessWidget {
   }
 }
 
-class _FreightPreview {
-  final String code;
-  final String status;
-  final String origin;
-  final String destination;
-  final IconData infoIcon;
-  final String infoLabel;
-  final String infoValue;
-
-  const _FreightPreview({
-    required this.code,
-    required this.status,
-    required this.origin,
-    required this.destination,
-    required this.infoIcon,
-    required this.infoLabel,
-    required this.infoValue,
-  });
+String _formatCoordinates(double latitude, double longitude) {
+  return '${latitude.toStringAsFixed(5)}, ${longitude.toStringAsFixed(5)}';
 }
 
-const List<_FreightPreview> _freights = [
-  _FreightPreview(
-    code: '#FR-8921',
-    status: 'A CAMINHO',
-    origin: 'Indaiatuba, SP',
-    destination: 'São Paulo, SP',
-    infoIcon: Icons.person_outline_rounded,
-    infoLabel: 'MOTORISTA',
-    infoValue: 'Marcos Oliveira',
-  ),
-  _FreightPreview(
-    code: '#FR-8840',
-    status: 'COLETA',
-    origin: 'Campinas, SP',
-    destination: 'Santos, SP',
-    infoIcon: Icons.local_shipping_outlined,
-    infoLabel: 'VEICULO',
-    infoValue: 'Truck baú',
-  ),
-];
+String _formatDate(DateTime value) {
+  final local = value.toLocal();
+  final day = local.day.toString().padLeft(2, '0');
+  final month = local.month.toString().padLeft(2, '0');
+  final year = local.year.toString();
+  return '$day/$month/$year';
+}
+
+String _formatMetric(double value) {
+  if (value == value.roundToDouble()) {
+    return value.toStringAsFixed(0);
+  }
+
+  return value.toStringAsFixed(1).replaceAll('.', ',');
+}
+
+String _formatMoney(double value) {
+  final fixed = value.toStringAsFixed(2);
+  final parts = fixed.split('.');
+  final integer = parts.first;
+  final decimals = parts.last;
+  final buffer = StringBuffer();
+
+  for (int i = 0; i < integer.length; i++) {
+    final reverseIndex = integer.length - i;
+    buffer.write(integer[i]);
+    if (reverseIndex > 1 && reverseIndex % 3 == 1) {
+      buffer.write('.');
+    }
+  }
+
+  return 'R\$ ${buffer.toString()},$decimals';
+}

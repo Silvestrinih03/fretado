@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../data/models/vehicle_fipe_option_model.dart';
@@ -17,6 +19,8 @@ class FillVehicleBrandData extends StatelessWidget {
   final ValueChanged<String?> onBrandChanged;
   final ValueChanged<String?> onModelChanged;
   final ValueChanged<String?> onYearChanged;
+  final ValueChanged<String> onBrandSearchChanged;
+  final ValueChanged<String> onModelSearchChanged;
   final bool isLoadingFipe;
   final String? errorMessage;
   final String? Function(String?, String) requiredValidator;
@@ -37,6 +41,8 @@ class FillVehicleBrandData extends StatelessWidget {
     required this.onBrandChanged,
     required this.onModelChanged,
     required this.onYearChanged,
+    required this.onBrandSearchChanged,
+    required this.onModelSearchChanged,
     required this.isLoadingFipe,
     required this.errorMessage,
     required this.requiredValidator,
@@ -98,24 +104,26 @@ class FillVehicleBrandData extends StatelessWidget {
                 const SizedBox(height: 8),
               ],
               if (registerMode == 'fipe') ...[
-                _selectField(
+                _autocompleteField(
                   label: 'Marca',
-                  hint: 'Selecione a marca',
+                  hint: 'Digite para buscar a marca',
                   value: selectedBrand,
                   items: brands,
-                  onChanged: onBrandChanged,
-                  enabled: !isLoadingFipe && brands.isNotEmpty,
+                  onSelected: onBrandChanged,
+                  onSearchChanged: onBrandSearchChanged,
+                  enabled: !isLoadingFipe,
                   validator: (value) =>
                       value == null ? 'Selecione a marca' : null,
                 ),
                 const SizedBox(height: 8),
-                _selectField(
+                _autocompleteField(
                   label: 'Modelo',
-                  hint: 'Selecione o modelo',
+                  hint: 'Digite para buscar o modelo',
                   value: selectedModel,
                   items: models,
-                  onChanged: onModelChanged,
-                  enabled: !isLoadingFipe && models.isNotEmpty,
+                  onSelected: onModelChanged,
+                  onSearchChanged: onModelSearchChanged,
+                  enabled: !isLoadingFipe && selectedBrand != null,
                   validator: (value) =>
                       value == null ? 'Selecione o modelo' : null,
                 ),
@@ -158,6 +166,28 @@ class FillVehicleBrandData extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _autocompleteField({
+    required String label,
+    required String hint,
+    required String? value,
+    required List<VehicleFipeOptionModel> items,
+    required ValueChanged<String?> onSelected,
+    required ValueChanged<String> onSearchChanged,
+    required bool enabled,
+    required String? Function(String?) validator,
+  }) {
+    return _FipeAutocompleteField(
+      label: label,
+      hint: hint,
+      value: value,
+      items: items,
+      enabled: enabled,
+      onSelected: onSelected,
+      onSearchChanged: onSearchChanged,
+      validator: validator,
     );
   }
 
@@ -306,6 +336,199 @@ class _ModeButton extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _FipeAutocompleteField extends StatefulWidget {
+  final String label;
+  final String hint;
+  final String? value;
+  final List<VehicleFipeOptionModel> items;
+  final bool enabled;
+  final ValueChanged<String?> onSelected;
+  final ValueChanged<String> onSearchChanged;
+  final String? Function(String?) validator;
+
+  const _FipeAutocompleteField({
+    required this.label,
+    required this.hint,
+    required this.value,
+    required this.items,
+    required this.enabled,
+    required this.onSelected,
+    required this.onSearchChanged,
+    required this.validator,
+  });
+
+  @override
+  State<_FipeAutocompleteField> createState() => _FipeAutocompleteFieldState();
+}
+
+class _FipeAutocompleteFieldState extends State<_FipeAutocompleteField> {
+  final TextEditingController _controller = TextEditingController();
+  final FocusNode _focusNode = FocusNode();
+  Timer? _debounce;
+  String? _lastAppliedValue;
+
+  @override
+  void initState() {
+    super.initState();
+    _applySelectedValue();
+  }
+
+  @override
+  void didUpdateWidget(covariant _FipeAutocompleteField oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.value != widget.value || oldWidget.items != widget.items) {
+      _applySelectedValue();
+    }
+  }
+
+  @override
+  void dispose() {
+    _debounce?.cancel();
+    _focusNode.dispose();
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _applySelectedValue() {
+    if (_lastAppliedValue == widget.value) {
+      return;
+    }
+
+    _lastAppliedValue = widget.value;
+    final String label = _selectedLabel(widget.value) ?? '';
+    if (_controller.text != label) {
+      _controller.text = label;
+    }
+  }
+
+  String? _selectedLabel(String? value) {
+    if (value == null) {
+      return null;
+    }
+
+    for (final item in widget.items) {
+      if (item.value == value) {
+        return item.label;
+      }
+    }
+
+    return null;
+  }
+
+  void _scheduleSearch(String value) {
+    _debounce?.cancel();
+    _debounce = Timer(const Duration(milliseconds: 350), () {
+      widget.onSearchChanged(value.trim());
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return RawAutocomplete<VehicleFipeOptionModel>(
+      textEditingController: _controller,
+      focusNode: _focusNode,
+      displayStringForOption: (option) => option.label,
+      optionsBuilder: (textEditingValue) {
+        final String query = textEditingValue.text.trim().toLowerCase();
+        if (query.isEmpty) {
+          return widget.items;
+        }
+
+        return widget.items.where(
+          (item) => item.label.toLowerCase().contains(query),
+        );
+      },
+      onSelected: (option) {
+        _debounce?.cancel();
+        _lastAppliedValue = option.value;
+        widget.onSelected(option.value);
+      },
+      fieldViewBuilder: (context, controller, focusNode, onFieldSubmitted) {
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              widget.label,
+              style: const TextStyle(
+                color: Color(0xFFB6B9C6),
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(height: 4),
+            TextFormField(
+              controller: controller,
+              focusNode: focusNode,
+              enabled: widget.enabled,
+              validator: (_) => widget.validator(widget.value),
+              onChanged: (value) {
+                if (widget.value != null && value != _selectedLabel(widget.value)) {
+                  _lastAppliedValue = null;
+                  widget.onSelected(null);
+                }
+                _scheduleSearch(value);
+              },
+              decoration: InputDecoration(
+                hintText: widget.hint,
+                hintStyle: const TextStyle(
+                  color: Color(0xFF2B2D35),
+                  fontSize: 14,
+                ),
+                suffixIcon: const Icon(
+                  Icons.search_rounded,
+                  color: Color(0xFF666C7E),
+                ),
+                filled: true,
+                fillColor: const Color(0xFFDCDDDF),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 10,
+                ),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: BorderSide.none,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+      optionsViewBuilder: (context, onSelected, options) {
+        final List<VehicleFipeOptionModel> visibleOptions =
+            options.take(20).toList();
+
+        return Align(
+          alignment: Alignment.topLeft,
+          child: Material(
+            elevation: 8,
+            borderRadius: BorderRadius.circular(8),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxHeight: 240, maxWidth: 360),
+              child: ListView.builder(
+                padding: EdgeInsets.zero,
+                shrinkWrap: true,
+                itemCount: visibleOptions.length,
+                itemBuilder: (context, index) {
+                  final option = visibleOptions[index];
+                  return ListTile(
+                    dense: true,
+                    title: Text(
+                      option.label,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    onTap: () => onSelected(option),
+                  );
+                },
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 }

@@ -5,6 +5,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.database.database import get_db
+from app.enums.wallet_transactions_status_enum import WalletTransactionsStatusEnum
 from app.models.user import User
 from app.models.wallet_transaction import WalletTransaction
 from app.models.wallet_transaction_status import WalletTransactionStatus
@@ -12,6 +13,7 @@ from app.schemas.wallet_transaction import (
     WalletTransactionRequest,
     WalletTransactionResponse,
 )
+from app.services.driver_wallet_service import subtract_balance
 
 router = APIRouter(prefix="/wallet_transactions", tags=["Wallet Transactions"])
 
@@ -30,9 +32,11 @@ def create_wallet_transaction(
             detail="Driver not found.",
         )
 
+    status_id = WalletTransactionsStatusEnum.PROCESSANDO.value
+
     transaction_status = (
         db.query(WalletTransactionStatus)
-        .filter(WalletTransactionStatus.id == payload.status_id)
+        .filter(WalletTransactionStatus.id == status_id)
         .first()
     )
 
@@ -45,14 +49,22 @@ def create_wallet_transaction(
     transaction = WalletTransaction(
         driver_user_id=driver_user_id,
         value=payload.value,
-        status_id=payload.status_id,
+        status_id=status_id,
         pix_key=payload.pix_key,
     )
 
     try:
         db.add(transaction)
+
+        subtract_balance(
+            db=db,
+            driver_user_id=driver_user_id,
+            value=payload.value,
+        )
+
         db.commit()
         db.refresh(transaction)
+
     except IntegrityError:
         db.rollback()
         raise HTTPException(
@@ -68,14 +80,6 @@ def get_wallet_transactions_by_driver(
     driver_user_id: int,
     db: Session = Depends(get_db),
 ):
-    user = db.query(User).filter(User.id == driver_user_id).first()
-
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Driver not found.",
-        )
-
     return (
         db.query(WalletTransaction)
         .filter(WalletTransaction.driver_user_id == driver_user_id)

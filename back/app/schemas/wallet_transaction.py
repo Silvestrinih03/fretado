@@ -6,7 +6,6 @@ from pydantic import BaseModel
 
 class WalletTransactionRequest(BaseModel):
     value: Decimal
-    status_id: int
     pix_key: str
 
 

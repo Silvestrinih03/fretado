@@ -9,6 +9,12 @@ from app.services.vehicle_service import VehicleService
 router = APIRouter(prefix="/vehicles", tags=["Vehicles"])
 
 @router.post("", response_model=VehicleResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/",
+    response_model=VehicleResponse,
+    status_code=status.HTTP_201_CREATED,
+    include_in_schema=False,
+)
 def create_vehicle(payload: VehicleCreateRequest, db: Session = Depends(get_db)):
     return VehicleService.create_vehicle(payload, db)
 

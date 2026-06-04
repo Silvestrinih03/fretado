@@ -26,5 +26,8 @@ class Settings:
     CORS_ALLOW_ORIGIN_REGEX: str | None = (
         os.getenv("CORS_ALLOW_ORIGIN_REGEX", LOCAL_NETWORK_ORIGIN_REGEX) or None
     )
+    OFFER_EXPIRATION_MINUTES: int = int(os.getenv("OFFER_EXPIRATION_MINUTES", 5))
+    RIDE_EXPIRATION_MINUTES: int = int(os.getenv("RIDE_EXPIRATION_MINUTES", 30))
+    DISPATCH_BATCH_SIZE: int = int(os.getenv("DISPATCH_BATCH_SIZE", 1))
 
 settings = Settings()

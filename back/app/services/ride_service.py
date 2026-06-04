@@ -1,7 +1,7 @@
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
-from app.enums.ride_status import RideStatusEnum
+from app.enums.ride_status_enum import RideStatusEnum
 from app.models.ride import Ride
 from app.models.ride_status import RideStatus
 from app.models.user import User
@@ -21,6 +21,15 @@ def calculate_ride_price(payload: RideQuoteRequest) -> RideQuoteResponse:
 
 
 def create_ride(db: Session, ride_data: RideCreate):
+    if (
+        ride_data.driver_user_id is not None
+        or ride_data.status_id != int(RideStatusEnum.AGUARDANDO_ACEITE)
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Corridas devem ser criadas aguardando aceite e sem motorista.",
+        )
+
     validate_ride_payload_references(
         db=db,
         client_user_id=ride_data.client_user_id,
@@ -122,9 +131,21 @@ def update_ride(db: Session, ride_id: int, ride_data: RideUpdate):
 
     update_data = ride_data.model_dump(exclude_unset=True)
     if "driver_user_id" in update_data:
-        validate_user_exists(db, update_data["driver_user_id"], "Motorista")
+        if update_data["driver_user_id"] != ride.driver_user_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Use o aceite de oferta para atribuir motorista a corrida.",
+            )
     if "status_id" in update_data:
         validate_ride_status_exists(db, update_data["status_id"])
+        if (
+            update_data["status_id"] == int(RideStatusEnum.AGUARDANDO_INICIO)
+            and ride.driver_user_id is None
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Corrida sem motorista nao pode aguardar inicio.",
+            )
 
     for field, value in update_data.items():
         setattr(ride, field, value)

@@ -18,10 +18,30 @@ abstract class Endpoints {
   static String deleteVehicleById(int vehicleId) => '$vehicles/$vehicleId';
 
   static const String rides = '/rides';
+  static String rideById(int rideId) => '$rides/$rideId';
+  static String ridesByDriver(int driverUserId) => '$rides/driver/$driverUserId';
   static String rideGeocode(String query) =>
       '$rides/geocode?q=${Uri.encodeQueryComponent(query.trim())}';
   static const String rideQuote = '$rides/quote';
   static const String createRide = '$rides/create';
+
+  static const String rideOffers = '/offers';
+  static String offersByDriver(int driverUserId) =>
+      '$rideOffers/driver/$driverUserId';
+  static String acceptOffer(int offerId) => '$rideOffers/$offerId/accept';
+  static String rejectOffer(int offerId) => '$rideOffers/$offerId/reject';
+
+  static const String driverEarnings = '/driver_earnings';
+  static String driverEarningsByDriver(int driverUserId) =>
+      '$driverEarnings/driver/$driverUserId';
+
+  static const String driverWallets = '/driver_wallets';
+  static String driverWalletByDriver(int driverUserId) =>
+      '$driverWallets/driver/$driverUserId';
+
+  static const String walletTransactions = '/wallet_transactions';
+  static String walletTransactionsByDriver(int driverUserId) =>
+      '$walletTransactions/driver/$driverUserId';
 
   static const String payments = '/payments';
   static const String simulatePayment = '$payments/simulate';

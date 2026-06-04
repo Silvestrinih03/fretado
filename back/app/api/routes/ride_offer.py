@@ -12,7 +12,9 @@ from app.schemas.ride_offer import (
 from app.services.ride_offer_service import (
     create_offer,
     get_offers_by_driver_user_id,
+    reject_offer,
     update_offer,
+    accept_offer,
 )
 
 router = APIRouter(prefix="/offers", tags=["Ride Offers"])
@@ -37,3 +39,11 @@ def get_by_driver(driver_user_id: int, db: Session = Depends(get_db)):
 @router.put("/{offer_id}", response_model=RideOfferResponse)
 def update(offer_id: int, offer_data: RideOfferUpdate, db: Session = Depends(get_db)):
     return update_offer(db, offer_id, offer_data)
+
+@router.put("/{offer_id}/accept", response_model=RideOfferResponse)
+def accept(offer_id: int, db: Session = Depends(get_db)):
+    return accept_offer(db, offer_id)
+
+@router.put("/{offer_id}/reject", response_model=RideOfferResponse)
+def reject(offer_id: int, db: Session = Depends(get_db)):
+    return reject_offer(db, offer_id)

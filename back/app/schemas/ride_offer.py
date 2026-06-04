@@ -19,6 +19,8 @@ class RideOfferResponse(BaseModel):
     ride_id: int
     driver_user_id: int
     status_id: int
+    expires_at: Optional[datetime]
+    attempt_order: int
     created_at: datetime
     updated_at: datetime
 

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../app/design_system/design_system.dart';
 import '../../../../core/services/myself/models/myself_user_model.dart';
 import '../../../../core/services/myself/services/myself_service.dart';
+import '../../../driver_operations/presentation/pages/driver_operations_page.dart';
 import '../../../documents/presentation/pages/my_documents.dart';
 import '../../../payments/presentation/pages/my_payment_methods_page.dart';
 import '../../../profile/presentation/pages/user_data_page.dart';
@@ -68,6 +69,50 @@ class HomeDrawer extends StatelessWidget {
               },
             ),
             if (resolvedUserTypeId == _driverUserTypeId) ...[
+              _DrawerItem(
+                icon: Icons.inbox_outlined,
+                label: 'Ofertas de corrida',
+                onTap: () {
+                  Navigator.of(context).pop();
+                  Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => DriverOperationsPage(
+                        userId: userId ?? MyselfService().currentUserId,
+                      ),
+                    ),
+                  );
+                },
+              ),
+              _DrawerItem(
+                icon: Icons.route_outlined,
+                label: 'Minhas corridas',
+                onTap: () {
+                  Navigator.of(context).pop();
+                  Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => DriverOperationsPage(
+                        userId: userId ?? MyselfService().currentUserId,
+                        initialTabIndex: 1,
+                      ),
+                    ),
+                  );
+                },
+              ),
+              _DrawerItem(
+                icon: Icons.account_balance_wallet_outlined,
+                label: 'Carteira',
+                onTap: () {
+                  Navigator.of(context).pop();
+                  Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => DriverOperationsPage(
+                        userId: userId ?? MyselfService().currentUserId,
+                        initialTabIndex: 2,
+                      ),
+                    ),
+                  );
+                },
+              ),
               _DrawerItem(
                 icon: Icons.local_shipping_outlined,
                 label: 'Veículos',

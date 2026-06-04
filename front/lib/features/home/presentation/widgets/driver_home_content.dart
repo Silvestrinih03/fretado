@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../app/design_system/design_system.dart';
+import '../../../driver_operations/presentation/pages/driver_operations_page.dart';
 import '../../../documents/presentation/pages/my_documents.dart';
 import '../../../vehicles/presentation/pages/my_vehicles.dart';
 
@@ -20,7 +21,7 @@ class DriverHomeContent extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 18),
       children: [
         Text(
-          'Olá, $firstName!',
+          'Ola, $firstName!',
           style: const TextStyle(
             fontSize: 30,
             fontWeight: FontWeight.w800,
@@ -29,16 +30,32 @@ class DriverHomeContent extends StatelessWidget {
         ),
         const SizedBox(height: 2),
         const Text(
-          'Gerencie suas viagens, veículos e documentos aqui.',
+          'Gerencie suas viagens, veiculos e documentos aqui.',
           style: TextStyle(fontSize: 15, color: FretColors.neutral700),
         ),
         const SizedBox(height: 14),
-        const _BalanceCard(),
+        _BalanceCard(
+          onTap: () => _openOperations(context, initialTabIndex: 2),
+        ),
+        const SizedBox(height: 10),
+        _SimpleMetricCard(
+          icon: Icons.inbox_outlined,
+          title: 'Ofertas de corrida',
+          subtitle: 'Aceitar ou recusar ofertas pendentes',
+          onTap: () => _openOperations(context),
+        ),
+        const SizedBox(height: 10),
+        _SimpleMetricCard(
+          icon: Icons.route_outlined,
+          title: 'Minhas corridas',
+          subtitle: 'Ver corridas vinculadas ao motorista',
+          onTap: () => _openOperations(context, initialTabIndex: 1),
+        ),
         const SizedBox(height: 10),
         _SimpleMetricCard(
           icon: Icons.local_shipping_rounded,
-          title: 'Meus veículos',
-          subtitle: 'Gerenciar meus veículos',
+          title: 'Meus veiculos',
+          subtitle: 'Gerenciar meus veiculos',
           barColor: FretColors.loginFooterLink,
           onTap: () {
             Navigator.of(context).push(
@@ -61,133 +78,104 @@ class DriverHomeContent extends StatelessWidget {
             );
           },
         ),
-        const SizedBox(height: 16),
-        const Row(
-          children: [
-            Text(
-              'Minhas corridas',
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.w800,
-                color: FretColors.loginFooterLink,
-              ),
-            ),
-            Spacer(),
-            Text(
-              'Ver todas',
-              style: TextStyle(
-                color: FretColors.secondaryVariation700,
-                fontWeight: FontWeight.w700,
-                fontSize: 12,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 8),
-        const _TripCard(
-          title: 'Rota Industrial Sul',
-          subtitle: 'Placa: ABC-1234 • Motorista: Carlos R.',
-          statusLabel: 'EM CURSO',
-          statusColor: Color(0xFFF4E8B7),
-          sideColor: Color(0xFFD0A900),
-          icon: Icons.route,
-        ),
-        const SizedBox(height: 8),
-        const _TripCard(
-          title: 'Transporte Executivo',
-          subtitle: 'Hoje, 09:30 • Placa: XYZ-9876',
-          statusLabel: 'FINALIZADA',
-          statusColor: Color(0xFFE8EAF3),
-          sideColor: FretColors.loginFooterLink,
-          icon: Icons.check_circle,
-        ),
-        const SizedBox(height: 8),
-        const _TripCard(
-          title: 'Fretado Universitário',
-          subtitle: 'Hoje, 18:45 • Placa: KJK-4421',
-          statusLabel: 'AGENDADA',
-          statusColor: Color(0xFFF1F1F3),
-          sideColor: Color(0xFFBABDCA),
-          icon: Icons.schedule,
-        ),
-        const SizedBox(height: 12),
-        // const _TrafficCard(),
       ],
+    );
+  }
+
+  void _openOperations(BuildContext context, {int initialTabIndex = 0}) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => DriverOperationsPage(
+          userId: userId,
+          initialTabIndex: initialTabIndex,
+        ),
+      ),
     );
   }
 }
 
 class _BalanceCard extends StatelessWidget {
-  const _BalanceCard();
+  final VoidCallback onTap;
+
+  const _BalanceCard({required this.onTap});
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
         borderRadius: BorderRadius.circular(14),
-        gradient: const LinearGradient(
-          colors: [Color(0xFF1B2397), Color(0xFF151E8C)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: FretColors.loginFooterLink.withOpacity(0.25),
-            blurRadius: 12,
-            offset: const Offset(0, 6),
-          ),
-        ],
-      ),
-      padding: const EdgeInsets.fromLTRB(18, 16, 18, 16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Row(
-            children: [
-              Text(
-                'SALDO DISPONÍVEL',
-                style: TextStyle(
-                  color: Color(0xFFD1D5FF),
-                  letterSpacing: 0,
-                  fontWeight: FontWeight.w500,
-                ),
+        child: Ink(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(14),
+            gradient: const LinearGradient(
+              colors: [Color(0xFF1B2397), Color(0xFF151E8C)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: FretColors.loginFooterLink.withOpacity(0.25),
+                blurRadius: 12,
+                offset: const Offset(0, 6),
               ),
-              Spacer(),
-              Icon(Icons.account_balance_wallet, color: Color(0xFFAFB6F3)),
             ],
           ),
-          const SizedBox(height: 8),
-          const Text(
-            'R\$ 42.850,00',
-            style: TextStyle(
-              color: FretColors.white,
-              fontSize: 34,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          const SizedBox(height: 10),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-            decoration: BoxDecoration(
-              color: const Color(0xFF313CA3),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: const Row(
-              children: [
-                Text(
-                  'Sacar valores',
-                  style: TextStyle(
-                    color: FretColors.white,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 14,
+          padding: const EdgeInsets.fromLTRB(18, 16, 18, 16),
+          child: const Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Text(
+                    'CARTEIRA DO MOTORISTA',
+                    style: TextStyle(
+                      color: Color(0xFFD1D5FF),
+                      letterSpacing: 0,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  Spacer(),
+                  Icon(Icons.account_balance_wallet, color: Color(0xFFAFB6F3)),
+                ],
+              ),
+              SizedBox(height: 8),
+              Text(
+                'Ver saldo',
+                style: TextStyle(
+                  color: FretColors.white,
+                  fontSize: 30,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              SizedBox(height: 10),
+              DecoratedBox(
+                decoration: BoxDecoration(
+                  color: Color(0xFF313CA3),
+                  borderRadius: BorderRadius.all(Radius.circular(10)),
+                ),
+                child: Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  child: Row(
+                    children: [
+                      Text(
+                        'Saldo, historico e saque',
+                        style: TextStyle(
+                          color: FretColors.white,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 14,
+                        ),
+                      ),
+                      Spacer(),
+                      Icon(Icons.arrow_forward_rounded, color: FretColors.white),
+                    ],
                   ),
                 ),
-                Spacer(),
-                Icon(Icons.arrow_forward_rounded, color: FretColors.white),
-              ],
-            ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -294,118 +282,6 @@ class _SimpleMetricCard extends StatelessWidget {
             ],
           ),
         ),
-      ),
-    );
-  }
-}
-
-class _TripCard extends StatelessWidget {
-  final String title;
-  final String subtitle;
-  final String statusLabel;
-  final Color statusColor;
-  final Color sideColor;
-  final IconData icon;
-
-  const _TripCard({
-    required this.title,
-    required this.subtitle,
-    required this.statusLabel,
-    required this.statusColor,
-    required this.sideColor,
-    required this.icon,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: FretColors.neutral050,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: FretColors.neutral200),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 4,
-            height: 68,
-            decoration: BoxDecoration(
-              color: sideColor,
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(14),
-                bottomLeft: Radius.circular(14),
-              ),
-            ),
-          ),
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
-              child: Row(
-                children: [
-                  Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: FretColors.primary100,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Icon(icon, color: FretColors.loginFooterLink),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Expanded(
-                              child: Text(
-                                title,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  fontSize: 15,
-                                  color: FretColors.loginFooterLink,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 6),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 4,
-                              ),
-                              decoration: BoxDecoration(
-                                color: statusColor,
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                              child: Text(
-                                statusLabel,
-                                style: const TextStyle(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w700,
-                                  color: FretColors.neutral700,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          subtitle,
-                          style: const TextStyle(
-                            fontSize: 12,
-                            color: FretColors.neutral700,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
       ),
     );
   }

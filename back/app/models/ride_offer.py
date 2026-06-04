@@ -9,6 +9,8 @@ class RideOffer(Base):
     ride_id = Column(BigInteger, ForeignKey("rides.id"), nullable=False)
     driver_user_id = Column(BigInteger, ForeignKey("users.id"), nullable=False)
     status_id = Column(BigInteger, ForeignKey("ride_offer_status.id"), nullable=False)
+    expires_at = Column(DateTime(timezone=True), nullable=True)
+    attempt_order = Column(BigInteger, nullable=False, default=1)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at = Column(
         DateTime(timezone=True),

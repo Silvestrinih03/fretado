@@ -15,6 +15,12 @@ abstract class DriverOperationsRepository {
 
   Future<DriverRideModel> getRideById(int rideId);
 
+  Future<DriverRideModel> startRide(int rideId);
+
+  Future<DriverRideModel> completeRidePickup(int rideId);
+
+  Future<DriverRideModel> finishRide(int rideId);
+
   Future<DriverWalletModel?> getWalletByDriver(int driverUserId);
 
   Future<List<WalletTransactionModel>> listTransactionsByDriver(

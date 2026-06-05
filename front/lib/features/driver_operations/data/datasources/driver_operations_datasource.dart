@@ -115,6 +115,44 @@ class DriverOperationsDatasource {
     }
   }
 
+  Future<DriverRideModel> startRide(int rideId) async {
+    try {
+      final response = await _httpService.patch(Endpoints.startRide(rideId));
+      return DriverRideModel.fromJson(response);
+    } on HttpServiceException catch (e) {
+      throw DriverOperationsDatasourceException(
+        e.message,
+        statusCode: e.statusCode,
+      );
+    }
+  }
+
+  Future<DriverRideModel> completeRidePickup(int rideId) async {
+    try {
+      final response = await _httpService.patch(
+        Endpoints.completeRidePickup(rideId),
+      );
+      return DriverRideModel.fromJson(response);
+    } on HttpServiceException catch (e) {
+      throw DriverOperationsDatasourceException(
+        e.message,
+        statusCode: e.statusCode,
+      );
+    }
+  }
+
+  Future<DriverRideModel> finishRide(int rideId) async {
+    try {
+      final response = await _httpService.patch(Endpoints.finishRide(rideId));
+      return DriverRideModel.fromJson(response);
+    } on HttpServiceException catch (e) {
+      throw DriverOperationsDatasourceException(
+        e.message,
+        statusCode: e.statusCode,
+      );
+    }
+  }
+
   Future<DriverWalletModel?> getWalletByDriver(int driverUserId) async {
     try {
       final response = await _httpService.get(

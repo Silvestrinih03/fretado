@@ -28,12 +28,25 @@ abstract class Endpoints {
       '$rides/geocode?q=${Uri.encodeQueryComponent(query.trim())}';
   static const String rideQuote = '$rides/quote';
   static const String createRide = '$rides/create';
+  static const String availableRides = '$rides/available';
+  static String startRide(int rideId) => '$rides/$rideId/start';
+  static String completeRidePickup(int rideId) =>
+      '$rides/$rideId/pickup-completed';
+  static String finishRide(int rideId) => '$rides/$rideId/finish';
 
   static const String rideOffers = '/offers';
   static String offersByDriver(int driverUserId) =>
       '$rideOffers/driver/$driverUserId';
   static String acceptOffer(int offerId) => '$rideOffers/$offerId/accept';
   static String rejectOffer(int offerId) => '$rideOffers/$offerId/reject';
+
+  static const String driverLocations = '/driver-locations';
+  static String driverLocationByDriver(int driverUserId) =>
+      '$driverLocations/$driverUserId';
+  static String driverLocationOffline(int driverUserId) =>
+      '$driverLocations/$driverUserId/offline';
+
+  static const String rideDispatchJob = '/jobs/ride-dispatch';
 
   static const String driverEarnings = '/driver_earnings';
   static String driverEarningsByDriver(int driverUserId) =>

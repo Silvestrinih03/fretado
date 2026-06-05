@@ -12,6 +12,7 @@ from app.schemas.ride import (
 from app.services.ride_service import (
     calculate_ride_price,
     create_ride,
+    get_available_rides,
     get_ride_by_id,
     get_rides_by_client_user_id,
     get_rides_by_driver_user_id,
@@ -54,6 +55,11 @@ def get_by_client(client_user_id: int, db: Session = Depends(get_db)):
 @router.get("/driver/{driver_user_id}", response_model=List[RideResponse])
 def get_by_driver(driver_user_id: int, db: Session = Depends(get_db)):
     return get_rides_by_driver_user_id(db, driver_user_id)
+
+
+@router.get("/available", response_model=List[RideResponse])
+def get_available(db: Session = Depends(get_db)):
+    return get_available_rides(db)
 
 
 @router.get("/{ride_id}", response_model=RideResponse)

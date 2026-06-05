@@ -19,6 +19,7 @@ class DriverOperationsStore extends ChangeNotifier {
   bool _isRefreshingWallet = false;
   bool _isWithdrawing = false;
   int? _offerInActionId;
+  int? _rideInActionId;
   String? _errorMessage;
   String? _actionMessage;
   DriverWalletModel? _wallet;
@@ -32,6 +33,7 @@ class DriverOperationsStore extends ChangeNotifier {
   bool get isRefreshingWallet => _isRefreshingWallet;
   bool get isWithdrawing => _isWithdrawing;
   int? get offerInActionId => _offerInActionId;
+  int? get rideInActionId => _rideInActionId;
   String? get errorMessage => _errorMessage;
   String? get actionMessage => _actionMessage;
   DriverWalletModel? get wallet => _wallet;
@@ -167,6 +169,34 @@ class DriverOperationsStore extends ChangeNotifier {
     }
   }
 
+  Future<bool> startRide(int rideId) {
+    return _advanceRide(
+      rideId: rideId,
+      action: () => _repository.startRide(rideId),
+      successMessage: 'Corrida iniciada.',
+      fallbackErrorMessage: 'Nao foi possivel iniciar a corrida.',
+    );
+  }
+
+  Future<bool> completeRidePickup(int rideId) {
+    return _advanceRide(
+      rideId: rideId,
+      action: () => _repository.completeRidePickup(rideId),
+      successMessage: 'Coleta concluida.',
+      fallbackErrorMessage: 'Nao foi possivel concluir a coleta.',
+    );
+  }
+
+  Future<bool> finishRide(int rideId) {
+    return _advanceRide(
+      rideId: rideId,
+      action: () => _repository.finishRide(rideId),
+      successMessage: 'Corrida finalizada.',
+      fallbackErrorMessage: 'Nao foi possivel finalizar a corrida.',
+      reloadWalletData: true,
+    );
+  }
+
   Future<bool> requestWithdraw({
     required String valueText,
     required String pixKey,
@@ -205,8 +235,12 @@ class DriverOperationsStore extends ChangeNotifier {
         ),
       );
       _actionMessage = 'Saque solicitado.';
-      _wallet = await _repository.getWalletByDriver(userId);
-      _transactions = await _repository.listTransactionsByDriver(userId);
+      try {
+        _wallet = await _repository.getWalletByDriver(userId);
+        _transactions = await _repository.listTransactionsByDriver(userId);
+      } catch (_) {
+        // The withdraw request succeeded; keep success feedback visible.
+      }
       return true;
     } on DriverOperationsRepositoryException catch (e) {
       _actionMessage = e.message;
@@ -256,6 +290,46 @@ class DriverOperationsStore extends ChangeNotifier {
       await _loadOfferRideDetails();
     } catch (_) {
       // Keep the original action error visible.
+    }
+  }
+
+  Future<bool> _advanceRide({
+    required int rideId,
+    required Future<DriverRideModel> Function() action,
+    required String successMessage,
+    required String fallbackErrorMessage,
+    bool reloadWalletData = false,
+  }) async {
+    final userId = _resolveUserId();
+    if (userId == null) {
+      _actionMessage = 'Usuario logado nao encontrado.';
+      notifyListeners();
+      return false;
+    }
+
+    _rideInActionId = rideId;
+    _actionMessage = null;
+    notifyListeners();
+
+    try {
+      await action();
+      _actionMessage = successMessage;
+      _rides = await _repository.listRidesInProgressByUser(userId);
+      await _loadOfferRideDetails();
+      if (reloadWalletData) {
+        _earnings = await _repository.listEarningsByDriver(userId);
+        _wallet = await _repository.getWalletByDriver(userId);
+      }
+      return true;
+    } on DriverOperationsRepositoryException catch (e) {
+      _actionMessage = e.message;
+      return false;
+    } catch (_) {
+      _actionMessage = fallbackErrorMessage;
+      return false;
+    } finally {
+      _rideInActionId = null;
+      notifyListeners();
     }
   }
 

@@ -139,6 +139,7 @@ class _ShippingPaymentPageState extends State<ShippingPaymentPage> {
           'status_id': 1,
         },
       );
+      await _runRideDispatchJob();
 
       if (!mounted) {
         return;
@@ -179,6 +180,22 @@ class _ShippingPaymentPageState extends State<ShippingPaymentPage> {
       if (mounted) {
         setState(() => _isPaying = false);
       }
+    }
+  }
+
+  Future<void> _runRideDispatchJob() async {
+    const jobSecret = String.fromEnvironment('JOB_SECRET');
+    if (jobSecret.isEmpty) {
+      return;
+    }
+
+    try {
+      await _httpService.post(
+        Endpoints.rideDispatchJob,
+        headers: {'X-Job-Secret': jobSecret},
+      );
+    } catch (_) {
+      // A corrida ja foi criada; o job agendado do backend ainda pode processar.
     }
   }
 

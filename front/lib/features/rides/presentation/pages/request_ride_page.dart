@@ -362,9 +362,10 @@ class _RequestRidePageState extends State<RequestRidePage> {
     setState(() => _loading = true);
     try {
       final data = await _http.post(Endpoints.createRide, body: payload);
+      await _runRideDispatchJob();
       if (!mounted) return;
       _showMessage(
-        'Corrida #${data['id']} solicitada. Status: ${data['status']}',
+        'Corrida #${data['id']} solicitada. Status: ${data['status_id']}',
       );
       Navigator.of(context).pop(true);
     } on HttpServiceException catch (e) {
@@ -483,6 +484,22 @@ class _RequestRidePageState extends State<RequestRidePage> {
     return result;
   }
 
+  Future<void> _runRideDispatchJob() async {
+    const jobSecret = String.fromEnvironment('JOB_SECRET');
+    if (jobSecret.isEmpty) {
+      return;
+    }
+
+    try {
+      await _http.post(
+        Endpoints.rideDispatchJob,
+        headers: {'X-Job-Secret': jobSecret},
+      );
+    } catch (_) {
+      // A corrida ja foi criada; o job agendado do backend ainda pode processar.
+    }
+  }
+
   Map<String, dynamic>? _payload({required bool paymentConfirmed}) {
     final pickup = _pickup;
     final delivery = _delivery;
@@ -503,8 +520,7 @@ class _RequestRidePageState extends State<RequestRidePage> {
       return null;
     }
 
-    return {
-      'client_user_id': widget.userId,
+    final payload = <String, dynamic>{
       'origin_latitude': pickup.latitude,
       'origin_longitude': pickup.longitude,
       'destination_latitude': delivery.latitude,
@@ -513,7 +529,24 @@ class _RequestRidePageState extends State<RequestRidePage> {
       'package_height': height,
       'package_length': length,
       'package_weight': weight,
-      'payment_confirmed': paymentConfirmed,
+    };
+
+    if (!paymentConfirmed) {
+      return payload;
+    }
+
+    final quote = _quote;
+    if (quote == null) {
+      _showMessage('Calcule o valor antes de solicitar a corrida.');
+      return null;
+    }
+
+    return {
+      ...payload,
+      'client_user_id': widget.userId,
+      'driver_user_id': null,
+      'total_price': quote.totalPrice,
+      'status_id': 1,
     };
   }
 

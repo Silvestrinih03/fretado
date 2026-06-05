@@ -125,6 +125,18 @@ def get_rides_by_driver_user_id(db: Session, driver_user_id: int):
     return db.query(Ride).filter(Ride.driver_user_id == driver_user_id).all()
 
 
+def get_available_rides(db: Session):
+    return (
+        db.query(Ride)
+        .filter(
+            Ride.status_id == int(RideStatusEnum.AGUARDANDO_ACEITE),
+            Ride.driver_user_id.is_(None),
+        )
+        .order_by(Ride.created_at.asc())
+        .all()
+    )
+
+
 def get_ride_by_id(db: Session, ride_id: int):
     ride = db.query(Ride).filter(Ride.id == ride_id).first()
 

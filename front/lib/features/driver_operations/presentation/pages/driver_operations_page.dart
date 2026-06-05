@@ -69,6 +69,23 @@ class _DriverOperationsPageState extends State<DriverOperationsPage> {
     );
   }
 
+  Future<void> _runRideAction(
+    Future<bool> Function() action,
+  ) async {
+    final ok = await action();
+    if (!mounted || _store.actionMessage == null) {
+      return;
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(_store.actionMessage!),
+        backgroundColor:
+            ok ? FretColors.success700 : FretColors.destructive600,
+      ),
+    );
+  }
+
   Future<void> _openWithdrawDialog() async {
     final valueController = TextEditingController();
     final pixController = TextEditingController();
@@ -229,7 +246,18 @@ class _DriverOperationsPageState extends State<DriverOperationsPage> {
             () => _store.rejectOffer(offerId),
           ),
         ),
-        _RidesTab(rides: _store.rides),
+        _RidesTab(
+          store: _store,
+          onStart: (rideId) => _runRideAction(
+            () => _store.startRide(rideId),
+          ),
+          onCompletePickup: (rideId) => _runRideAction(
+            () => _store.completeRidePickup(rideId),
+          ),
+          onFinish: (rideId) => _runRideAction(
+            () => _store.finishRide(rideId),
+          ),
+        ),
         _WalletTab(
           store: _store,
           onWithdrawTap: _openWithdrawDialog,
@@ -420,12 +448,22 @@ class _OfferCard extends StatelessWidget {
 }
 
 class _RidesTab extends StatelessWidget {
-  final List<DriverRideModel> rides;
+  final DriverOperationsStore store;
+  final ValueChanged<int> onStart;
+  final ValueChanged<int> onCompletePickup;
+  final ValueChanged<int> onFinish;
 
-  const _RidesTab({required this.rides});
+  const _RidesTab({
+    required this.store,
+    required this.onStart,
+    required this.onCompletePickup,
+    required this.onFinish,
+  });
 
   @override
   Widget build(BuildContext context) {
+    final rides = store.rides;
+
     if (rides.isEmpty) {
       return const Padding(
         padding: EdgeInsets.all(16),
@@ -442,7 +480,14 @@ class _RidesTab extends StatelessWidget {
       itemCount: rides.length,
       separatorBuilder: (_, __) => const SizedBox(height: 10),
       itemBuilder: (context, index) {
-        return _RideCard(ride: rides[index]);
+        final ride = rides[index];
+        return _RideCard(
+          ride: ride,
+          isBusy: store.rideInActionId == ride.id,
+          onStart: () => onStart(ride.id),
+          onCompletePickup: () => onCompletePickup(ride.id),
+          onFinish: () => onFinish(ride.id),
+        );
       },
     );
   }
@@ -450,11 +495,30 @@ class _RidesTab extends StatelessWidget {
 
 class _RideCard extends StatelessWidget {
   final DriverRideModel ride;
+  final bool isBusy;
+  final VoidCallback onStart;
+  final VoidCallback onCompletePickup;
+  final VoidCallback onFinish;
 
-  const _RideCard({required this.ride});
+  const _RideCard({
+    required this.ride,
+    required this.isBusy,
+    required this.onStart,
+    required this.onCompletePickup,
+    required this.onFinish,
+  });
 
   @override
   Widget build(BuildContext context) {
+    final actionLabel = _rideProgressActionLabel(ride);
+    final actionIcon = _rideProgressActionIcon(ride);
+    final onAction = _rideProgressActionCallback(
+      ride,
+      onStart: onStart,
+      onCompletePickup: onCompletePickup,
+      onFinish: onFinish,
+    );
+
     return _Panel(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -499,6 +563,23 @@ class _RideCard extends StatelessWidget {
             overflow: TextOverflow.ellipsis,
             style: const TextStyle(color: FretColors.neutral600, fontSize: 12),
           ),
+          if (actionLabel != null && actionIcon != null && onAction != null) ...[
+            const SizedBox(height: 14),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: isBusy ? null : onAction,
+                icon: isBusy
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : Icon(actionIcon),
+                label: Text(actionLabel),
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -971,6 +1052,38 @@ Color _rideColor(DriverRideModel ride) {
     5 => FretColors.success100,
     6 => FretColors.destructive100,
     _ => FretColors.neutral200,
+  };
+}
+
+String? _rideProgressActionLabel(DriverRideModel ride) {
+  return switch (ride.statusId) {
+    2 => 'Iniciar corrida',
+    3 => 'Confirmar coleta',
+    4 => 'Finalizar corrida',
+    _ => null,
+  };
+}
+
+IconData? _rideProgressActionIcon(DriverRideModel ride) {
+  return switch (ride.statusId) {
+    2 => Icons.play_arrow_rounded,
+    3 => Icons.inventory_2_outlined,
+    4 => Icons.flag_outlined,
+    _ => null,
+  };
+}
+
+VoidCallback? _rideProgressActionCallback(
+  DriverRideModel ride, {
+  required VoidCallback onStart,
+  required VoidCallback onCompletePickup,
+  required VoidCallback onFinish,
+}) {
+  return switch (ride.statusId) {
+    2 => onStart,
+    3 => onCompletePickup,
+    4 => onFinish,
+    _ => null,
   };
 }
 

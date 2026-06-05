@@ -20,3 +20,8 @@ class DriverEarningResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+class DriverEarningCreate(BaseModel):
+    driver_user_id: int
+    ride_id: int
+    gross_value: Decimal

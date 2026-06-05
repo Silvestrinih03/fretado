@@ -17,6 +17,8 @@ from app.schemas.register import UserTypeEnum
 from app.enums.ride_status_enum import RideStatusEnum
 
 from datetime import datetime, timezone
+from app.schemas.driver_earning import DriverEarningCreate
+from app.services.driver_earning_service import create_driver_earning
 
 def utc_now():
     return datetime.now(timezone.utc)
@@ -288,8 +290,24 @@ def finish_ride(db: Session, ride_id: int):
             detail="Apenas corridas a caminho da entrega podem ser finalizadas.",
         )
 
+    if ride.driver_user_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Corrida nao possui motorista.",
+        )
+
     ride.status_id = int(RideStatusEnum.FINALIZADA)
     ride.finished_at = utc_now()
+
+    create_driver_earning(
+        db=db,
+        driver_earning_data=DriverEarningCreate(
+            driver_user_id=ride.driver_user_id,
+            ride_id=ride.id,
+            gross_value=ride.total_price,
+        ),
+        commit=False,
+    )
 
     db.commit()
     db.refresh(ride)

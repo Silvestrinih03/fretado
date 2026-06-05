@@ -38,7 +38,10 @@ class Settings:
         os.getenv("CORS_ALLOW_ORIGIN_REGEX") or DEFAULT_CORS_ALLOW_ORIGIN_REGEX
     )
     OFFER_EXPIRATION_MINUTES: int = int(os.getenv("OFFER_EXPIRATION_MINUTES", 5))
-    RIDE_EXPIRATION_MINUTES: int = int(os.getenv("RIDE_EXPIRATION_MINUTES", 30))
-    DISPATCH_BATCH_SIZE: int = int(os.getenv("DISPATCH_BATCH_SIZE", 1))
+    RIDE_EXPIRATION_MINUTES: int = int(os.getenv("RIDE_EXPIRATION_MINUTES", 15))
+    DISPATCH_BATCH_SIZE: int = int(os.getenv("DISPATCH_BATCH_SIZE", 5))
+    DRIVER_LOCATION_MAX_AGE_MINUTES: int = int(os.getenv("DRIVER_LOCATION_MAX_AGE_MINUTES", 5))
+    JOB_SECRET: str = os.getenv("JOB_SECRET", "")
+    JOBS_ENABLED: bool = os.getenv("JOBS_ENABLED", "false").lower() == "true"
 
 settings = Settings()

@@ -13,6 +13,7 @@ from app.models.vehicle import Vehicle
 from app.schemas.ride import RideQuoteRequest
 from app.schemas.ride_offer import RideOfferResponse
 from app.services.ride_service import calculate_ride_price
+from app.models.driver_location import DriverLocation
 
 
 PENDING_OFFER_STATUS_ID = int(RideOfferStatusEnum.PENDENTE)
@@ -248,11 +249,16 @@ def has_active_pending_offer(db: Session, ride_id: int) -> bool:
 
 
 def find_next_driver_for_ride(db: Session, ride: Ride) -> int | None:
+    now = utc_now()
+    location_limit = now - timedelta(minutes=settings.DRIVER_LOCATION_MAX_AGE_MINUTES)
+
     quote = calculate_ride_price(build_quote_request(ride))
+
     used_driver_ids = (
         db.query(RideOffer.driver_user_id)
         .filter(RideOffer.ride_id == ride.id)
     )
+
     busy_driver_ids = (
         db.query(Ride.driver_user_id)
         .filter(
@@ -264,6 +270,7 @@ def find_next_driver_for_ride(db: Session, ride: Ride) -> int | None:
     driver = (
         db.query(Vehicle.user_id)
         .join(User, User.id == Vehicle.user_id)
+        .join(DriverLocation, DriverLocation.driver_user_id == User.id)
         .filter(
             User.user_type_id == int(UserTypeEnum.DRIVER),
             Vehicle.status.is_(True),
@@ -271,8 +278,14 @@ def find_next_driver_for_ride(db: Session, ride: Ride) -> int | None:
             Vehicle.load_capacity_kg >= ride.package_weight,
             Vehicle.user_id.notin_(used_driver_ids),
             Vehicle.user_id.notin_(busy_driver_ids),
+            DriverLocation.is_online.is_(True),
+            DriverLocation.last_seen_at >= location_limit,
         )
-        .order_by(Vehicle.vehicle_type_id.asc(), Vehicle.id.asc())
+        .order_by(
+            Vehicle.vehicle_type_id.asc(),
+            DriverLocation.last_seen_at.desc(),
+            Vehicle.id.asc(),
+        )
         .first()
     )
 

@@ -16,6 +16,11 @@ from app.services.ride_quote_service import RideQuoteService
 from app.schemas.register import UserTypeEnum
 from app.enums.ride_status_enum import RideStatusEnum
 
+from datetime import datetime, timezone
+
+def utc_now():
+    return datetime.now(timezone.utc)
+
 
 def calculate_ride_price(payload: RideQuoteRequest) -> RideQuoteResponse:
     return RideQuoteService().quote(payload)
@@ -232,3 +237,61 @@ def get_rides_in_progress_by_user_id(db: Session, user_id: int):
         )
 
     return query.all()
+
+def start_ride(db: Session, ride_id: int):
+    ride = get_ride_by_id(db, ride_id)
+
+    if ride.driver_user_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Corrida precisa ter motorista para ser iniciada.",
+        )
+
+    if ride.status_id != int(RideStatusEnum.AGUARDANDO_INICIO):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Apenas corridas aguardando inicio podem ser iniciadas.",
+        )
+
+    ride.status_id = int(RideStatusEnum.A_CAMINHO_COLETA)
+    ride.started_at = utc_now()
+
+    db.commit()
+    db.refresh(ride)
+
+    return ride
+
+
+def complete_pickup(db: Session, ride_id: int):
+    ride = get_ride_by_id(db, ride_id)
+
+    if ride.status_id != int(RideStatusEnum.A_CAMINHO_COLETA):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Apenas corridas a caminho da coleta podem concluir a coleta.",
+        )
+
+    ride.status_id = int(RideStatusEnum.A_CAMINHO_ENTREGA)
+
+    db.commit()
+    db.refresh(ride)
+
+    return ride
+
+
+def finish_ride(db: Session, ride_id: int):
+    ride = get_ride_by_id(db, ride_id)
+
+    if ride.status_id != int(RideStatusEnum.A_CAMINHO_ENTREGA):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Apenas corridas a caminho da entrega podem ser finalizadas.",
+        )
+
+    ride.status_id = int(RideStatusEnum.FINALIZADA)
+    ride.finished_at = utc_now()
+
+    db.commit()
+    db.refresh(ride)
+
+    return ride

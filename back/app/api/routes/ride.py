@@ -17,6 +17,9 @@ from app.services.ride_service import (
     get_rides_by_driver_user_id,
     get_rides_in_progress_by_user_id,
     update_ride,
+    start_ride,
+    complete_pickup,
+    finish_ride,
 )
 
 router = APIRouter(prefix="/rides", tags=["Rides"])
@@ -65,3 +68,26 @@ def get_in_progress_by_user(user_id: int, db: Session = Depends(get_db)):
 @router.put("/{ride_id}", response_model=RideResponse)
 def update(ride_id: int, ride_data: RideUpdate, db: Session = Depends(get_db)):
     return update_ride(db, ride_id, ride_data)
+
+@router.patch("/{ride_id}/start", status_code=status.HTTP_200_OK)
+def start_ride_route(
+    ride_id: int,
+    db: Session = Depends(get_db),
+):
+    return start_ride(db=db, ride_id=ride_id)
+
+
+@router.patch("/{ride_id}/pickup-completed", status_code=status.HTTP_200_OK)
+def complete_pickup_route(
+    ride_id: int,
+    db: Session = Depends(get_db),
+):
+    return complete_pickup(db=db, ride_id=ride_id)
+
+
+@router.patch("/{ride_id}/finish", status_code=status.HTTP_200_OK)
+def finish_ride_route(
+    ride_id: int,
+    db: Session = Depends(get_db),
+):
+    return finish_ride(db=db, ride_id=ride_id)

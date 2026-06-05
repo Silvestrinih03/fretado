@@ -1,7 +1,6 @@
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
-from app.enums.ride_status_enum import RideStatusEnum
 from app.models.ride import Ride
 from app.models.ride_status import RideStatus
 from app.models.user import User
@@ -14,6 +13,8 @@ from app.schemas.ride import (
     RideUpdate,
 )
 from app.services.ride_quote_service import RideQuoteService
+from app.schemas.register import UserTypeEnum
+from app.enums.ride_status_enum import RideStatusEnum
 
 
 def calculate_ride_price(payload: RideQuoteRequest) -> RideQuoteResponse:
@@ -199,3 +200,35 @@ def get_ride_status_by_id(db: Session, status_id: int) -> RideStatus:
         )
 
     return ride_status
+
+def get_rides_in_progress_by_user_id(db: Session, user_id: int):
+    user = db.query(User).filter(User.id == user_id).first()
+
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Usuario nao encontrado",
+        )
+
+    finished_statuses = [
+        int(RideStatusEnum.FINALIZADA),
+        int(RideStatusEnum.CANCELADA),
+    ]
+
+    query = db.query(Ride).filter(
+        Ride.status_id.notin_(finished_statuses)
+    )
+
+    if user.user_type_id == int(UserTypeEnum.CLIENT):
+        query = query.filter(Ride.client_user_id == user_id)
+
+    elif user.user_type_id == int(UserTypeEnum.DRIVER):
+        query = query.filter(Ride.driver_user_id == user_id)
+
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Tipo de usuario invalido",
+        )
+
+    return query.all()

@@ -44,6 +44,24 @@ class DriverOperationsRepositoryImpl implements DriverOperationsRepository {
   }
 
   @override
+  Future<List<DriverRideModel>> listRidesByClient(int clientUserId) async {
+    try {
+      return await _datasource.listRidesByClient(clientUserId);
+    } on DriverOperationsDatasourceException catch (e) {
+      throw DriverOperationsRepositoryException(e.message);
+    }
+  }
+
+  @override
+  Future<List<DriverRideModel>> listRidesInProgressByUser(int userId) async {
+    try {
+      return await _datasource.listRidesInProgressByUser(userId);
+    } on DriverOperationsDatasourceException catch (e) {
+      throw DriverOperationsRepositoryException(e.message);
+    }
+  }
+
+  @override
   Future<DriverRideModel> getRideById(int rideId) async {
     try {
       return await _datasource.getRideById(rideId);

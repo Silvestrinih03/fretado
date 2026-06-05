@@ -73,6 +73,14 @@ class DriverRideModel {
       _ => 'STATUS $statusId',
     };
   }
+
+  String get originLabel {
+    return '${originLatitude.toStringAsFixed(5)}, ${originLongitude.toStringAsFixed(5)}';
+  }
+
+  String get destinationLabel {
+    return '${destinationLatitude.toStringAsFixed(5)}, ${destinationLongitude.toStringAsFixed(5)}';
+  }
 }
 
 class RideOfferModel {

@@ -44,7 +44,7 @@ class ClientHomeContent extends StatelessWidget {
         const SizedBox(height: 20),
         _FreightRequestCard(userId: userId),
         const SizedBox(height: 22),
-        _ClientRideHistorySection(userId: userId),
+        _ClientRideInProgressSection(userId: userId),
       ],
     );
   }
@@ -127,17 +127,18 @@ class _FreightRequestCard extends StatelessWidget {
   }
 }
 
-class _ClientRideHistorySection extends StatefulWidget {
+class _ClientRideInProgressSection extends StatefulWidget {
   final int userId;
 
-  const _ClientRideHistorySection({required this.userId});
+  const _ClientRideInProgressSection({required this.userId});
 
   @override
-  State<_ClientRideHistorySection> createState() =>
-      _ClientRideHistorySectionState();
+  State<_ClientRideInProgressSection> createState() =>
+      _ClientRideInProgressSectionState();
 }
 
-class _ClientRideHistorySectionState extends State<_ClientRideHistorySection> {
+class _ClientRideInProgressSectionState
+    extends State<_ClientRideInProgressSection> {
   late final HttpService _httpService;
   late Future<List<DriverRideModel>> _ridesFuture;
 
@@ -149,7 +150,7 @@ class _ClientRideHistorySectionState extends State<_ClientRideHistorySection> {
   }
 
   @override
-  void didUpdateWidget(covariant _ClientRideHistorySection oldWidget) {
+  void didUpdateWidget(covariant _ClientRideInProgressSection oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.userId != widget.userId) {
       _ridesFuture = _loadRides();
@@ -164,7 +165,7 @@ class _ClientRideHistorySectionState extends State<_ClientRideHistorySection> {
 
   Future<List<DriverRideModel>> _loadRides() async {
     final response = await _httpService.get(
-      Endpoints.ridesByClient(widget.userId),
+      Endpoints.ridesInProgressByUser(widget.userId),
     );
     final dynamic data = response['data'];
 
@@ -211,8 +212,8 @@ class _ClientRideHistorySectionState extends State<_ClientRideHistorySection> {
             if (isLoading)
               const _RideHistoryStateCard(
                 icon: Icons.hourglass_top_rounded,
-                title: 'Carregando historico',
-                subtitle: 'Buscando suas corridas mais recentes.',
+                title: 'Carregando corridas',
+                subtitle: 'Buscando suas corridas em andamento.',
               )
             else if (snapshot.hasError)
               _RideHistoryStateCard(
@@ -225,8 +226,8 @@ class _ClientRideHistorySectionState extends State<_ClientRideHistorySection> {
             else if (rides.isEmpty)
               const _RideHistoryStateCard(
                 icon: Icons.route_outlined,
-                title: 'Nenhuma corrida encontrada',
-                subtitle: 'Quando voce solicitar um frete, ele aparecera aqui.',
+                title: 'Nenhuma corrida em andamento',
+                subtitle: 'Quando seu frete estiver ativo, ele aparecera aqui.',
               )
             else
               ...rides.map(
@@ -253,7 +254,7 @@ class _ClientRideHistoryHeader extends StatelessWidget {
       children: [
         const Expanded(
           child: Text(
-            'Historico de corridas',
+            'Corridas em andamento',
             maxLines: 2,
             style: TextStyle(
               fontSize: 20,
@@ -263,7 +264,7 @@ class _ClientRideHistoryHeader extends StatelessWidget {
           ),
         ),
         IconButton(
-          tooltip: 'Atualizar historico',
+          tooltip: 'Atualizar corridas',
           onPressed: onRefresh,
           icon: const Icon(
             Icons.refresh_rounded,
@@ -316,14 +317,8 @@ class _ClientRideHistoryCard extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           _RouteLine(
-            origin: _formatCoordinates(
-              ride.originLatitude,
-              ride.originLongitude,
-            ),
-            destination: _formatCoordinates(
-              ride.destinationLatitude,
-              ride.destinationLongitude,
-            ),
+            origin: ride.originLabel,
+            destination: ride.destinationLabel,
           ),
           const SizedBox(height: 12),
           const Divider(height: 1, color: Color(0xFFE8E8EC)),
@@ -590,10 +585,6 @@ class _FreightInfo extends StatelessWidget {
       ],
     );
   }
-}
-
-String _formatCoordinates(double latitude, double longitude) {
-  return '${latitude.toStringAsFixed(5)}, ${longitude.toStringAsFixed(5)}';
 }
 
 String _formatDate(DateTime value) {

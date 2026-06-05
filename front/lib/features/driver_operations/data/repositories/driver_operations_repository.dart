@@ -9,6 +9,10 @@ abstract class DriverOperationsRepository {
 
   Future<List<DriverRideModel>> listRidesByDriver(int driverUserId);
 
+  Future<List<DriverRideModel>> listRidesByClient(int clientUserId);
+
+  Future<List<DriverRideModel>> listRidesInProgressByUser(int userId);
+
   Future<DriverRideModel> getRideById(int rideId);
 
   Future<DriverWalletModel?> getWalletByDriver(int driverUserId);

@@ -15,6 +15,7 @@ from app.services.ride_service import (
     get_ride_by_id,
     get_rides_by_client_user_id,
     get_rides_by_driver_user_id,
+    get_rides_in_progress_by_user_id,
     update_ride,
 )
 
@@ -55,6 +56,10 @@ def get_by_driver(driver_user_id: int, db: Session = Depends(get_db)):
 @router.get("/{ride_id}", response_model=RideResponse)
 def get_by_id(ride_id: int, db: Session = Depends(get_db)):
     return get_ride_by_id(db, ride_id)
+
+@router.get("/in-progress/user/{user_id}", response_model=List[RideResponse])
+def get_in_progress_by_user(user_id: int, db: Session = Depends(get_db)):
+    return get_rides_in_progress_by_user_id(db, user_id)
 
 
 @router.put("/{ride_id}", response_model=RideResponse)

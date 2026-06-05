@@ -70,7 +70,7 @@ class DriverOperationsStore extends ChangeNotifier {
 
     try {
       _offers = await _repository.listOffersByDriver(userId);
-      _rides = await _repository.listRidesByDriver(userId);
+      _rides = await _repository.listRidesInProgressByUser(userId);
       await _loadOfferRideDetails();
       _wallet = await _repository.getWalletByDriver(userId);
       _transactions = await _repository.listTransactionsByDriver(userId);
@@ -120,7 +120,7 @@ class DriverOperationsStore extends ChangeNotifier {
       await _repository.acceptOffer(offerId);
       _actionMessage = 'Oferta aceita.';
       _offers = await _repository.listOffersByDriver(userId);
-      _rides = await _repository.listRidesByDriver(userId);
+      _rides = await _repository.listRidesInProgressByUser(userId);
       await _loadOfferRideDetails();
       return true;
     } on DriverOperationsRepositoryException catch (e) {
@@ -252,7 +252,7 @@ class DriverOperationsStore extends ChangeNotifier {
   Future<void> _reloadOffersAndRides(int userId) async {
     try {
       _offers = await _repository.listOffersByDriver(userId);
-      _rides = await _repository.listRidesByDriver(userId);
+      _rides = await _repository.listRidesInProgressByUser(userId);
       await _loadOfferRideDetails();
     } catch (_) {
       // Keep the original action error visible.

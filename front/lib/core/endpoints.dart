@@ -22,6 +22,8 @@ abstract class Endpoints {
   static String ridesByClient(int clientUserId) =>
       '$rides/client/$clientUserId';
   static String ridesByDriver(int driverUserId) => '$rides/driver/$driverUserId';
+  static String ridesInProgressByUser(int userId) =>
+      '$rides/in-progress/user/$userId';
   static String rideGeocode(String query) =>
       '$rides/geocode?q=${Uri.encodeQueryComponent(query.trim())}';
   static const String rideQuote = '$rides/quote';

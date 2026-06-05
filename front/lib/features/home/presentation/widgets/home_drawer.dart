@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 
 import '../../../../app/design_system/design_system.dart';
+import '../../../../core/enums/home_profile.dart';
 import '../../../../core/services/myself/models/myself_user_model.dart';
 import '../../../../core/services/myself/services/myself_service.dart';
 import '../../../driver_operations/presentation/pages/driver_operations_page.dart';
 import '../../../documents/presentation/pages/my_documents.dart';
 import '../../../payments/presentation/pages/my_payment_methods_page.dart';
 import '../../../profile/presentation/pages/user_data_page.dart';
+import '../../../rides/presentation/pages/ride_history_page.dart';
 import '../../../vehicles/presentation/pages/my_vehicles.dart';
 
 const int _clientUserTypeId = 1;
@@ -85,14 +87,14 @@ class HomeDrawer extends StatelessWidget {
               ),
               _DrawerItem(
                 icon: Icons.route_outlined,
-                label: 'Minhas corridas',
+                label: 'Historico de corridas',
                 onTap: () {
                   Navigator.of(context).pop();
                   Navigator.of(context).push(
                     MaterialPageRoute<void>(
-                      builder: (_) => DriverOperationsPage(
-                        userId: userId ?? MyselfService().currentUserId,
-                        initialTabIndex: 1,
+                      builder: (_) => RideHistoryPage(
+                        userId: userId ?? MyselfService().currentUserId ?? 5,
+                        profile: HomeProfileEnum.driver,
                       ),
                     ),
                   );
@@ -142,6 +144,21 @@ class HomeDrawer extends StatelessWidget {
                 },
               ),
             ] else if (resolvedUserTypeId == _clientUserTypeId) ...[
+              _DrawerItem(
+                icon: Icons.route_outlined,
+                label: 'Historico de corridas',
+                onTap: () {
+                  Navigator.of(context).pop();
+                  Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => RideHistoryPage(
+                        userId: userId ?? MyselfService().currentUserId ?? 5,
+                        profile: HomeProfileEnum.client,
+                      ),
+                    ),
+                  );
+                },
+              ),
               _DrawerItem(
                 icon: Icons.credit_card_outlined,
                 label: 'Métodos de pagamento',

@@ -67,6 +67,42 @@ class DriverOperationsDatasource {
     }
   }
 
+  Future<List<DriverRideModel>> listRidesByClient(int clientUserId) async {
+    try {
+      final response = await _httpService.get(
+        Endpoints.ridesByClient(clientUserId),
+      );
+
+      return _readList(response)
+          .whereType<Map<String, dynamic>>()
+          .map(DriverRideModel.fromJson)
+          .toList();
+    } on HttpServiceException catch (e) {
+      throw DriverOperationsDatasourceException(
+        e.message,
+        statusCode: e.statusCode,
+      );
+    }
+  }
+
+  Future<List<DriverRideModel>> listRidesInProgressByUser(int userId) async {
+    try {
+      final response = await _httpService.get(
+        Endpoints.ridesInProgressByUser(userId),
+      );
+
+      return _readList(response)
+          .whereType<Map<String, dynamic>>()
+          .map(DriverRideModel.fromJson)
+          .toList();
+    } on HttpServiceException catch (e) {
+      throw DriverOperationsDatasourceException(
+        e.message,
+        statusCode: e.statusCode,
+      );
+    }
+  }
+
   Future<DriverRideModel> getRideById(int rideId) async {
     try {
       final response = await _httpService.get(Endpoints.rideById(rideId));

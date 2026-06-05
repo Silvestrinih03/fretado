@@ -431,8 +431,8 @@ class _RidesTab extends StatelessWidget {
         padding: EdgeInsets.all(16),
         child: _StateCard(
           icon: Icons.route_outlined,
-          title: 'Nenhuma corrida vinculada',
-          subtitle: 'Corridas aceitas e finalizadas aparecem aqui.',
+          title: 'Nenhuma corrida em andamento',
+          subtitle: 'Corridas em andamento aparecem aqui.',
         ),
       );
     }
@@ -487,12 +487,16 @@ class _RideCard extends StatelessWidget {
           ),
           const SizedBox(height: 10),
           Text(
-            'Origem ${_formatNumber(ride.originLatitude)}, ${_formatNumber(ride.originLongitude)}',
+            'Origem ${ride.originLabel}',
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
             style: const TextStyle(color: FretColors.neutral600, fontSize: 12),
           ),
           const SizedBox(height: 3),
           Text(
-            'Destino ${_formatNumber(ride.destinationLatitude)}, ${_formatNumber(ride.destinationLongitude)}',
+            'Destino ${ride.destinationLabel}',
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
             style: const TextStyle(color: FretColors.neutral600, fontSize: 12),
           ),
         ],

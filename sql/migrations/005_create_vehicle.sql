@@ -20,5 +20,5 @@ CREATE TABLE vehicles (
     CONSTRAINT chk_width CHECK (width_cm IS NULL OR width_cm > 0),
     CONSTRAINT chk_height CHECK (height_cm IS NULL OR height_cm > 0),
     CONSTRAINT chk_length CHECK (length_cm IS NULL OR length_cm > 0),
-    CONSTRAINT chk_plate_format CHECK (plate ~ '^[A-Z]{3}[0-9][A-Z][0-9]{2}$')
+    CONSTRAINT chk_plate_format CHECK (plate ~ '^[A-Z]{3}[0-9]{4}$' OR plate ~ '^[A-Z]{3}[0-9][A-Z][0-9]{2}$')
 );

@@ -95,7 +95,9 @@ class _RegisterVehiclePageState extends State<RegisterVehiclePage> {
 
   Future<void> _save() async {
     if (_store.selectedVehicleTypeId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      final messenger = ScaffoldMessenger.of(context);
+      Navigator.of(context).pop(true);
+      messenger.showSnackBar(
         const SnackBar(content: Text('Selecione o tipo de veículo.')),
       );
       return;
@@ -124,7 +126,9 @@ class _RegisterVehiclePageState extends State<RegisterVehiclePage> {
     }
 
     if (success) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      final messenger = ScaffoldMessenger.of(context);
+      Navigator.of(context).pop(true);
+      messenger.showSnackBar(
         const SnackBar(content: Text('Veículo cadastrado com sucesso.')),
       );
       return;

@@ -29,7 +29,7 @@ class DriverHomeContent extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 18),
       children: [
         Text(
-          'Ola, $firstName!',
+          'Olá, $firstName!',
           style: const TextStyle(
             fontSize: 30,
             fontWeight: FontWeight.w800,
@@ -42,6 +42,8 @@ class DriverHomeContent extends StatelessWidget {
           style: TextStyle(fontSize: 15, color: FretColors.neutral700),
         ),
         const SizedBox(height: 14),
+        _DriverRequiredSetupAlert(userId: userId),
+        const SizedBox(height: 10),
         _DriverAvailabilityCard(userId: userId),
         const SizedBox(height: 10),
         SizedBox(
@@ -53,9 +55,7 @@ class DriverHomeContent extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 14),
-        _BalanceCard(
-          onTap: () => _openOperations(context, initialTabIndex: 2),
-        ),
+        _BalanceCard(onTap: () => _openOperations(context, initialTabIndex: 2)),
         const SizedBox(height: 14),
         _DriverRideInProgressSection(userId: userId),
         const SizedBox(height: 10),
@@ -142,7 +142,8 @@ class _AvailableRideRequestsPage extends StatefulWidget {
       _AvailableRideRequestsPageState();
 }
 
-class _AvailableRideRequestsPageState extends State<_AvailableRideRequestsPage> {
+class _AvailableRideRequestsPageState
+    extends State<_AvailableRideRequestsPage> {
   late final HttpService _httpService;
   late Future<List<DriverRideModel>> _ridesFuture;
   int? _rideInActionId;
@@ -236,9 +237,9 @@ class _AvailableRideRequestsPageState extends State<_AvailableRideRequestsPage> 
       return;
     }
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 
   @override
@@ -356,6 +357,325 @@ class _AvailableRequestsHeader extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+class _DriverRequiredSetupAlert extends StatefulWidget {
+  final int userId;
+
+  const _DriverRequiredSetupAlert({required this.userId});
+
+  @override
+  State<_DriverRequiredSetupAlert> createState() =>
+      _DriverRequiredSetupAlertState();
+}
+
+class _DriverRequiredSetupAlertState extends State<_DriverRequiredSetupAlert> {
+  late final HttpService _httpService;
+  late Future<_DriverRequiredSetupStatus> _statusFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _httpService = HttpService();
+    _statusFuture = _loadStatus();
+  }
+
+  @override
+  void didUpdateWidget(covariant _DriverRequiredSetupAlert oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.userId != widget.userId) {
+      _reload();
+    }
+  }
+
+  @override
+  void dispose() {
+    _httpService.dispose();
+    super.dispose();
+  }
+
+  void _reload() {
+    setState(() {
+      _statusFuture = _loadStatus();
+    });
+  }
+
+  Future<_DriverRequiredSetupStatus> _loadStatus() async {
+    try {
+      final results = await Future.wait<bool>([
+        _loadHasVehicle(),
+        _loadHasDriverLicense(),
+      ]);
+
+      return _DriverRequiredSetupStatus(
+        hasVehicle: results[0],
+        hasDriverLicense: results[1],
+      );
+    } on HttpServiceException catch (e) {
+      return _DriverRequiredSetupStatus.error(e.message);
+    } catch (_) {
+      return _DriverRequiredSetupStatus.error(
+        'Nao foi possivel verificar seus cadastros obrigatorios.',
+      );
+    }
+  }
+
+  Future<bool> _loadHasVehicle() async {
+    final Map<String, dynamic> response;
+    try {
+      response = await _httpService.get(
+        Endpoints.vehiclesByUser(widget.userId),
+      );
+    } on HttpServiceException catch (e) {
+      if (e.statusCode == 404) {
+        return false;
+      }
+
+      rethrow;
+    }
+
+    final dynamic data = response['data'];
+    return data is List<dynamic> && data.isNotEmpty;
+  }
+
+  Future<bool> _loadHasDriverLicense() async {
+    try {
+      final response = await _httpService.get(
+        Endpoints.driverDocumentByUserId(widget.userId),
+      );
+
+      final licenseNumber = _readString(response['license_number']);
+      final licenseCategoryId = _readInt(response['license_category_id']) ?? 0;
+
+      return licenseNumber.isNotEmpty && licenseCategoryId > 0;
+    } on HttpServiceException catch (e) {
+      if (e.statusCode == 404) {
+        return false;
+      }
+
+      rethrow;
+    }
+  }
+
+  Future<void> _openVehiclesPage() async {
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => MyVehiclesPage(userId: widget.userId),
+      ),
+    );
+
+    if (mounted) {
+      _reload();
+    }
+  }
+
+  Future<void> _openDocumentsPage() async {
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => MyDocumentsPage(userId: widget.userId),
+      ),
+    );
+
+    if (mounted) {
+      _reload();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<_DriverRequiredSetupStatus>(
+      future: _statusFuture,
+      builder: (context, snapshot) {
+        final isLoading = snapshot.connectionState != ConnectionState.done;
+        final status = snapshot.data;
+
+        if (isLoading) {
+          return const _DriverSetupNoticeCard(
+            icon: Icons.hourglass_top_rounded,
+            title: 'Verificando cadastro',
+            message: 'Conferindo veiculo e CNH.',
+          );
+        }
+
+        if (status == null || status.errorMessage != null) {
+          return _DriverSetupNoticeCard(
+            icon: Icons.error_outline_rounded,
+            title: 'Nao foi possivel verificar',
+            message: status?.errorMessage ??
+                'Tente novamente para validar seus dados obrigatorios.',
+            actions: [
+              TextButton.icon(
+                onPressed: _reload,
+                icon: const Icon(Icons.refresh_rounded, size: 18),
+                label: const Text('Tentar novamente'),
+              ),
+            ],
+          );
+        }
+
+        if (status.isComplete) {
+          return const SizedBox.shrink();
+        }
+
+        return _DriverSetupNoticeCard(
+          icon: Icons.warning_amber_rounded,
+          title: 'Cadastro obrigatorio pendente',
+          message: status.message,
+          actions: [
+            if (!status.hasVehicle)
+              ElevatedButton.icon(
+                onPressed: _openVehiclesPage,
+                icon: const Icon(Icons.local_shipping_rounded, size: 18),
+                label: const Text('Cadastrar veiculo'),
+              ),
+            if (!status.hasDriverLicense)
+              OutlinedButton.icon(
+                onPressed: _openDocumentsPage,
+                icon: const Icon(Icons.badge_outlined, size: 18),
+                label: const Text('Cadastrar CNH'),
+              ),
+            IconButton(
+              tooltip: 'Atualizar',
+              onPressed: _reload,
+              icon: const Icon(Icons.refresh_rounded),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  String _readString(dynamic value) {
+    if (value is String) {
+      return value.trim();
+    }
+
+    return '';
+  }
+
+  int? _readInt(dynamic value) {
+    if (value is int) {
+      return value;
+    }
+
+    if (value is String) {
+      return int.tryParse(value);
+    }
+
+    return null;
+  }
+}
+
+class _DriverSetupNoticeCard extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String message;
+  final List<Widget> actions;
+
+  const _DriverSetupNoticeCard({
+    required this.icon,
+    required this.title,
+    required this.message,
+    this.actions = const [],
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: FretColors.attention050,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: FretColors.attention300),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  color: FretColors.attention100,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(icon, color: FretColors.attention800, size: 24),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        color: FretColors.neutral900,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      message,
+                      style: const TextStyle(
+                        color: FretColors.neutral700,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        height: 1.25,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          if (actions.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: actions,
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _DriverRequiredSetupStatus {
+  final bool hasVehicle;
+  final bool hasDriverLicense;
+  final String? errorMessage;
+
+  const _DriverRequiredSetupStatus({
+    required this.hasVehicle,
+    required this.hasDriverLicense,
+    this.errorMessage,
+  });
+
+  const _DriverRequiredSetupStatus.error(String message)
+      : hasVehicle = false,
+        hasDriverLicense = false,
+        errorMessage = message;
+
+  bool get isComplete => hasVehicle && hasDriverLicense;
+
+  String get message {
+    if (!hasVehicle && !hasDriverLicense) {
+      return 'Cadastre pelo menos um veiculo e sua CNH para ficar apto a receber corridas.';
+    }
+
+    if (!hasVehicle) {
+      return 'Cadastre pelo menos um veiculo para ficar apto a receber corridas.';
+    }
+
+    return 'Cadastre sua CNH para ficar apto a receber corridas.';
   }
 }
 
@@ -520,10 +840,7 @@ class _DriverAvailabilityCardState extends State<_DriverAvailabilityCard> {
     try {
       final response = await _httpService.post(
         Endpoints.driverLocationByDriver(widget.userId),
-        body: {
-          'latitude': position.latitude,
-          'longitude': position.longitude,
-        },
+        body: {'latitude': position.latitude, 'longitude': position.longitude},
       );
       await _runRideDispatchJob();
 
@@ -635,8 +952,9 @@ class _DriverAvailabilityCardState extends State<_DriverAvailabilityCard> {
 
   @override
   Widget build(BuildContext context) {
-    final Color statusColor =
-        _isOnline ? FretColors.success700 : FretColors.destructive600;
+    final Color statusColor = _isOnline
+        ? FretColors.success700
+        : FretColors.destructive600;
     final String statusLabel = _isOnline ? 'Online' : 'Offline';
     final String lastSeenLabel = _lastSeenAt == null
         ? 'Localizacao ainda nao enviada'
@@ -871,9 +1189,9 @@ class _DriverRideInProgressSectionState
       return;
     }
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 
   @override
@@ -1063,10 +1381,7 @@ class _DriverRouteText extends StatelessWidget {
   final String label;
   final String value;
 
-  const _DriverRouteText({
-    required this.label,
-    required this.value,
-  });
+  const _DriverRouteText({required this.label, required this.value});
 
   @override
   Widget build(BuildContext context) {
@@ -1105,10 +1420,7 @@ class _DriverRideInfo extends StatelessWidget {
   final String label;
   final String value;
 
-  const _DriverRideInfo({
-    required this.label,
-    required this.value,
-  });
+  const _DriverRideInfo({required this.label, required this.value});
 
   @override
   Widget build(BuildContext context) {
@@ -1302,7 +1614,10 @@ class _BalanceCard extends StatelessWidget {
                         ),
                       ),
                       Spacer(),
-                      Icon(Icons.arrow_forward_rounded, color: FretColors.white),
+                      Icon(
+                        Icons.arrow_forward_rounded,
+                        color: FretColors.white,
+                      ),
                     ],
                   ),
                 ),

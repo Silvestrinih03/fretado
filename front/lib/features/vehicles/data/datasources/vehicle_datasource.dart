@@ -23,6 +23,10 @@ class VehicleDatasource {
           .map(VehicleListItemModel.fromJson)
           .toList();
     } on HttpServiceException catch (e) {
+      if (e.statusCode == 404) {
+        return <VehicleListItemModel>[];
+      }
+
       throw VehicleDatasourceException(e.message, statusCode: e.statusCode);
     }
   }

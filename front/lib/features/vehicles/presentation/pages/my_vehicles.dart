@@ -31,6 +31,9 @@ class _MyVehiclesPageState extends State<MyVehiclesPage> {
     _vehicleDatasource = VehicleDatasource(_httpService);
     _vehicleRepository = VehicleRepositoryImpl(_vehicleDatasource);
     _myselfService = MyselfService();
+    if (widget.userId != null) {
+      _myselfService.currentUserId = widget.userId;
+    }
     _store = MyVehiclesStore(
       _vehicleRepository,
       _myselfService,
@@ -48,14 +51,6 @@ class _MyVehiclesPageState extends State<MyVehiclesPage> {
 
   @override
   Widget build(BuildContext context) {
-    void openRegisterVehicle() {
-      Navigator.of(context).push(
-        MaterialPageRoute<void>(
-          builder: (_) => RegisterVehiclePage(userId: widget.userId),
-        ),
-      );
-    }
-
     return AnimatedBuilder(
       animation: _store,
       builder: (context, _) {
@@ -64,7 +59,7 @@ class _MyVehiclesPageState extends State<MyVehiclesPage> {
           body: SafeArea(
             child: Column(
               children: [
-                _MyVehiclesHeader(onAddTap: openRegisterVehicle),
+                _MyVehiclesHeader(onAddTap: _openRegisterVehicle),
                 Expanded(
                   child: ListView(
                     padding: const EdgeInsets.fromLTRB(16, 14, 16, 18),
@@ -77,17 +72,17 @@ class _MyVehiclesPageState extends State<MyVehiclesPage> {
                           ),
                         ),
                       ] else if (_store.errorMessage != null) ...[
-                        _EmptyState(
+                        _VehiclesErrorState(
                           title: 'Não foi possível carregar seus veículos',
                           subtitle: _store.errorMessage!,
-                          onTap: _store.loadVehicles,
+                          onRetry: _store.loadVehicles,
                         ),
                       ] else if (_store.vehicles.isEmpty) ...[
                         _EmptyState(
                           title: 'Nenhum veículo cadastrado',
                           subtitle:
                               'Cadastre o primeiro veículo para começar.',
-                          onTap: openRegisterVehicle,
+                          onTap: _openRegisterVehicle,
                         ),
                       ] else ...[
                         ..._store.vehicles.asMap().entries.map((entry) {
@@ -115,7 +110,7 @@ class _MyVehiclesPageState extends State<MyVehiclesPage> {
                           );
                         }),
                         const SizedBox(height: 14),
-                        _NewVehicleCallout(onTap: openRegisterVehicle),
+                        _NewVehicleCallout(onTap: _openRegisterVehicle),
                       ],
                     ],
                   ),
@@ -126,6 +121,22 @@ class _MyVehiclesPageState extends State<MyVehiclesPage> {
         );
       },
     );
+  }
+
+  Future<void> _openRegisterVehicle() async {
+    final bool? didRegister = await Navigator.of(context).push<bool>(
+      MaterialPageRoute<bool>(
+        builder: (_) => RegisterVehiclePage(userId: widget.userId),
+      ),
+    );
+
+    if (!mounted) {
+      return;
+    }
+
+    if (didRegister == true) {
+      _store.loadVehicles();
+    }
   }
 }
 
@@ -186,6 +197,71 @@ class _EmptyState extends StatelessWidget {
               ),
             ),
             child: const Text('Cadastrar veículo'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _VehiclesErrorState extends StatelessWidget {
+  final String title;
+  final String subtitle;
+  final VoidCallback onRetry;
+
+  const _VehiclesErrorState({
+    required this.title,
+    required this.subtitle,
+    required this.onRetry,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE4E6EE)),
+      ),
+      child: Column(
+        children: [
+          const Icon(
+            Icons.error_outline_rounded,
+            size: 34,
+            color: Color(0xFFB42318),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            title,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+              color: Color(0xFF121E84),
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            subtitle,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontSize: 13,
+              color: Color(0xFF6B7285),
+            ),
+          ),
+          const SizedBox(height: 14),
+          OutlinedButton.icon(
+            onPressed: onRetry,
+            icon: const Icon(Icons.refresh_rounded, size: 18),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: const Color(0xFF0E1386),
+              side: const BorderSide(color: Color(0xFF0E1386)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            label: const Text('Tentar novamente'),
           ),
         ],
       ),

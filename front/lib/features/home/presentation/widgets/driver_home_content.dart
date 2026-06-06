@@ -44,29 +44,19 @@ class DriverHomeContent extends StatelessWidget {
         const SizedBox(height: 14),
         _DriverRequiredSetupAlert(userId: userId),
         const SizedBox(height: 10),
-        _DriverAvailabilityCard(userId: userId),
-        const SizedBox(height: 10),
-        SizedBox(
-          height: 46,
-          child: ElevatedButton.icon(
-            onPressed: () => _openAvailableRequests(context),
-            icon: const Icon(Icons.search_rounded),
-            label: const Text('Encontrar solicitações'),
-          ),
+        _DriverAvailabilityCard(
+          userId: userId,
+          onFindRequests: () => _openAvailableRequests(context),
         ),
         const SizedBox(height: 14),
-        _BalanceCard(onTap: () => _openOperations(context, initialTabIndex: 2)),
+        _BalanceCard(
+          userId: userId,
+          onTap: () => _openOperations(context, initialTabIndex: 2),
+        ),
         const SizedBox(height: 14),
         _DriverRideInProgressSection(userId: userId),
         const SizedBox(height: 10),
-        _SimpleMetricCard(
-          icon: Icons.inbox_outlined,
-          title: 'Ofertas de corrida',
-          subtitle: 'Aceitar ou recusar ofertas pendentes',
-          onTap: () => _openOperations(context),
-        ),
-        const SizedBox(height: 10),
-        _SimpleMetricCard(
+        _DriverShortcutCard(
           icon: Icons.history_rounded,
           title: 'Historico de corridas',
           subtitle: 'Ver corridas anteriores e finalizadas',
@@ -82,11 +72,10 @@ class DriverHomeContent extends StatelessWidget {
           },
         ),
         const SizedBox(height: 10),
-        _SimpleMetricCard(
+        _DriverShortcutCard(
           icon: Icons.local_shipping_rounded,
           title: 'Meus veiculos',
           subtitle: 'Gerenciar meus veiculos',
-          barColor: FretColors.loginFooterLink,
           onTap: () {
             Navigator.of(context).push(
               MaterialPageRoute<void>(
@@ -96,7 +85,7 @@ class DriverHomeContent extends StatelessWidget {
           },
         ),
         const SizedBox(height: 10),
-        _SimpleMetricCard(
+        _DriverShortcutCard(
           icon: Icons.description_outlined,
           title: 'Meus documentos',
           subtitle: 'Acompanhar validade da CNH',
@@ -502,7 +491,8 @@ class _DriverRequiredSetupAlertState extends State<_DriverRequiredSetupAlert> {
           return _DriverSetupNoticeCard(
             icon: Icons.error_outline_rounded,
             title: 'Nao foi possivel verificar',
-            message: status?.errorMessage ??
+            message:
+                status?.errorMessage ??
                 'Tente novamente para validar seus dados obrigatorios.',
             actions: [
               TextButton.icon(
@@ -660,9 +650,9 @@ class _DriverRequiredSetupStatus {
   });
 
   const _DriverRequiredSetupStatus.error(String message)
-      : hasVehicle = false,
-        hasDriverLicense = false,
-        errorMessage = message;
+    : hasVehicle = false,
+      hasDriverLicense = false,
+      errorMessage = message;
 
   bool get isComplete => hasVehicle && hasDriverLicense;
 
@@ -681,8 +671,12 @@ class _DriverRequiredSetupStatus {
 
 class _DriverAvailabilityCard extends StatefulWidget {
   final int userId;
+  final VoidCallback onFindRequests;
 
-  const _DriverAvailabilityCard({required this.userId});
+  const _DriverAvailabilityCard({
+    required this.userId,
+    required this.onFindRequests,
+  });
 
   @override
   State<_DriverAvailabilityCard> createState() =>
@@ -1077,6 +1071,16 @@ class _DriverAvailabilityCardState extends State<_DriverAvailabilityCard> {
                 ),
               ],
             ],
+          ),
+          const SizedBox(height: 10),
+          SizedBox(
+            width: double.infinity,
+            height: 46,
+            child: ElevatedButton.icon(
+              onPressed: _isLoading ? null : widget.onFindRequests,
+              icon: const Icon(Icons.search_rounded),
+              label: const Text('Encontrar solicitacoes'),
+            ),
           ),
         ],
       ),
@@ -1540,19 +1544,70 @@ class _DriverRideStateCard extends StatelessWidget {
   }
 }
 
-class _BalanceCard extends StatelessWidget {
+class _BalanceCard extends StatefulWidget {
+  final int userId;
   final VoidCallback onTap;
 
-  const _BalanceCard({required this.onTap});
+  const _BalanceCard({required this.userId, required this.onTap});
+
+  @override
+  State<_BalanceCard> createState() => _BalanceCardState();
+}
+
+class _BalanceCardState extends State<_BalanceCard> {
+  late final HttpService _httpService;
+  late Future<DriverWalletModel?> _walletFuture;
+  bool _isBalanceVisible = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _httpService = HttpService();
+    _walletFuture = _loadWallet();
+  }
+
+  @override
+  void didUpdateWidget(covariant _BalanceCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.userId != widget.userId) {
+      _walletFuture = _loadWallet();
+      _isBalanceVisible = false;
+    }
+  }
+
+  @override
+  void dispose() {
+    _httpService.dispose();
+    super.dispose();
+  }
+
+  Future<DriverWalletModel?> _loadWallet() async {
+    try {
+      final response = await _httpService.get(
+        Endpoints.driverWalletByDriver(widget.userId),
+      );
+      return DriverWalletModel.fromJson(response);
+    } on HttpServiceException catch (e) {
+      if (e.statusCode == 404) {
+        return null;
+      }
+
+      rethrow;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(14),
-        child: Ink(
+    return FutureBuilder<DriverWalletModel?>(
+      future: _walletFuture,
+      builder: (context, snapshot) {
+        final bool isLoading = snapshot.connectionState != ConnectionState.done;
+        final DriverWalletModel? wallet = snapshot.data;
+        final bool canToggle =
+            !isLoading && !snapshot.hasError && wallet != null;
+        final String balanceLabel = _balanceLabel(snapshot);
+
+        return Container(
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(14),
             gradient: const LinearGradient(
@@ -1568,13 +1623,13 @@ class _BalanceCard extends StatelessWidget {
               ),
             ],
           ),
-          padding: const EdgeInsets.fromLTRB(18, 16, 18, 16),
-          child: const Column(
+          padding: const EdgeInsets.fromLTRB(18, 12, 18, 16),
+          child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
                 children: [
-                  Text(
+                  const Text(
                     'CARTEIRA DO MOTORISTA',
                     style: TextStyle(
                       color: Color(0xFFD1D5FF),
@@ -1582,73 +1637,112 @@ class _BalanceCard extends StatelessWidget {
                       fontWeight: FontWeight.w700,
                     ),
                   ),
-                  Spacer(),
-                  Icon(Icons.account_balance_wallet, color: Color(0xFFAFB6F3)),
+                  const Spacer(),
+                  IconButton(
+                    tooltip: _isBalanceVisible
+                        ? 'Ocultar saldo'
+                        : 'Exibir saldo',
+                    onPressed: canToggle
+                        ? () {
+                            setState(() {
+                              _isBalanceVisible = !_isBalanceVisible;
+                            });
+                          }
+                        : null,
+                    icon: Icon(
+                      _isBalanceVisible
+                          ? Icons.visibility_off_rounded
+                          : Icons.visibility_rounded,
+                    ),
+                    color: const Color(0xFFAFB6F3),
+                    disabledColor: const Color(0x667C84D6),
+                  ),
                 ],
               ),
-              SizedBox(height: 8),
+              const SizedBox(height: 2),
               Text(
-                'Ver saldo',
-                style: TextStyle(
+                balanceLabel,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
                   color: FretColors.white,
                   fontSize: 30,
                   fontWeight: FontWeight.w700,
                 ),
               ),
-              SizedBox(height: 10),
-              DecoratedBox(
-                decoration: BoxDecoration(
-                  color: Color(0xFF313CA3),
-                  borderRadius: BorderRadius.all(Radius.circular(10)),
-                ),
-                child: Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                  child: Row(
-                    children: [
-                      Text(
-                        'Saldo, historico e saque',
-                        style: TextStyle(
-                          color: FretColors.white,
-                          fontWeight: FontWeight.w700,
-                          fontSize: 14,
-                        ),
+              const SizedBox(height: 10),
+              Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: widget.onTap,
+                  borderRadius: BorderRadius.circular(10),
+                  child: Ink(
+                    decoration: const BoxDecoration(
+                      color: Color(0xFF313CA3),
+                      borderRadius: BorderRadius.all(Radius.circular(10)),
+                    ),
+                    child: const Padding(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 10,
                       ),
-                      Spacer(),
-                      Icon(
-                        Icons.arrow_forward_rounded,
-                        color: FretColors.white,
+                      child: Row(
+                        children: [
+                          Text(
+                            'Saldo, historico e saque',
+                            style: TextStyle(
+                              color: FretColors.white,
+                              fontWeight: FontWeight.w700,
+                              fontSize: 14,
+                            ),
+                          ),
+                          Spacer(),
+                          Icon(
+                            Icons.arrow_forward_rounded,
+                            color: FretColors.white,
+                          ),
+                        ],
                       ),
-                    ],
+                    ),
                   ),
                 ),
               ),
             ],
           ),
-        ),
-      ),
+        );
+      },
     );
+  }
+
+  String _balanceLabel(AsyncSnapshot<DriverWalletModel?> snapshot) {
+    if (snapshot.connectionState != ConnectionState.done) {
+      return 'Carregando saldo';
+    }
+
+    final wallet = snapshot.data;
+    if (snapshot.hasError || wallet == null) {
+      return 'Saldo indisponivel';
+    }
+
+    if (!_isBalanceVisible) {
+      return 'R\$ *****';
+    }
+
+    return _formatMoney(wallet.availableBalance);
   }
 }
 
-class _SimpleMetricCard extends StatelessWidget {
+class _DriverShortcutCard extends StatelessWidget {
   final IconData icon;
   final String title;
   final String subtitle;
-  final String? urgencyTag;
-  final Color? urgencyColor;
-  final Color? urgencyTextColor;
-  final Color? barColor;
-  final VoidCallback? onTap;
+  final VoidCallback onTap;
 
-  const _SimpleMetricCard({
+  const _DriverShortcutCard({
     required this.icon,
     required this.title,
     required this.subtitle,
-    this.urgencyTag,
-    this.urgencyColor,
-    this.urgencyTextColor,
-    this.barColor,
-    this.onTap,
+    required this.onTap,
   });
 
   @override
@@ -1665,8 +1759,7 @@ class _SimpleMetricCard extends StatelessWidget {
             borderRadius: BorderRadius.circular(14),
             border: Border.all(color: FretColors.neutral200),
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          child: Row(
             children: [
               Container(
                 width: 40,
@@ -1677,57 +1770,35 @@ class _SimpleMetricCard extends StatelessWidget {
                 ),
                 child: Icon(icon, color: FretColors.loginFooterLink),
               ),
-              const SizedBox(height: 10),
-              Text(
-                title,
-                style: const TextStyle(
-                  fontSize: 17,
-                  fontWeight: FontWeight.w700,
-                  color: FretColors.loginFooterLink,
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.w700,
+                        color: FretColors.loginFooterLink,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        color: FretColors.neutral700,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(height: 2),
-              Text(
-                subtitle,
-                style: const TextStyle(
-                  fontSize: 13,
-                  color: FretColors.neutral700,
-                ),
+              const SizedBox(width: 10),
+              const Icon(
+                Icons.arrow_forward_rounded,
+                color: FretColors.loginFooterLink,
               ),
-              const SizedBox(height: 8),
-              if (urgencyTag != null)
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: urgencyColor,
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: Text(
-                    urgencyTag!,
-                    style: TextStyle(
-                      color: urgencyTextColor,
-                      fontWeight: FontWeight.w800,
-                      fontSize: 12,
-                    ),
-                  ),
-                ),
-              if (barColor != null) ...[
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(999),
-                  child: Container(
-                    height: 6,
-                    color: FretColors.neutral200,
-                    child: FractionallySizedBox(
-                      widthFactor: 0.38,
-                      alignment: Alignment.centerLeft,
-                      child: Container(color: barColor),
-                    ),
-                  ),
-                ),
-              ],
             ],
           ),
         ),

@@ -2,8 +2,11 @@ import 'package:flutter/material.dart';
 
 import '../../../../app/design_system/design_system.dart';
 import '../../../../core/endpoints.dart';
+import '../../../../core/enums/home_profile.dart';
 import '../../../../core/services/http_service.dart';
 import '../../../driver_operations/data/models/driver_operation_models.dart';
+import '../../../payments/presentation/pages/my_payment_methods_page.dart';
+import '../../../rides/presentation/pages/ride_history_page.dart';
 import '../../../shipping_request/presentation/pages/address_map_page.dart';
 
 class ClientHomeContent extends StatelessWidget {
@@ -43,6 +46,35 @@ class ClientHomeContent extends StatelessWidget {
         ),
         const SizedBox(height: 20),
         _FreightRequestCard(userId: userId),
+        const SizedBox(height: 14),
+        _ClientShortcutCard(
+          icon: Icons.history_rounded,
+          title: 'Historico de corridas',
+          subtitle: 'Ver corridas anteriores e finalizadas',
+          onTap: () {
+            Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => RideHistoryPage(
+                  userId: userId,
+                  profile: HomeProfileEnum.client,
+                ),
+              ),
+            );
+          },
+        ),
+        const SizedBox(height: 10),
+        _ClientShortcutCard(
+          icon: Icons.credit_card_outlined,
+          title: 'Metodos de pagamento',
+          subtitle: 'Gerenciar cartoes para seus fretes',
+          onTap: () {
+            Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => MyPaymentMethodsPage(userId: userId),
+              ),
+            );
+          },
+        ),
         const SizedBox(height: 22),
         _ClientRideInProgressSection(userId: userId),
       ],
@@ -122,6 +154,81 @@ class _FreightRequestCard extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _ClientShortcutCard extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final VoidCallback onTap;
+
+  const _ClientShortcutCard({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(14),
+        child: Ink(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: FretColors.neutral050,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: FretColors.neutral200),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: FretColors.neutral100,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(icon, color: FretColors.loginFooterLink),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.w700,
+                        color: FretColors.loginFooterLink,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        color: FretColors.neutral700,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 10),
+              const Icon(
+                Icons.arrow_forward_rounded,
+                color: FretColors.loginFooterLink,
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

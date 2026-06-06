@@ -72,13 +72,13 @@ class HomeDrawer extends StatelessWidget {
             ),
             if (resolvedUserTypeId == _driverUserTypeId) ...[
               _DrawerItem(
-                icon: Icons.inbox_outlined,
-                label: 'Ofertas de corrida',
+                icon: Icons.article_outlined,
+                label: 'Documentos',
                 onTap: () {
                   Navigator.of(context).pop();
                   Navigator.of(context).push(
                     MaterialPageRoute<void>(
-                      builder: (_) => DriverOperationsPage(
+                      builder: (_) => MyDocumentsPage(
                         userId: userId ?? MyselfService().currentUserId,
                       ),
                     ),
@@ -86,15 +86,14 @@ class HomeDrawer extends StatelessWidget {
                 },
               ),
               _DrawerItem(
-                icon: Icons.route_outlined,
-                label: 'Historico de corridas',
+                icon: Icons.local_shipping_outlined,
+                label: 'Veículos',
                 onTap: () {
                   Navigator.of(context).pop();
                   Navigator.of(context).push(
                     MaterialPageRoute<void>(
-                      builder: (_) => RideHistoryPage(
-                        userId: userId ?? MyselfService().currentUserId ?? 5,
-                        profile: HomeProfileEnum.driver,
+                      builder: (_) => MyVehiclesPage(
+                        userId: userId ?? MyselfService().currentUserId,
                       ),
                     ),
                   );
@@ -116,34 +115,35 @@ class HomeDrawer extends StatelessWidget {
                 },
               ),
               _DrawerItem(
-                icon: Icons.local_shipping_outlined,
-                label: 'Veículos',
+                icon: Icons.route_outlined,
+                label: 'Historico de corridas',
                 onTap: () {
                   Navigator.of(context).pop();
                   Navigator.of(context).push(
                     MaterialPageRoute<void>(
-                      builder: (_) => MyVehiclesPage(
-                        userId: userId ?? MyselfService().currentUserId,
-                      ),
-                    ),
-                  );
-                },
-              ),
-              _DrawerItem(
-                icon: Icons.article_outlined,
-                label: 'Documentos',
-                onTap: () {
-                  Navigator.of(context).pop();
-                  Navigator.of(context).push(
-                    MaterialPageRoute<void>(
-                      builder: (_) => MyDocumentsPage(
-                        userId: userId ?? MyselfService().currentUserId,
+                      builder: (_) => RideHistoryPage(
+                        userId: userId ?? MyselfService().currentUserId ?? 5,
+                        profile: HomeProfileEnum.driver,
                       ),
                     ),
                   );
                 },
               ),
             ] else if (resolvedUserTypeId == _clientUserTypeId) ...[
+              _DrawerItem(
+                icon: Icons.credit_card_outlined,
+                label: 'Métodos de pagamento',
+                onTap: () {
+                  Navigator.of(context).pop();
+                  Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => MyPaymentMethodsPage(
+                        userId: userId ?? MyselfService().currentUserId,
+                      ),
+                    ),
+                  );
+                },
+              ),
               _DrawerItem(
                 icon: Icons.route_outlined,
                 label: 'Historico de corridas',
@@ -154,20 +154,6 @@ class HomeDrawer extends StatelessWidget {
                       builder: (_) => RideHistoryPage(
                         userId: userId ?? MyselfService().currentUserId ?? 5,
                         profile: HomeProfileEnum.client,
-                      ),
-                    ),
-                  );
-                },
-              ),
-              _DrawerItem(
-                icon: Icons.credit_card_outlined,
-                label: 'Métodos de pagamento',
-                onTap: () {
-                  Navigator.of(context).pop();
-                  Navigator.of(context).push(
-                    MaterialPageRoute<void>(
-                      builder: (_) => MyPaymentMethodsPage(
-                        userId: userId ?? MyselfService().currentUserId,
                       ),
                     ),
                   );

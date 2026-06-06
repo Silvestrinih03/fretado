@@ -1,6 +1,9 @@
+import base64
 import smtplib
 from email.message import EmailMessage
 from html import escape
+
+import requests
 
 from app.core.config import settings
 
@@ -15,7 +18,20 @@ class EmailSendError(Exception):
 
 def send_password_reset_email(email: str, reset_link: str) -> None:
     sender = settings.EMAIL_FROM or settings.EMAIL_USER
-    _validate_email_settings(sender)
+    message = _build_password_reset_message(email, reset_link, sender)
+
+    if settings.EMAIL_PROVIDER in {"gmail", "gmail_api"}:
+        _send_with_gmail_api(message, sender)
+        return
+
+    _send_with_smtp(message, sender)
+
+
+def _build_password_reset_message(
+    email: str,
+    reset_link: str,
+    sender: str,
+) -> EmailMessage:
     html_reset_link = escape(reset_link, quote=True)
 
     message = EmailMessage()
@@ -47,6 +63,12 @@ def send_password_reset_email(email: str, reset_link: str) -> None:
         subtype="html",
     )
 
+    return message
+
+
+def _send_with_smtp(message: EmailMessage, sender: str) -> None:
+    _validate_smtp_settings(sender)
+
     try:
         if settings.EMAIL_USE_SSL:
             with smtplib.SMTP_SSL(
@@ -68,10 +90,39 @@ def send_password_reset_email(email: str, reset_link: str) -> None:
     except smtplib.SMTPException as exc:
         raise EmailSendError("Unable to send password reset email.") from exc
     except OSError as exc:
-        raise EmailSendError("Unable to connect to email server.") from exc
+        raise EmailSendError(
+            "Unable to connect to SMTP server. Render free web services block "
+            "outbound SMTP ports 25, 465, and 587; use EMAIL_PROVIDER=gmail_api "
+            "or a paid Render instance."
+        ) from exc
 
 
-def _validate_email_settings(sender: str) -> None:
+def _send_with_gmail_api(message: EmailMessage, sender: str) -> None:
+    _validate_gmail_api_settings(sender)
+
+    access_token = _get_gmail_access_token()
+    raw_message = base64.urlsafe_b64encode(message.as_bytes()).decode("utf-8")
+
+    try:
+        response = requests.post(
+            "https://gmail.googleapis.com/gmail/v1/users/me/messages/send",
+            headers={
+                "Authorization": f"Bearer {access_token}",
+                "Content-Type": "application/json",
+            },
+            json={"raw": raw_message},
+            timeout=15,
+        )
+    except requests.RequestException as exc:
+        raise EmailSendError("Unable to connect to Gmail API.") from exc
+
+    if response.status_code >= 400:
+        raise EmailSendError(
+            f"Gmail API rejected the email request with status {response.status_code}."
+        )
+
+
+def _validate_smtp_settings(sender: str) -> None:
     missing_settings = [
         name
         for name, value in (
@@ -87,6 +138,51 @@ def _validate_email_settings(sender: str) -> None:
         raise EmailConfigurationError(
             "Missing email settings: " + ", ".join(missing_settings)
         )
+
+
+def _validate_gmail_api_settings(sender: str) -> None:
+    missing_settings = [
+        name
+        for name, value in (
+            ("EMAIL_FROM", sender),
+            ("GMAIL_CLIENT_ID", settings.GMAIL_CLIENT_ID),
+            ("GMAIL_CLIENT_SECRET", settings.GMAIL_CLIENT_SECRET),
+            ("GMAIL_REFRESH_TOKEN", settings.GMAIL_REFRESH_TOKEN),
+        )
+        if not value
+    ]
+
+    if missing_settings:
+        raise EmailConfigurationError(
+            "Missing Gmail API settings: " + ", ".join(missing_settings)
+        )
+
+
+def _get_gmail_access_token() -> str:
+    try:
+        response = requests.post(
+            settings.GMAIL_TOKEN_URL,
+            data={
+                "client_id": settings.GMAIL_CLIENT_ID,
+                "client_secret": settings.GMAIL_CLIENT_SECRET,
+                "refresh_token": settings.GMAIL_REFRESH_TOKEN,
+                "grant_type": "refresh_token",
+            },
+            timeout=15,
+        )
+    except requests.RequestException as exc:
+        raise EmailSendError("Unable to connect to Google OAuth API.") from exc
+
+    if response.status_code >= 400:
+        raise EmailSendError(
+            f"Google OAuth rejected the token request with status {response.status_code}."
+        )
+
+    access_token = response.json().get("access_token")
+    if not access_token:
+        raise EmailSendError("Google OAuth response did not include an access token.")
+
+    return access_token
 
 
 def _login_and_send(smtp: smtplib.SMTP, message: EmailMessage) -> None:

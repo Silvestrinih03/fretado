@@ -51,6 +51,7 @@ class Settings:
     DRIVER_LOCATION_MAX_AGE_MINUTES: int = int(os.getenv("DRIVER_LOCATION_MAX_AGE_MINUTES", 5))
     JOB_SECRET: str = os.getenv("JOB_SECRET", "")
     JOBS_ENABLED: bool = os.getenv("JOBS_ENABLED", "false").lower() == "true"
+    EMAIL_PROVIDER: str = os.getenv("EMAIL_PROVIDER", "smtp").lower()
     EMAIL_HOST: str = os.getenv("EMAIL_HOST", "")
     EMAIL_PORT: int = int(os.getenv("EMAIL_PORT", 587))
     EMAIL_USER: str = os.getenv("EMAIL_USER", "")
@@ -58,5 +59,12 @@ class Settings:
     EMAIL_FROM: str = os.getenv("EMAIL_FROM", "")
     EMAIL_USE_TLS: bool = os.getenv("EMAIL_USE_TLS", "true").lower() == "true"
     EMAIL_USE_SSL: bool = os.getenv("EMAIL_USE_SSL", "false").lower() == "true"
+    GMAIL_CLIENT_ID: str = os.getenv("GMAIL_CLIENT_ID", "")
+    GMAIL_CLIENT_SECRET: str = os.getenv("GMAIL_CLIENT_SECRET", "")
+    GMAIL_REFRESH_TOKEN: str = os.getenv("GMAIL_REFRESH_TOKEN", "")
+    GMAIL_TOKEN_URL: str = os.getenv(
+        "GMAIL_TOKEN_URL",
+        "https://oauth2.googleapis.com/token",
+    )
 
 settings = Settings()

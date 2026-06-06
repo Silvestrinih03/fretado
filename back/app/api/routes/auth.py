@@ -115,8 +115,8 @@ def forgot_password(
                 user.email,
                 reset_link
             )
-        except (EmailConfigurationError, EmailSendError):
-            logger.exception("Unable to send password reset email.")
+        except (EmailConfigurationError, EmailSendError) as exc:
+            logger.error("Unable to send password reset email: %s", exc)
 
     return {
         "message": "If the email exists, a recovery email has been sent."

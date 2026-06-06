@@ -16,16 +16,27 @@ class EmailSendError(Exception):
     pass
 
 
-def send_password_reset_email(email: str, reset_link: str) -> None:
-    sender = settings.EMAIL_FROM or settings.EMAIL_USER
-    message = _build_password_reset_message(email, reset_link, sender)
+def send_password_reset_email(to_email: str, reset_link: str):
+    response = requests.post(
+        "https://api.resend.com/emails",
+        headers={
+            "Authorization": f"Bearer {settings.RESEND_API_KEY}",
+            "Content-Type": "application/json",
+        },
+        json={
+            "from": f"Fretado <{settings.EMAIL_FROM}>",
+            "to": [to_email],
+            "subject": "Recuperação de senha - Fretado",
+            "html": f"""
+                <p>Olá!</p>
+                <p>Clique no link abaixo para redefinir sua senha:</p>
+                <p><a href="{reset_link}">Redefinir senha</a></p>
+            """,
+        },
+        timeout=15,
+    )
 
-    if settings.EMAIL_PROVIDER in {"gmail", "gmail_api"}:
-        _send_with_gmail_api(message, sender)
-        return
-
-    _send_with_smtp(message, sender)
-
+    response.raise_for_status()
 
 def _build_password_reset_message(
     email: str,

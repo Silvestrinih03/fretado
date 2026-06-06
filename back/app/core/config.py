@@ -66,5 +66,11 @@ class Settings:
         "GMAIL_TOKEN_URL",
         "https://oauth2.googleapis.com/token",
     )
+    RESEND_API_KEY: str = os.getenv("RESEND_API_KEY", "")
+    RESEND_FROM: str = os.getenv("RESEND_FROM", "")
+    RESEND_API_URL: str = os.getenv(
+        "RESEND_API_URL",
+        "https://api.resend.com/emails",
+    )
 
 settings = Settings()

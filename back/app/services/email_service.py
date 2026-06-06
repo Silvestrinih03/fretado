@@ -16,65 +16,98 @@ class EmailSendError(Exception):
     pass
 
 
-def send_password_reset_email(to_email: str, reset_link: str):
-    response = requests.post(
-        "https://api.resend.com/emails",
-        headers={
-            "Authorization": f"Bearer {settings.RESEND_API_KEY}",
-            "Content-Type": "application/json",
-        },
-        json={
-            "from": f"Fretado <{settings.EMAIL_FROM}>",
-            "to": [to_email],
-            "subject": "Recuperação de senha - Fretado",
-            "html": f"""
-                <p>Olá!</p>
-                <p>Clique no link abaixo para redefinir sua senha:</p>
-                <p><a href="{reset_link}">Redefinir senha</a></p>
-            """,
-        },
-        timeout=15,
-    )
+def send_password_reset_email(to_email: str, reset_link: str) -> None:
+    sender = settings.RESEND_FROM or settings.EMAIL_FROM or settings.EMAIL_USER
 
-    response.raise_for_status()
+    if settings.EMAIL_PROVIDER == "resend":
+        _send_with_resend(to_email, reset_link, sender)
+        return
+
+    message = _build_password_reset_message(to_email, reset_link, sender)
+
+    if settings.EMAIL_PROVIDER in {"gmail", "gmail_api"}:
+        _send_with_gmail_api(message, sender)
+        return
+
+    _send_with_smtp(message, sender)
+
 
 def _build_password_reset_message(
-    email: str,
+    to_email: str,
     reset_link: str,
     sender: str,
 ) -> EmailMessage:
-    html_reset_link = escape(reset_link, quote=True)
+    text_body, html_body = _build_password_reset_body(reset_link)
 
     message = EmailMessage()
-    message["Subject"] = "Recuperacao de senha - Fretado"
+    message["Subject"] = _password_reset_subject()
     message["From"] = sender
-    message["To"] = email
-    message.set_content(
+    message["To"] = to_email
+    message.set_content(text_body)
+    message.add_alternative(html_body, subtype="html")
+
+    return message
+
+
+def _password_reset_subject() -> str:
+    return "Recuperacao de senha - Fretado"
+
+
+def _build_password_reset_body(reset_link: str) -> tuple[str, str]:
+    html_reset_link = escape(reset_link, quote=True)
+
+    text_body = (
         "Recebemos uma solicitacao para redefinir sua senha no Fretado.\n\n"
         f"Acesse o link abaixo para criar uma nova senha:\n{reset_link}\n\n"
         "Este link expira em alguns minutos. Se voce nao solicitou a "
         "recuperacao de senha, ignore este e-mail."
     )
-    message.add_alternative(
-        f"""
-        <html>
-          <body style="font-family: Arial, sans-serif; color: #1f2937;">
-            <h2 style="color: #10206e;">Recuperacao de senha</h2>
-            <p>Recebemos uma solicitacao para redefinir sua senha no Fretado.</p>
-            <p>
-              <a href="{html_reset_link}" style="background: #10206e; color: #ffffff; padding: 12px 18px; text-decoration: none; border-radius: 6px; display: inline-block;">
-                Criar nova senha
-              </a>
-            </p>
-            <p>Este link expira em alguns minutos.</p>
-            <p>Se voce nao solicitou a recuperacao de senha, ignore este e-mail.</p>
-          </body>
-        </html>
-        """,
-        subtype="html",
-    )
 
-    return message
+    html_body = f"""
+    <html>
+      <body style="font-family: Arial, sans-serif; color: #1f2937;">
+        <h2 style="color: #10206e;">Recuperacao de senha</h2>
+        <p>Recebemos uma solicitacao para redefinir sua senha no Fretado.</p>
+        <p>
+          <a href="{html_reset_link}" style="background: #10206e; color: #ffffff; padding: 12px 18px; text-decoration: none; border-radius: 6px; display: inline-block;">
+            Criar nova senha
+          </a>
+        </p>
+        <p>Este link expira em alguns minutos.</p>
+        <p>Se voce nao solicitou a recuperacao de senha, ignore este e-mail.</p>
+      </body>
+    </html>
+    """
+
+    return text_body, html_body
+
+
+def _send_with_resend(to_email: str, reset_link: str, sender: str) -> None:
+    _validate_resend_settings(sender)
+    text_body, html_body = _build_password_reset_body(reset_link)
+
+    try:
+        response = requests.post(
+            settings.RESEND_API_URL,
+            headers={
+                "Authorization": f"Bearer {settings.RESEND_API_KEY}",
+                "Content-Type": "application/json",
+                "User-Agent": "fretado-api/1.0",
+            },
+            json={
+                "from": sender,
+                "to": [to_email],
+                "subject": _password_reset_subject(),
+                "html": html_body,
+                "text": text_body,
+            },
+            timeout=15,
+        )
+    except requests.RequestException as exc:
+        raise EmailSendError("Unable to connect to Resend API.") from exc
+
+    if response.status_code >= 400:
+        raise EmailSendError(_read_resend_error(response))
 
 
 def _send_with_smtp(message: EmailMessage, sender: str) -> None:
@@ -103,7 +136,7 @@ def _send_with_smtp(message: EmailMessage, sender: str) -> None:
     except OSError as exc:
         raise EmailSendError(
             "Unable to connect to SMTP server. Render free web services block "
-            "outbound SMTP ports 25, 465, and 587; use EMAIL_PROVIDER=gmail_api "
+            "outbound SMTP ports 25, 465, and 587; use EMAIL_PROVIDER=resend "
             "or a paid Render instance."
         ) from exc
 
@@ -120,6 +153,7 @@ def _send_with_gmail_api(message: EmailMessage, sender: str) -> None:
             headers={
                 "Authorization": f"Bearer {access_token}",
                 "Content-Type": "application/json",
+                "User-Agent": "fretado-api/1.0",
             },
             json={"raw": raw_message},
             timeout=15,
@@ -130,6 +164,23 @@ def _send_with_gmail_api(message: EmailMessage, sender: str) -> None:
     if response.status_code >= 400:
         raise EmailSendError(
             f"Gmail API rejected the email request with status {response.status_code}."
+        )
+
+
+def _validate_resend_settings(sender: str) -> None:
+    missing_settings = [
+        name
+        for name, value in (
+            ("RESEND_API_KEY", settings.RESEND_API_KEY),
+            ("RESEND_FROM", sender),
+            ("RESEND_API_URL", settings.RESEND_API_URL),
+        )
+        if not value
+    ]
+
+    if missing_settings:
+        raise EmailConfigurationError(
+            "Missing Resend settings: " + ", ".join(missing_settings)
         )
 
 
@@ -169,6 +220,30 @@ def _validate_gmail_api_settings(sender: str) -> None:
         )
 
 
+def _read_resend_error(response: requests.Response) -> str:
+    try:
+        data = response.json()
+    except ValueError:
+        return f"Resend rejected the email request with status {response.status_code}."
+
+    message = data.get("message") or data.get("error")
+    name = data.get("name")
+
+    if name and message:
+        return (
+            "Resend rejected the email request with status "
+            f"{response.status_code}: {name}: {message}"
+        )
+
+    if message:
+        return (
+            "Resend rejected the email request with status "
+            f"{response.status_code}: {message}"
+        )
+
+    return f"Resend rejected the email request with status {response.status_code}."
+
+
 def _get_gmail_access_token() -> str:
     try:
         response = requests.post(
@@ -179,6 +254,7 @@ def _get_gmail_access_token() -> str:
                 "refresh_token": settings.GMAIL_REFRESH_TOKEN,
                 "grant_type": "refresh_token",
             },
+            headers={"User-Agent": "fretado-api/1.0"},
             timeout=15,
         )
     except requests.RequestException as exc:

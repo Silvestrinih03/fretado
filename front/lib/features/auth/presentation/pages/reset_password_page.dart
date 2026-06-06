@@ -82,13 +82,10 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
       return;
     }
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          _authController.errorMessage ??
-              'Nao foi possivel redefinir sua senha.',
-        ),
-      ),
+    showFretErrorPopup(
+      context,
+      message: _authController.errorMessage ??
+          'Nao foi possivel redefinir sua senha.',
     );
   }
 

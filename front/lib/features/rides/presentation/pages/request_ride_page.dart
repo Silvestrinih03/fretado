@@ -366,6 +366,7 @@ class _RequestRidePageState extends State<RequestRidePage> {
       if (!mounted) return;
       _showMessage(
         'Corrida #${data['id']} solicitada. Status: ${data['status_id']}',
+        isError: false,
       );
       Navigator.of(context).pop(true);
     } on HttpServiceException catch (e) {
@@ -576,8 +577,14 @@ class _RequestRidePageState extends State<RequestRidePage> {
     });
   }
 
-  void _showMessage(String message) {
+  void _showMessage(String message, {bool isError = true}) {
     if (!mounted) return;
+
+    if (isError) {
+      showFretErrorPopup(context, message: message);
+      return;
+    }
+
     ScaffoldMessenger.of(
       context,
     ).showSnackBar(SnackBar(content: Text(message)));

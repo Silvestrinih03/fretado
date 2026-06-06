@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../app/design_system/design_system.dart';
 import '../../../../core/services/http_service.dart';
 import '../../../../core/services/myself/services/myself_service.dart';
 import '../../data/datasources/vehicle_type_datasource.dart';
@@ -95,10 +96,9 @@ class _RegisterVehiclePageState extends State<RegisterVehiclePage> {
 
   Future<void> _save() async {
     if (_store.selectedVehicleTypeId == null) {
-      final messenger = ScaffoldMessenger.of(context);
-      Navigator.of(context).pop(true);
-      messenger.showSnackBar(
-        const SnackBar(content: Text('Selecione o tipo de veículo.')),
+      showFretErrorPopup(
+        context,
+        message: 'Selecione o tipo de veículo.',
       );
       return;
     }
@@ -136,9 +136,7 @@ class _RegisterVehiclePageState extends State<RegisterVehiclePage> {
 
     final String errorMessage =
         _store.registerVehicleError ?? 'Não foi possível cadastrar o veículo.';
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(errorMessage)));
+    showFretErrorPopup(context, message: errorMessage);
   }
 
   String? _requiredValidator(String? value, String fieldName) {

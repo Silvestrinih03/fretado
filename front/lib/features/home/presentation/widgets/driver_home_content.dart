@@ -206,7 +206,7 @@ class _AvailableRideRequestsPageState
         return;
       }
 
-      _showMessage('Corrida aceita.');
+      _showMessage('Corrida aceita.', isError: false);
       setState(() {
         _ridesFuture = _loadRides();
       });
@@ -221,8 +221,13 @@ class _AvailableRideRequestsPageState
     }
   }
 
-  void _showMessage(String message) {
+  void _showMessage(String message, {bool isError = true}) {
     if (!mounted) {
+      return;
+    }
+
+    if (isError) {
+      showFretErrorPopup(context, message: message);
       return;
     }
 
@@ -1173,7 +1178,7 @@ class _DriverRideInProgressSectionState
         return;
       }
 
-      _showMessage(message);
+      _showMessage(message, isError: false);
       setState(() {
         _ridesFuture = _loadRides();
       });
@@ -1188,8 +1193,13 @@ class _DriverRideInProgressSectionState
     }
   }
 
-  void _showMessage(String message) {
+  void _showMessage(String message, {bool isError = true}) {
     if (!mounted) {
+      return;
+    }
+
+    if (isError) {
+      showFretErrorPopup(context, message: message);
       return;
     }
 

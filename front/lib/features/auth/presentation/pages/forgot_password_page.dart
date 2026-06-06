@@ -62,13 +62,10 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
       return;
     }
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          _authController.errorMessage ??
-              'Nao foi possivel enviar o email de recuperacao.',
-        ),
-      ),
+    showFretErrorPopup(
+      context,
+      message: _authController.errorMessage ??
+          'Nao foi possivel enviar o email de recuperacao.',
     );
   }
 

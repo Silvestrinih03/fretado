@@ -113,10 +113,9 @@ class _RegisterPageState extends State<RegisterPage> {
     FocusScope.of(context).unfocus();
 
     if (_selectedAccountType == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Selecione o tipo de conta para continuar.'),
-        ),
+      showFretErrorPopup(
+        context,
+        message: 'Selecione o tipo de conta para continuar.',
       );
       return;
     }
@@ -185,9 +184,7 @@ class _RegisterPageState extends State<RegisterPage> {
     final String message =
         _registerController.errorMessage ??
         'Não foi possível concluir cadastro.';
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(message)));
+    showFretErrorPopup(context, message: message);
   }
 
   @override

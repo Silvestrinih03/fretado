@@ -200,10 +200,9 @@ class _EditCardDataPageState extends State<EditCardDataPage> {
       return;
     }
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(_store.saveErrorMessage ?? 'Nao foi possivel salvar.'),
-      ),
+    showFretErrorPopup(
+      context,
+      message: _store.saveErrorMessage ?? 'Nao foi possivel salvar.',
     );
   }
 

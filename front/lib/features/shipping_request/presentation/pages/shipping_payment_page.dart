@@ -218,9 +218,7 @@ class _ShippingPaymentPageState extends State<ShippingPaymentPage> {
       return;
     }
 
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(message)));
+    showFretErrorPopup(context, message: message);
   }
 
   @override

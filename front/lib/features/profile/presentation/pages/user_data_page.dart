@@ -128,9 +128,7 @@ class _UserDataPageState extends State<UserDataPage> {
       }
 
       setState(() => _isSaving = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(_readErrorMessage(e))),
-      );
+      showFretErrorPopup(context, message: _readErrorMessage(e));
     }
   }
 

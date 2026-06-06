@@ -60,11 +60,15 @@ class _DriverOperationsPageState extends State<DriverOperationsPage> {
       return;
     }
 
+    if (!ok) {
+      showFretErrorPopup(context, message: _store.actionMessage!);
+      return;
+    }
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(_store.actionMessage!),
-        backgroundColor:
-            ok ? FretColors.success700 : FretColors.destructive600,
+        backgroundColor: FretColors.success700,
       ),
     );
   }
@@ -77,11 +81,15 @@ class _DriverOperationsPageState extends State<DriverOperationsPage> {
       return;
     }
 
+    if (!ok) {
+      showFretErrorPopup(context, message: _store.actionMessage!);
+      return;
+    }
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(_store.actionMessage!),
-        backgroundColor:
-            ok ? FretColors.success700 : FretColors.destructive600,
+        backgroundColor: FretColors.success700,
       ),
     );
   }
@@ -149,12 +157,18 @@ class _DriverOperationsPageState extends State<DriverOperationsPage> {
                           }
 
                           if (_store.actionMessage != null) {
+                            if (!ok) {
+                              showFretErrorPopup(
+                                context,
+                                message: _store.actionMessage!,
+                              );
+                              return;
+                            }
+
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
                                 content: Text(_store.actionMessage!),
-                                backgroundColor: ok
-                                    ? FretColors.success700
-                                    : FretColors.destructive600,
+                                backgroundColor: FretColors.success700,
                               ),
                             );
                           }

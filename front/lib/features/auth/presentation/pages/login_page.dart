@@ -123,9 +123,7 @@ class _LoginPageState extends State<LoginPage> {
 
     final String errorMessage =
         _authController.errorMessage ?? 'Falha no login.';
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(errorMessage)));
+    showFretErrorPopup(context, message: errorMessage);
   }
 
   @override

@@ -503,7 +503,10 @@ class _AddressMapPageState extends State<AddressMapPage> {
       }
 
       _selectAddress(_AddressPointMode.pickup, result);
-      _showMessage('Localizacao atual selecionada para coleta.');
+      _showMessage(
+        'Localizacao atual selecionada para coleta.',
+        isError: false,
+      );
     } finally {
       if (mounted) {
         setState(() => _selectingPickupFromCurrentLocation = false);
@@ -642,8 +645,13 @@ class _AddressMapPageState extends State<AddressMapPage> {
     return mode == _AddressPointMode.pickup ? _pickupAddress : _deliveryAddress;
   }
 
-  void _showMessage(String message) {
+  void _showMessage(String message, {bool isError = true}) {
     if (!mounted) {
+      return;
+    }
+
+    if (isError) {
+      showFretErrorPopup(context, message: message);
       return;
     }
 

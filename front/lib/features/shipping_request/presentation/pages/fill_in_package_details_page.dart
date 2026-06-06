@@ -186,9 +186,7 @@ class _FillInPackageDetailsPageState extends State<FillInPackageDetailsPage> {
       return;
     }
 
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(message)));
+    showFretErrorPopup(context, message: message);
   }
 }
 

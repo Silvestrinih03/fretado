@@ -89,9 +89,7 @@ class _MyDriversLicensePageState extends State<MyDriversLicensePage> {
     _fillFormFromStoredDocument();
 
     if (_store.loadDocumentError != null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(_store.loadDocumentError!)),
-      );
+      showFretErrorPopup(context, message: _store.loadDocumentError!);
     }
   }
 
@@ -214,8 +212,9 @@ class _MyDriversLicensePageState extends State<MyDriversLicensePage> {
     }
 
     if (_store.selectedCategoryId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Selecione a categoria da CNH.')),
+      showFretErrorPopup(
+        context,
+        message: 'Selecione a categoria da CNH.',
       );
       return;
     }
@@ -247,9 +246,7 @@ class _MyDriversLicensePageState extends State<MyDriversLicensePage> {
 
     final errorMessage =
         _store.saveDocumentError ?? 'Não foi possível salvar sua CNH.';
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(errorMessage)));
+    showFretErrorPopup(context, message: errorMessage);
   }
 
   Future<void> _handleFooterAction() async {

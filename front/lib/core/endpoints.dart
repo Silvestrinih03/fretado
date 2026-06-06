@@ -4,6 +4,8 @@ abstract class Endpoints {
   static const String root = '/';
 
   static const String auth = '/auth';
+  static const String forgotPassword = '$auth/forgot-password';
+  static const String resetPassword = '$auth/reset-password';
   static String changePassword(int userId) => '$auth/change-password/$userId';
 
   static const String register = '/register';

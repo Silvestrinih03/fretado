@@ -18,4 +18,30 @@ class AuthRepositoryImpl implements AuthRepository {
       throw AuthRepositoryException(e.message);
     }
   }
+
+  @override
+  Future<String> forgotPassword({required String email}) async {
+    try {
+      return await _datasource.forgotPassword(email: email);
+    } on AuthDatasourceException catch (e) {
+      throw AuthRepositoryException(e.message);
+    }
+  }
+
+  @override
+  Future<String> resetPassword({
+    required String token,
+    required String newPassword,
+    required String confirmPassword,
+  }) async {
+    try {
+      return await _datasource.resetPassword(
+        token: token,
+        newPassword: newPassword,
+        confirmPassword: confirmPassword,
+      );
+    } on AuthDatasourceException catch (e) {
+      throw AuthRepositoryException(e.message);
+    }
+  }
 }

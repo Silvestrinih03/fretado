@@ -8,6 +8,7 @@ import '../../../home/presentation/pages/home_page.dart';
 import '../../data/datasources/auth_datasource.dart';
 import '../../data/repositories/auth_repository_impl.dart';
 import '../controllers/auth_controller.dart';
+import 'forgot_password_page.dart';
 import '../../../register/presentation/pages/register_page.dart';
 
 const String _appVersion = String.fromEnvironment(
@@ -67,6 +68,12 @@ class _LoginPageState extends State<LoginPage> {
         const SnackBar(content: Text('Cadastro realizado.')),
       );
     }
+  }
+
+  Future<void> _openForgotPasswordPage() async {
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(builder: (_) => const ForgotPasswordPage()),
+    );
   }
 
   Future<void> _login() async {
@@ -217,7 +224,9 @@ class _LoginPageState extends State<LoginPage> {
                                   ),
                                 ),
                                 const SizedBox(height: 8),
-                                FretAuthForgotPasswordLink(onPressed: () {}),
+                                FretAuthForgotPasswordLink(
+                                  onPressed: _openForgotPasswordPage,
+                                ),
                                 const SizedBox(height: 22),
                                 FretPrimaryGradientButton(
                                   label: _authController.isLoading

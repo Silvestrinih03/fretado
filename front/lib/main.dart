@@ -4,6 +4,7 @@ import 'app/design_system/design_system.dart';
 import 'core/enums/home_profile.dart';
 import 'core/services/myself/services/myself_service.dart';
 import 'features/auth/presentation/pages/login_page.dart';
+import 'features/auth/presentation/pages/reset_password_page.dart';
 import 'features/home/presentation/pages/home_page.dart';
 
 void main() {
@@ -55,9 +56,70 @@ class FretadoApp extends StatelessWidget {
           ),
         ),
       ),
-      home: const SessionGate(),
+      onGenerateRoute: (settings) {
+        final String? resetPasswordToken =
+            _extractResetPasswordTokenFromRoute(settings.name) ??
+            _extractResetPasswordToken(Uri.base);
+
+        if (resetPasswordToken != null) {
+          return MaterialPageRoute<void>(
+            builder: (_) => ResetPasswordPage(token: resetPasswordToken),
+            settings: settings,
+          );
+        }
+
+        return MaterialPageRoute<void>(
+          builder: (_) => const SessionGate(),
+          settings: settings,
+        );
+      },
     );
   }
+}
+
+String? _extractResetPasswordTokenFromRoute(String? routeName) {
+  if (routeName == null || routeName.isEmpty) {
+    return null;
+  }
+
+  final Uri routeUri = Uri.parse(routeName);
+  return _extractResetPasswordToken(routeUri);
+}
+
+String? _extractResetPasswordToken(Uri uri) {
+  final String? queryToken = uri.queryParameters['token'];
+  if (_isResetPasswordPath(uri.path) || _isRootPath(uri.path)) {
+    if (queryToken != null && queryToken.trim().isNotEmpty) {
+      return queryToken;
+    }
+  }
+
+  final String fragment = uri.fragment;
+  if (fragment.isEmpty) {
+    return null;
+  }
+
+  final Uri fragmentUri = Uri.parse(
+    fragment.startsWith('/') ? fragment : '/$fragment',
+  );
+
+  if (_isResetPasswordPath(fragmentUri.path)) {
+    return fragmentUri.queryParameters['token'];
+  }
+
+  return null;
+}
+
+bool _isResetPasswordPath(String path) {
+  final String normalizedPath = path
+      .toLowerCase()
+      .replaceAll(RegExp(r'^/+'), '')
+      .replaceAll(RegExp(r'/+$'), '');
+  return normalizedPath == 'reset-password';
+}
+
+bool _isRootPath(String path) {
+  return path.isEmpty || path == '/';
 }
 
 class SessionGate extends StatefulWidget {

@@ -410,7 +410,7 @@ class _ClientRideHistoryCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              _StatusPill(label: ride.statusLabel),
+              FretRideStatusBadge(statusId: ride.statusId),
               const Spacer(),
               Text(
                 '#FR-${ride.id}',
@@ -520,35 +520,6 @@ class _RideHistoryStateCard extends StatelessWidget {
             ),
           ],
         ],
-      ),
-    );
-  }
-}
-
-class _StatusPill extends StatelessWidget {
-  final String label;
-
-  const _StatusPill({required this.label});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      constraints: const BoxConstraints(minHeight: 32),
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        color: const Color(0xFFF4EDC8),
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Text(
-        label,
-        maxLines: 2,
-        overflow: TextOverflow.ellipsis,
-        style: const TextStyle(
-          color: Color(0xFF3D3312),
-          fontSize: 11,
-          fontWeight: FontWeight.w800,
-        ),
       ),
     );
   }

@@ -1170,6 +1170,14 @@ class _DriverRideInProgressSectionState
       return;
     }
 
+    final bool confirmed = await showFretRideProgressConfirmation(
+      context,
+      statusId: ride.statusId,
+    );
+    if (!confirmed || !mounted) {
+      return;
+    }
+
     setState(() => _rideInActionId = ride.id);
 
     try {
@@ -1338,7 +1346,7 @@ class _DriverActiveRideCard extends StatelessWidget {
                   ),
                 ),
               ),
-              _DriverRideStatusBadge(label: ride.statusLabel),
+              FretRideStatusBadge(statusId: ride.statusId),
             ],
           ),
           const SizedBox(height: 12),
@@ -1461,33 +1469,6 @@ class _DriverRideInfo extends StatelessWidget {
           ),
         ),
       ],
-    );
-  }
-}
-
-class _DriverRideStatusBadge extends StatelessWidget {
-  final String label;
-
-  const _DriverRideStatusBadge({required this.label});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
-      decoration: BoxDecoration(
-        color: FretColors.primary100,
-        borderRadius: BorderRadius.circular(6),
-      ),
-      child: Text(
-        label,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        style: const TextStyle(
-          color: FretColors.neutral800,
-          fontSize: 10,
-          fontWeight: FontWeight.w800,
-        ),
-      ),
     );
   }
 }
@@ -1839,7 +1820,7 @@ String? _rideProgressActionLabel(DriverRideModel ride) {
   return switch (ride.statusId) {
     2 => 'Iniciar corrida',
     3 => 'Confirmar coleta',
-    4 => 'Finalizar corrida',
+    4 => 'Finalizar entrega',
     _ => null,
   };
 }

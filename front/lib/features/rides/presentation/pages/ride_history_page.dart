@@ -252,7 +252,7 @@ class _HistoryRideCard extends StatelessWidget {
                   ),
                 ),
               ),
-              _StatusBadge(label: ride.statusLabel),
+              FretRideStatusBadge(statusId: ride.statusId),
             ],
           ),
           const SizedBox(height: 12),
@@ -369,33 +369,6 @@ class _InfoChip extends StatelessWidget {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _StatusBadge extends StatelessWidget {
-  final String label;
-
-  const _StatusBadge({required this.label});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
-      decoration: BoxDecoration(
-        color: FretColors.primary100,
-        borderRadius: BorderRadius.circular(6),
-      ),
-      child: Text(
-        label,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        style: const TextStyle(
-          color: FretColors.neutral800,
-          fontSize: 10,
-          fontWeight: FontWeight.w800,
-        ),
       ),
     );
   }

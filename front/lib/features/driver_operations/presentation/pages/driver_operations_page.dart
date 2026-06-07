@@ -74,8 +74,17 @@ class _DriverOperationsPageState extends State<DriverOperationsPage> {
   }
 
   Future<void> _runRideAction(
+    DriverRideModel ride,
     Future<bool> Function() action,
   ) async {
+    final bool confirmed = await showFretRideProgressConfirmation(
+      context,
+      statusId: ride.statusId,
+    );
+    if (!confirmed || !mounted) {
+      return;
+    }
+
     final ok = await action();
     if (!mounted || _store.actionMessage == null) {
       return;
@@ -262,14 +271,17 @@ class _DriverOperationsPageState extends State<DriverOperationsPage> {
         ),
         _RidesTab(
           store: _store,
-          onStart: (rideId) => _runRideAction(
-            () => _store.startRide(rideId),
+          onStart: (ride) => _runRideAction(
+            ride,
+            () => _store.startRide(ride.id),
           ),
-          onCompletePickup: (rideId) => _runRideAction(
-            () => _store.completeRidePickup(rideId),
+          onCompletePickup: (ride) => _runRideAction(
+            ride,
+            () => _store.completeRidePickup(ride.id),
           ),
-          onFinish: (rideId) => _runRideAction(
-            () => _store.finishRide(rideId),
+          onFinish: (ride) => _runRideAction(
+            ride,
+            () => _store.finishRide(ride.id),
           ),
         ),
         _WalletTab(
@@ -463,9 +475,9 @@ class _OfferCard extends StatelessWidget {
 
 class _RidesTab extends StatelessWidget {
   final DriverOperationsStore store;
-  final ValueChanged<int> onStart;
-  final ValueChanged<int> onCompletePickup;
-  final ValueChanged<int> onFinish;
+  final ValueChanged<DriverRideModel> onStart;
+  final ValueChanged<DriverRideModel> onCompletePickup;
+  final ValueChanged<DriverRideModel> onFinish;
 
   const _RidesTab({
     required this.store,
@@ -498,9 +510,9 @@ class _RidesTab extends StatelessWidget {
         return _RideCard(
           ride: ride,
           isBusy: store.rideInActionId == ride.id,
-          onStart: () => onStart(ride.id),
-          onCompletePickup: () => onCompletePickup(ride.id),
-          onFinish: () => onFinish(ride.id),
+          onStart: () => onStart(ride),
+          onCompletePickup: () => onCompletePickup(ride),
+          onFinish: () => onFinish(ride),
         );
       },
     );
@@ -551,7 +563,7 @@ class _RideCard extends StatelessWidget {
                   ),
                 ),
               ),
-              _StatusBadge(label: ride.statusLabel, color: _rideColor(ride)),
+              FretRideStatusBadge(statusId: ride.statusId),
             ],
           ),
           const SizedBox(height: 12),
@@ -1058,22 +1070,11 @@ Color _offerColor(RideOfferModel offer) {
   };
 }
 
-Color _rideColor(DriverRideModel ride) {
-  return switch (ride.statusId) {
-    2 => FretColors.attention200,
-    3 => FretColors.attention200,
-    4 => FretColors.attention200,
-    5 => FretColors.success100,
-    6 => FretColors.destructive100,
-    _ => FretColors.neutral200,
-  };
-}
-
 String? _rideProgressActionLabel(DriverRideModel ride) {
   return switch (ride.statusId) {
     2 => 'Iniciar corrida',
     3 => 'Confirmar coleta',
-    4 => 'Finalizar corrida',
+    4 => 'Finalizar entrega',
     _ => null,
   };
 }

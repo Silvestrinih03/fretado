@@ -87,7 +87,7 @@ class RegisterController extends ChangeNotifier {
         firstName: trimmedFirstName,
         lastName: trimmedLastName,
         birthDate: _normalizeBirthDate(birthDate),
-        phone: _normalizeOptional(phone),
+        phone: _normalizePhone(phone),
       );
 
       _registeredUser = user;
@@ -114,6 +114,15 @@ class RegisterController extends ChangeNotifier {
       return null;
     }
     return cleaned;
+  }
+
+  String? _normalizePhone(String? value) {
+    final String digits = (value ?? '').replaceAll(RegExp(r'\D'), '');
+    if (digits.isEmpty) {
+      return null;
+    }
+
+    return digits;
   }
 
   String? _normalizeBirthDate(String? birthDate) {

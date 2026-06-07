@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 
 import '../../../../app/design_system/design_system.dart';
 import '../../../../core/endpoints.dart';
+import '../../../../core/enums/home_profile.dart';
 import '../../../../core/services/http_service.dart';
+import '../../../home/presentation/pages/home_page.dart';
 import '../../../payments/data/datasources/user_card_datasource.dart';
 import '../../../payments/data/models/user_card_model.dart';
 import '../../../payments/presentation/pages/edit_card_data_page.dart';
@@ -130,10 +132,7 @@ class _ShippingPaymentPageState extends State<ShippingPaymentPage> {
         body: {
           'client_user_id': widget.userId,
           'driver_user_id': null,
-          'origin_latitude': widget.addressData.pickupLatitude,
-          'origin_longitude': widget.addressData.pickupLongitude,
-          'destination_latitude': widget.addressData.deliveryLatitude,
-          'destination_longitude': widget.addressData.deliveryLongitude,
+          ...widget.addressData.toRideJson(),
           ...widget.packageData.toQuoteJson(),
           'total_price': widget.quote.totalPrice,
           'status_id': 1,
@@ -146,31 +145,14 @@ class _ShippingPaymentPageState extends State<ShippingPaymentPage> {
       }
 
       final rideId = response['id']?.toString();
-      final statusId = response['status_id']?.toString();
 
-      await showDialog<void>(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) => AlertDialog(
-          title: const Text('Frete solicitado'),
-          content: Text(
-            [
-              if (rideId != null) 'Corrida #$rideId criada com sucesso.',
-              if (statusId != null) 'Status: $statusId.',
-              'Metodo de pagamento verificado: cartao final ${selectedCard.lastFour}.',
-            ].join('\n'),
-          ),
-          actions: [
-            FilledButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Ok'),
-            ),
-          ],
-        ),
+      final bool shouldReturnHome = await _showPaymentSuccessDialog(
+        rideId: rideId,
+        cardLastFour: selectedCard.lastFour,
       );
 
-      if (mounted) {
-        Navigator.of(context).popUntil((route) => route.isFirst);
+      if (shouldReturnHome) {
+        _returnToHome();
       }
     } on HttpServiceException catch (e) {
       _showMessage(e.message);
@@ -181,6 +163,38 @@ class _ShippingPaymentPageState extends State<ShippingPaymentPage> {
         setState(() => _isPaying = false);
       }
     }
+  }
+
+  Future<bool> _showPaymentSuccessDialog({
+    required String? rideId,
+    required String cardLastFour,
+  }) async {
+    final result = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => _PaymentSuccessDialog(
+        rideId: rideId,
+        cardLastFour: cardLastFour,
+        totalPrice: _formatMoney(widget.quote.totalPrice),
+        onOk: () => Navigator.of(dialogContext).pop(true),
+      ),
+    );
+
+    return result ?? false;
+  }
+
+  void _returnToHome() {
+    if (!mounted) {
+      return;
+    }
+
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute<void>(
+        builder: (_) =>
+            HomePage(profile: HomeProfileEnum.client, userId: widget.userId),
+      ),
+      (route) => false,
+    );
   }
 
   Future<void> _runRideDispatchJob() async {
@@ -253,7 +267,7 @@ class _ShippingPaymentPageState extends State<ShippingPaymentPage> {
                   ),
                   const SizedBox(height: 8),
                   const Text(
-                    'Selecione um cartao cadastrado para confirmar.',
+                    'Selecione o método de pagamento para prosseguir.',
                     style: TextStyle(
                       color: _mutedText,
                       fontSize: 13,
@@ -388,6 +402,213 @@ class _PaymentHeader extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _PaymentSuccessDialog extends StatelessWidget {
+  final String? rideId;
+  final String cardLastFour;
+  final String totalPrice;
+  final VoidCallback onOk;
+
+  const _PaymentSuccessDialog({
+    required this.rideId,
+    required this.cardLastFour,
+    required this.totalPrice,
+    required this.onOk,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+      backgroundColor: Colors.transparent,
+      elevation: 0,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 420),
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: FretColors.white,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: FretColors.success100),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x24000000),
+                blurRadius: 24,
+                offset: Offset(0, 14),
+              ),
+            ],
+          ),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(18, 18, 18, 16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color: FretColors.success100,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(
+                        Icons.check_circle_rounded,
+                        color: FretColors.success700,
+                        size: 28,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    const Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Frete solicitado',
+                            style: TextStyle(
+                              color: FretColors.neutral900,
+                              fontSize: 18,
+                              fontWeight: FontWeight.w800,
+                              height: 1.15,
+                            ),
+                          ),
+                          SizedBox(height: 6),
+                          Text(
+                            'Pagamento confirmado.\nEstamos buscando motoristas disponiveis para sua corrida.',
+                            style: TextStyle(
+                              color: FretColors.neutral700,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                              height: 1.35,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 18),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF7F8FA),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: const Color(0xFFE3E5EC)),
+                  ),
+                  child: Column(
+                    children: [
+                      if (rideId != null)
+                        _PaymentSuccessInfoRow(
+                          icon: Icons.route_rounded,
+                          label: 'Corrida',
+                          value: '#$rideId',
+                        ),
+                      if (rideId != null) const SizedBox(height: 10),
+                      _PaymentSuccessInfoRow(
+                        icon: Icons.credit_card_rounded,
+                        label: 'Pagamento',
+                        value: 'Cartao final $cardLastFour',
+                      ),
+                      const SizedBox(height: 10),
+                      _PaymentSuccessInfoRow(
+                        icon: Icons.payments_outlined,
+                        label: 'Valor',
+                        value: totalPrice,
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 18),
+                SizedBox(
+                  height: 46,
+                  child: FilledButton(
+                    onPressed: onOk,
+                    style: FilledButton.styleFrom(
+                      backgroundColor: _ShippingPaymentPageState._primaryBlue,
+                      foregroundColor: FretColors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                    child: const Text(
+                      'Ok',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _PaymentSuccessInfoRow extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String value;
+
+  const _PaymentSuccessInfoRow({
+    required this.icon,
+    required this.label,
+    required this.value,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Container(
+          width: 32,
+          height: 32,
+          decoration: BoxDecoration(
+            color: FretColors.white,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(
+            icon,
+            color: _ShippingPaymentPageState._primaryBlue,
+            size: 18,
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: const TextStyle(
+                  color: FretColors.neutral500,
+                  fontSize: 10,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 0,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                value,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: FretColors.neutral900,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }

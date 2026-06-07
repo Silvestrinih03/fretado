@@ -108,6 +108,10 @@ class RegisterStepThree extends StatelessWidget {
                   hintText: '(00) 0000-0000',
                   keyboardType: TextInputType.phone,
                   textInputAction: TextInputAction.done,
+                  inputFormatters: [
+                    FilteringTextInputFormatter.digitsOnly,
+                    LengthLimitingTextInputFormatter(11),
+                  ],
                   onFieldSubmitted: (_) => onFinish(),
                   validator: _validateOptionalPhone,
                   suffixIcon: const Padding(

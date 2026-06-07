@@ -2,8 +2,14 @@ class DriverRideModel {
   final int id;
   final int clientUserId;
   final int? driverUserId;
+  final String originAddress;
+  final String? originAddressComplement;
+  final String? originReferencePoint;
   final double originLatitude;
   final double originLongitude;
+  final String destinationAddress;
+  final String? destinationAddressComplement;
+  final String? destinationReferencePoint;
   final double destinationLatitude;
   final double destinationLongitude;
   final double packageWidth;
@@ -22,8 +28,14 @@ class DriverRideModel {
     required this.id,
     required this.clientUserId,
     required this.driverUserId,
+    required this.originAddress,
+    required this.originAddressComplement,
+    required this.originReferencePoint,
     required this.originLatitude,
     required this.originLongitude,
+    required this.destinationAddress,
+    required this.destinationAddressComplement,
+    required this.destinationReferencePoint,
     required this.destinationLatitude,
     required this.destinationLongitude,
     required this.packageWidth,
@@ -44,8 +56,17 @@ class DriverRideModel {
       id: _readInt(json['id']),
       clientUserId: _readInt(json['client_user_id']),
       driverUserId: _readNullableInt(json['driver_user_id']),
+      originAddress: _readString(json['origin_address']),
+      originAddressComplement:
+          _readNullableString(json['origin_address_complement']),
+      originReferencePoint: _readNullableString(json['origin_reference_point']),
       originLatitude: _readDouble(json['origin_latitude']),
       originLongitude: _readDouble(json['origin_longitude']),
+      destinationAddress: _readString(json['destination_address']),
+      destinationAddressComplement:
+          _readNullableString(json['destination_address_complement']),
+      destinationReferencePoint:
+          _readNullableString(json['destination_reference_point']),
       destinationLatitude: _readDouble(json['destination_latitude']),
       destinationLongitude: _readDouble(json['destination_longitude']),
       packageWidth: _readDouble(json['package_width']),
@@ -75,11 +96,23 @@ class DriverRideModel {
   }
 
   String get originLabel {
-    return '${originLatitude.toStringAsFixed(5)}, ${originLongitude.toStringAsFixed(5)}';
+    return _buildAddressLabel(
+      address: originAddress,
+      complement: originAddressComplement,
+      referencePoint: originReferencePoint,
+      latitude: originLatitude,
+      longitude: originLongitude,
+    );
   }
 
   String get destinationLabel {
-    return '${destinationLatitude.toStringAsFixed(5)}, ${destinationLongitude.toStringAsFixed(5)}';
+    return _buildAddressLabel(
+      address: destinationAddress,
+      complement: destinationAddressComplement,
+      referencePoint: destinationReferencePoint,
+      latitude: destinationLatitude,
+      longitude: destinationLongitude,
+    );
   }
 }
 
@@ -258,6 +291,38 @@ double _readDouble(dynamic value) {
     return value.toDouble();
   }
   return double.tryParse(value?.toString() ?? '') ?? 0;
+}
+
+String _readString(dynamic value) => _readNullableString(value) ?? '';
+
+String? _readNullableString(dynamic value) {
+  final cleaned = value?.toString().trim();
+  if (cleaned == null || cleaned.isEmpty) {
+    return null;
+  }
+
+  return cleaned;
+}
+
+String _buildAddressLabel({
+  required String address,
+  required String? complement,
+  required String? referencePoint,
+  required double latitude,
+  required double longitude,
+}) {
+  final cleanedAddress = address.trim();
+  if (cleanedAddress.isEmpty) {
+    return '${latitude.toStringAsFixed(5)}, ${longitude.toStringAsFixed(5)}';
+  }
+
+  final parts = <String>[
+    cleanedAddress,
+    if (complement != null) 'Comp.: $complement',
+    if (referencePoint != null) 'Ref.: $referencePoint',
+  ];
+
+  return parts.join(' - ');
 }
 
 DateTime? _readDateTime(dynamic value) {

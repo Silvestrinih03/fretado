@@ -42,14 +42,6 @@ class FreightQuoteModel {
     );
   }
 
-  String get deliveryClassificationLabel {
-    return switch (deliveryClassification) {
-      'SCHEDULED_FREIGHT' => 'Frete agendado',
-      'IMMEDIATE_DELIVERY' => 'Entrega imediata',
-      _ => 'Entrega',
-    };
-  }
-
   String get vehicleLabel {
     if (vehicleTypeName.isEmpty) {
       return 'Veiculo';

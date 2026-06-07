@@ -52,10 +52,7 @@ class ShippingResumePage extends StatelessWidget {
                   const SizedBox(height: 16),
                   _RouteSummaryCard(addressData: addressData),
                   const SizedBox(height: 14),
-                  _CargoSpecsCard(
-                    packageData: packageData,
-                    quote: quote,
-                  ),
+                  _CargoSpecsCard(packageData: packageData, quote: quote),
                   const SizedBox(height: 14),
                   _RouteEstimateCard(quote: quote),
                   const SizedBox(height: 18),
@@ -211,10 +208,7 @@ class _CargoSpecsCard extends StatelessWidget {
   final FreightPackageData packageData;
   final FreightQuoteModel quote;
 
-  const _CargoSpecsCard({
-    required this.packageData,
-    required this.quote,
-  });
+  const _CargoSpecsCard({required this.packageData, required this.quote});
 
   @override
   Widget build(BuildContext context) {
@@ -303,8 +297,6 @@ class _RouteEstimateCard extends StatelessWidget {
             ),
           ],
         ),
-        const SizedBox(height: 10),
-        _ClassificationRow(quote: quote),
       ],
     );
   }
@@ -343,7 +335,7 @@ class _PriceConfirmationCard extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           const Text(
-            'Valor total para o motorista',
+            'Valor total da corrida',
             textAlign: TextAlign.center,
             style: TextStyle(
               color: Color(0xFFD8DAFF),
@@ -423,10 +415,7 @@ class _SectionTitle extends StatelessWidget {
   final IconData icon;
   final String title;
 
-  const _SectionTitle({
-    required this.icon,
-    required this.title,
-  });
+  const _SectionTitle({required this.icon, required this.title});
 
   @override
   Widget build(BuildContext context) {
@@ -583,44 +572,6 @@ class _SpecTile extends StatelessWidget {
               color: FretColors.neutral900,
               fontSize: 11,
               fontWeight: FontWeight.w800,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ClassificationRow extends StatelessWidget {
-  final FreightQuoteModel quote;
-
-  const _ClassificationRow({required this.quote});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF5F6F8),
-        borderRadius: BorderRadius.circular(3),
-      ),
-      child: Row(
-        children: [
-          const Icon(
-            Icons.bolt_rounded,
-            color: ShippingResumePage._orange,
-            size: 18,
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              quote.deliveryClassificationLabel,
-              style: const TextStyle(
-                color: FretColors.neutral900,
-                fontSize: 12,
-                fontWeight: FontWeight.w800,
-              ),
             ),
           ),
         ],

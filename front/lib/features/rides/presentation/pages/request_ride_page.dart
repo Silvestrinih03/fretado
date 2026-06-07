@@ -504,6 +504,8 @@ class _RequestRidePageState extends State<RequestRidePage> {
   Map<String, dynamic>? _payload({required bool paymentConfirmed}) {
     final pickup = _pickup;
     final delivery = _delivery;
+    final pickupAddress = _pickupController.text.trim();
+    final deliveryAddress = _deliveryController.text.trim();
     final width = double.tryParse(_widthController.text.replaceAll(',', '.'));
     final height = double.tryParse(_heightController.text.replaceAll(',', '.'));
     final length = double.tryParse(_lengthController.text.replaceAll(',', '.'));
@@ -511,6 +513,8 @@ class _RequestRidePageState extends State<RequestRidePage> {
 
     if (pickup == null ||
         delivery == null ||
+        pickupAddress.isEmpty ||
+        deliveryAddress.isEmpty ||
         width == null ||
         height == null ||
         length == null ||
@@ -522,8 +526,10 @@ class _RequestRidePageState extends State<RequestRidePage> {
     }
 
     final payload = <String, dynamic>{
+      'origin_address': pickupAddress,
       'origin_latitude': pickup.latitude,
       'origin_longitude': pickup.longitude,
+      'destination_address': deliveryAddress,
       'destination_latitude': delivery.latitude,
       'destination_longitude': delivery.longitude,
       'package_width': width,

@@ -9,7 +9,13 @@ from app.enums.vehicle_type import VehicleTypeEnum
 
 
 class RideQuoteRequest(BaseModel):
+    origin_address: str = Field(..., max_length=255)
+    origin_address_complement: Optional[str] = Field(default=None, max_length=255)
+    origin_reference_point: Optional[str] = Field(default=None, max_length=255)
     origin_latitude: Decimal = Field(..., ge=Decimal("-90"), le=Decimal("90"))
+    destination_address: str = Field(..., max_length=255)
+    destination_address_complement: Optional[str] = Field(default=None, max_length=255)
+    destination_reference_point: Optional[str] = Field(default=None, max_length=255)
     origin_longitude: Decimal = Field(..., ge=Decimal("-180"), le=Decimal("180"))
     destination_latitude: Decimal = Field(..., ge=Decimal("-90"), le=Decimal("90"))
     destination_longitude: Decimal = Field(..., ge=Decimal("-180"), le=Decimal("180"))
@@ -48,6 +54,14 @@ class RideQuoteResponse(BaseModel):
     origin_longitude: Decimal
     destination_latitude: Decimal
     destination_longitude: Decimal
+
+    origin_address: str
+    origin_address_complement: Optional[str]
+    origin_reference_point: Optional[str]
+
+    destination_address: str
+    destination_address_complement: Optional[str]
+    destination_reference_point: Optional[str]
 
     package_width: Decimal
     package_height: Decimal
@@ -105,6 +119,14 @@ class RideResponse(BaseModel):
     destination_latitude: Decimal
     destination_longitude: Decimal
 
+    origin_address: str
+    origin_address_complement: Optional[str]
+    origin_reference_point: Optional[str]
+
+    destination_address: str
+    destination_address_complement: Optional[str]
+    destination_reference_point: Optional[str]
+
     package_width: Decimal
     package_height: Decimal
     package_length: Decimal
@@ -132,6 +154,14 @@ class RideCreateResponse(BaseModel):
     origin_longitude: Decimal
     destination_latitude: Decimal
     destination_longitude: Decimal
+
+    origin_address: str
+    origin_address_complement: Optional[str]
+    origin_reference_point: Optional[str]
+
+    destination_address: str
+    destination_address_complement: Optional[str]
+    destination_reference_point: Optional[str]
 
     package_width: Decimal
     package_height: Decimal

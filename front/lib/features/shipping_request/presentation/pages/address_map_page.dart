@@ -130,22 +130,11 @@ class _AddressMapPageState extends State<AddressMapPage> {
                   Positioned(
                     right: 15,
                     bottom: 86,
-                    child: Column(
-                      children: [
-                        _MapActionButton(
-                          tooltip: 'Usar local atual como coleta',
-                          onPressed: _useCurrentLocationAsPickup,
-                          icon: Icons.add_location_alt_rounded,
-                          loading: _selectingPickupFromCurrentLocation,
-                        ),
-                        const SizedBox(height: 10),
-                        _MapActionButton(
-                          tooltip: 'Centralizar no local atual',
-                          onPressed: _centerOnUserLocation,
-                          icon: Icons.my_location_rounded,
-                          loading: _loadingLocation,
-                        ),
-                      ],
+                    child: _MapActionButton(
+                      tooltip: 'Usar local atual como coleta',
+                      onPressed: _useCurrentLocationAsPickup,
+                      icon: Icons.add_location_alt_rounded,
+                      loading: _selectingPickupFromCurrentLocation,
                     ),
                   ),
                   Positioned(
@@ -466,15 +455,6 @@ class _AddressMapPageState extends State<AddressMapPage> {
         setState(() => _loadingLocation = false);
       }
     }
-  }
-
-  Future<void> _centerOnUserLocation() async {
-    if (_userLocation != null) {
-      _mapController.move(_userLocation!, 15);
-      return;
-    }
-
-    await _loadCurrentLocation();
   }
 
   Future<void> _useCurrentLocationAsPickup() async {

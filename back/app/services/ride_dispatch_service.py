@@ -446,8 +446,14 @@ def get_next_attempt_order(db: Session, ride_id: int) -> int:
 
 def build_quote_request(ride: Ride) -> RideQuoteRequest:
     return RideQuoteRequest(
+        origin_address=ride.origin_address,
+        origin_address_complement=ride.origin_address_complement,
+        origin_reference_point=ride.origin_reference_point,
         origin_latitude=ride.origin_latitude,
         origin_longitude=ride.origin_longitude,
+        destination_address=ride.destination_address,
+        destination_address_complement=ride.destination_address_complement,
+        destination_reference_point=ride.destination_reference_point,
         destination_latitude=ride.destination_latitude,
         destination_longitude=ride.destination_longitude,
         package_width=ride.package_width,

@@ -28,8 +28,14 @@ def simulate_payment(db: Session, payload: PaymentSimulationRequest) -> PaymentS
 
     ride_payload = RideCreateRequest(
         client_user_id=payload.client_user_id,
+        origin_address=payload.origin_address,
+        origin_address_complement=payload.origin_address_complement,
+        origin_reference_point=payload.origin_reference_point,
         origin_latitude=payload.origin_latitude,
         origin_longitude=payload.origin_longitude,
+        destination_address=payload.destination_address,
+        destination_address_complement=payload.destination_address_complement,
+        destination_reference_point=payload.destination_reference_point,
         destination_latitude=payload.destination_latitude,
         destination_longitude=payload.destination_longitude,
         package_width=payload.package_width,

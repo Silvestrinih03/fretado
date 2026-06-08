@@ -1,17 +1,34 @@
+from decimal import Decimal
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from app.core.security import hash_password
 from app.database.database import get_db
+from app.models.driver_wallet import DriverWallet
 from app.models.user import User
 from app.models.user_profile import UserProfile
 from app.models.user_type import UserType
-from app.schemas.register import RegisterUserRequest, RegisterUserResponse
+from app.schemas.register import RegisterUserRequest, RegisterUserResponse, UserTypeEnum
 
 router = APIRouter(prefix="/register", tags=["Register"])
 
 @router.post("", status_code=status.HTTP_201_CREATED, response_model=RegisterUserResponse)
 def register_user(payload: RegisterUserRequest, db: Session = Depends(get_db)):
+    cpf = _only_digits(payload.cpf)
+    if len(cpf) != 11:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid CPF."
+        )
+
+    phone = _only_digits(payload.phone)
+    if len(phone) not in (10, 11):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid phone."
+        )
+
     existing_email = db.query(User).filter(User.email == payload.email).first()
     if existing_email:
         raise HTTPException(
@@ -19,7 +36,7 @@ def register_user(payload: RegisterUserRequest, db: Session = Depends(get_db)):
             detail="Email already registered."
         )
 
-    existing_cpf = db.query(User).filter(User.cpf == payload.cpf).first()
+    existing_cpf = db.query(User).filter(User.cpf == cpf).first()
     if existing_cpf:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -37,7 +54,7 @@ def register_user(payload: RegisterUserRequest, db: Session = Depends(get_db)):
 
     try:
         user = User(
-            cpf=payload.cpf,
+            cpf=cpf,
             email=payload.email,
             password_hash=hash_password(payload.password),
             user_type_id=user_type_id
@@ -51,10 +68,18 @@ def register_user(payload: RegisterUserRequest, db: Session = Depends(get_db)):
             first_name=payload.first_name,
             last_name=payload.last_name,
             birth_date=payload.birth_date,
-            phone=payload.phone
+            phone=phone
         )
 
         db.add(profile)
+
+        if user_type_id == int(UserTypeEnum.DRIVER):
+            wallet = DriverWallet(
+                driver_user_id=user.id,
+                available_balance=Decimal("0.00")
+            )
+            db.add(wallet)
+
         db.commit()
 
         db.refresh(user)
@@ -86,3 +111,7 @@ def register_user(payload: RegisterUserRequest, db: Session = Depends(get_db)):
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Internal server error."
         )
+
+
+def _only_digits(value: str) -> str:
+    return "".join(char for char in value if char.isdigit())

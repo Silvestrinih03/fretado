@@ -89,7 +89,7 @@ class RegisterStepThree extends StatelessWidget {
                   hintText: 'DD/MM/AAAA',
                   keyboardType: TextInputType.number,
                   textInputAction: TextInputAction.next,
-                  validator: _validateOptionalBirthDate,
+                  validator: _validateRequiredBirthDate,
                   inputFormatters: const [_BirthDateInputFormatter()],
                   suffixIcon: const Padding(
                     padding: EdgeInsetsDirectional.only(end: 10),
@@ -105,15 +105,12 @@ class RegisterStepThree extends StatelessWidget {
                 label: 'Telefone de contato',
                 child: RegisterInputField(
                   controller: phoneController,
-                  hintText: '(00) 0000-0000',
+                  hintText: '(00) 00000-0000',
                   keyboardType: TextInputType.phone,
                   textInputAction: TextInputAction.done,
-                  inputFormatters: [
-                    FilteringTextInputFormatter.digitsOnly,
-                    LengthLimitingTextInputFormatter(11),
-                  ],
+                  inputFormatters: const [_PhoneInputFormatter()],
                   onFieldSubmitted: (_) => onFinish(),
-                  validator: _validateOptionalPhone,
+                  validator: _validateRequiredPhone,
                   suffixIcon: const Padding(
                     padding: EdgeInsetsDirectional.only(end: 10),
                     child: Icon(
@@ -195,6 +192,50 @@ class _BirthDateInputFormatter extends TextInputFormatter {
   }
 }
 
+class _PhoneInputFormatter extends TextInputFormatter {
+  const _PhoneInputFormatter();
+
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    final String digits = newValue.text.replaceAll(RegExp(r'\D'), '');
+    final String limitedDigits = digits.length > 11
+        ? digits.substring(0, 11)
+        : digits;
+    final String formatted = _formatPhoneDigits(limitedDigits);
+
+    return TextEditingValue(
+      text: formatted,
+      selection: TextSelection.collapsed(offset: formatted.length),
+    );
+  }
+
+  String _formatPhoneDigits(String digits) {
+    if (digits.isEmpty) {
+      return '';
+    }
+
+    if (digits.length <= 2) {
+      return '($digits';
+    }
+
+    final String areaCode = digits.substring(0, 2);
+    final String number = digits.substring(2);
+
+    if (number.length <= 4) {
+      return '($areaCode) $number';
+    }
+
+    if (digits.length <= 10) {
+      return '($areaCode) ${number.substring(0, 4)}-${number.substring(4)}';
+    }
+
+    return '($areaCode) ${number.substring(0, 5)}-${number.substring(5)}';
+  }
+}
+
 String? _validateRequiredName(String? value, String fieldName) {
   if ((value ?? '').trim().isEmpty) {
     return 'Informe seu $fieldName.';
@@ -203,10 +244,10 @@ String? _validateRequiredName(String? value, String fieldName) {
   return null;
 }
 
-String? _validateOptionalBirthDate(String? value) {
+String? _validateRequiredBirthDate(String? value) {
   final String raw = (value ?? '').trim();
   if (raw.isEmpty) {
-    return null;
+    return 'Informe sua data de nascimento.';
   }
 
   final String digits = raw.replaceAll(RegExp(r'\D'), '');
@@ -232,10 +273,10 @@ String? _validateOptionalBirthDate(String? value) {
   return null;
 }
 
-String? _validateOptionalPhone(String? value) {
+String? _validateRequiredPhone(String? value) {
   final String digits = (value ?? '').replaceAll(RegExp(r'\D'), '');
   if (digits.isEmpty) {
-    return null;
+    return 'Informe seu telefone.';
   }
 
   if (digits.length < 10 || digits.length > 11) {

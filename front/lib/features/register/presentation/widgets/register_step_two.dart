@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../../../app/design_system/design_system.dart';
 import 'register_shared_widgets.dart';
@@ -51,6 +52,7 @@ class RegisterStepTwo extends StatelessWidget {
           hintText: 'Digite seu CPF sem pontuação',
           keyboardType: TextInputType.number,
           textInputAction: TextInputAction.next,
+          inputFormatters: const [_CpfInputFormatter()],
           validator: _validateCpf,
         ),
         const SizedBox(height: 18),
@@ -128,6 +130,43 @@ class RegisterStepTwo extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+class _CpfInputFormatter extends TextInputFormatter {
+  const _CpfInputFormatter();
+
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    final String digits = newValue.text.replaceAll(RegExp(r'\D'), '');
+    final String limitedDigits = digits.length > 11
+        ? digits.substring(0, 11)
+        : digits;
+    final String formatted = _formatCpfDigits(limitedDigits);
+
+    return TextEditingValue(
+      text: formatted,
+      selection: TextSelection.collapsed(offset: formatted.length),
+    );
+  }
+
+  String _formatCpfDigits(String digits) {
+    final StringBuffer buffer = StringBuffer();
+
+    for (int index = 0; index < digits.length; index += 1) {
+      if (index == 3 || index == 6) {
+        buffer.write('.');
+      }
+      if (index == 9) {
+        buffer.write('-');
+      }
+      buffer.write(digits[index]);
+    }
+
+    return buffer.toString();
   }
 }
 

@@ -14,8 +14,8 @@ class RegisterUserRequest(BaseModel):
     user_type_id: UserTypeEnum
     first_name: str = Field(..., min_length=1, max_length=100)
     last_name: str = Field(..., min_length=1, max_length=100)
-    birth_date: Optional[date] = None
-    phone: Optional[str] = Field(None, max_length=20)
+    birth_date: date
+    phone: str = Field(..., min_length=10, max_length=20)
 
 class RegisterUserResponse(BaseModel):
     id: int

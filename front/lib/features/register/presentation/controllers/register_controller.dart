@@ -80,7 +80,7 @@ class RegisterController extends ChangeNotifier {
 
     try {
       final RegisterUserModel user = await _registerRepository.register(
-        cpf: cpf,
+        cpf: _normalizeCpf(cpf),
         email: email,
         password: password,
         userTypeId: userTypeId,
@@ -108,12 +108,8 @@ class RegisterController extends ChangeNotifier {
     notifyListeners();
   }
 
-  String? _normalizeOptional(String? value) {
-    final String cleaned = (value ?? '').trim();
-    if (cleaned.isEmpty) {
-      return null;
-    }
-    return cleaned;
+  String _normalizeCpf(String value) {
+    return value.replaceAll(RegExp(r'\D'), '');
   }
 
   String? _normalizePhone(String? value) {

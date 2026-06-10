@@ -10,13 +10,8 @@ import '../stores/driver_operations_store.dart';
 
 class DriverOperationsPage extends StatefulWidget {
   final int? userId;
-  final int initialTabIndex;
 
-  const DriverOperationsPage({
-    super.key,
-    this.userId,
-    this.initialTabIndex = 0,
-  });
+  const DriverOperationsPage({super.key, this.userId});
 
   @override
   State<DriverOperationsPage> createState() => _DriverOperationsPageState();
@@ -36,9 +31,7 @@ class _DriverOperationsPageState extends State<DriverOperationsPage> {
 
     _httpService = HttpService();
     _store = DriverOperationsStore(
-      DriverOperationsRepositoryImpl(
-        DriverOperationsDatasource(_httpService),
-      ),
+      DriverOperationsRepositoryImpl(DriverOperationsDatasource(_httpService)),
       myselfService,
       fallbackUserId: widget.userId,
     );
@@ -52,189 +45,41 @@ class _DriverOperationsPageState extends State<DriverOperationsPage> {
     super.dispose();
   }
 
-  Future<void> _runOfferAction(
-    Future<bool> Function() action,
-  ) async {
-    final ok = await action();
-    if (!mounted || _store.actionMessage == null) {
-      return;
-    }
-
-    if (!ok) {
-      showFretErrorPopup(context, message: _store.actionMessage!);
-      return;
-    }
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(_store.actionMessage!),
-        backgroundColor: FretColors.success700,
-      ),
-    );
-  }
-
-  Future<void> _runRideAction(
-    DriverRideModel ride,
-    Future<bool> Function() action,
-  ) async {
-    final bool confirmed = await showFretRideProgressConfirmation(
-      context,
-      statusId: ride.statusId,
-    );
-    if (!confirmed || !mounted) {
-      return;
-    }
-
-    final ok = await action();
-    if (!mounted || _store.actionMessage == null) {
-      return;
-    }
-
-    if (!ok) {
-      showFretErrorPopup(context, message: _store.actionMessage!);
-      return;
-    }
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(_store.actionMessage!),
-        backgroundColor: FretColors.success700,
-      ),
-    );
-  }
-
   Future<void> _openWithdrawDialog() async {
-    final valueController = TextEditingController();
-    final pixController = TextEditingController();
-
     await showDialog<void>(
       context: context,
-      builder: (dialogContext) {
-        bool isSaving = false;
-
-        return StatefulBuilder(
-          builder: (dialogBuildContext, setDialogState) {
-            return AlertDialog(
-              title: const Text('Solicitar saque'),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  TextField(
-                    controller: valueController,
-                    keyboardType: const TextInputType.numberWithOptions(
-                      decimal: true,
-                    ),
-                    decoration: const InputDecoration(
-                      labelText: 'Valor',
-                      prefixIcon: Icon(Icons.payments_outlined),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: pixController,
-                    decoration: const InputDecoration(
-                      labelText: 'Chave Pix',
-                      prefixIcon: Icon(Icons.key_outlined),
-                    ),
-                  ),
-                ],
-              ),
-              actions: [
-                TextButton(
-                  onPressed: isSaving
-                      ? null
-                      : () => Navigator.of(dialogContext).maybePop(),
-                  child: const Text('Cancelar'),
-                ),
-                ElevatedButton(
-                  onPressed: isSaving
-                      ? null
-                      : () async {
-                          setDialogState(() => isSaving = true);
-                          final ok = await _store.requestWithdraw(
-                            valueText: valueController.text,
-                            pixKey: pixController.text,
-                          );
-
-                          if (!mounted || !dialogBuildContext.mounted) {
-                            return;
-                          }
-
-                          setDialogState(() => isSaving = false);
-                          if (ok) {
-                            Navigator.of(dialogContext).maybePop();
-                          }
-
-                          if (_store.actionMessage != null) {
-                            if (!ok) {
-                              showFretErrorPopup(
-                                context,
-                                message: _store.actionMessage!,
-                              );
-                              return;
-                            }
-
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(_store.actionMessage!),
-                                backgroundColor: FretColors.success700,
-                              ),
-                            );
-                          }
-                        },
-                  child: isSaving
-                      ? const SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Text('Solicitar'),
-                ),
-              ],
-            );
-          },
-        );
+      builder: (_) {
+        return _WithdrawDialog(store: _store);
       },
     );
 
-    valueController.dispose();
-    pixController.dispose();
+    if (_store.actionMessage != null && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(_store.actionMessage!),
+          backgroundColor: FretColors.success700,
+        ),
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    return DefaultTabController(
-      length: 3,
-      initialIndex: widget.initialTabIndex.clamp(0, 2).toInt(),
-      child: AnimatedBuilder(
-        animation: _store,
-        builder: (context, _) {
-          return Scaffold(
-            backgroundColor: const Color(0xFFF3F4F8),
-            body: SafeArea(
-              child: Column(
-                children: [
-                  _DriverOperationsHeader(onRefresh: _store.load),
-                  Container(
-                    color: FretColors.white,
-                    child: const TabBar(
-                      labelColor: FretColors.loginFooterLink,
-                      unselectedLabelColor: FretColors.neutral500,
-                      indicatorColor: FretColors.loginFooterLink,
-                      tabs: [
-                        Tab(text: 'Ofertas'),
-                        Tab(text: 'Corridas'),
-                        Tab(text: 'Carteira'),
-                      ],
-                    ),
-                  ),
-                  Expanded(child: _buildContent()),
-                ],
-              ),
+    return AnimatedBuilder(
+      animation: _store,
+      builder: (context, _) {
+        return Scaffold(
+          backgroundColor: const Color(0xFFF3F4F8),
+          body: SafeArea(
+            child: Column(
+              children: [
+                _DriverOperationsHeader(onRefresh: _store.load),
+                Expanded(child: _buildContent()),
+              ],
             ),
-          );
-        },
-      ),
+          ),
+        );
+      },
     );
   }
 
@@ -258,38 +103,7 @@ class _DriverOperationsPageState extends State<DriverOperationsPage> {
       );
     }
 
-    return TabBarView(
-      children: [
-        _OffersTab(
-          store: _store,
-          onAccept: (offerId) => _runOfferAction(
-            () => _store.acceptOffer(offerId),
-          ),
-          onReject: (offerId) => _runOfferAction(
-            () => _store.rejectOffer(offerId),
-          ),
-        ),
-        _RidesTab(
-          store: _store,
-          onStart: (ride) => _runRideAction(
-            ride,
-            () => _store.startRide(ride.id),
-          ),
-          onCompletePickup: (ride) => _runRideAction(
-            ride,
-            () => _store.completeRidePickup(ride.id),
-          ),
-          onFinish: (ride) => _runRideAction(
-            ride,
-            () => _store.finishRide(ride.id),
-          ),
-        ),
-        _WalletTab(
-          store: _store,
-          onWithdrawTap: _openWithdrawDialog,
-        ),
-      ],
-    );
+    return _WalletTab(store: _store, onWithdrawTap: _openWithdrawDialog);
   }
 }
 
@@ -318,7 +132,7 @@ class _DriverOperationsHeader extends StatelessWidget {
           const SizedBox(width: 4),
           const Expanded(
             child: Text(
-              'Operacao do motorista',
+              'Carteira',
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
@@ -342,284 +156,11 @@ class _DriverOperationsHeader extends StatelessWidget {
   }
 }
 
-class _OffersTab extends StatelessWidget {
-  final DriverOperationsStore store;
-  final ValueChanged<int> onAccept;
-  final ValueChanged<int> onReject;
-
-  const _OffersTab({
-    required this.store,
-    required this.onAccept,
-    required this.onReject,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final offers = [...store.offers]
-      ..sort((a, b) {
-        if (a.isPending != b.isPending) {
-          return a.isPending ? -1 : 1;
-        }
-        return b.id.compareTo(a.id);
-      });
-
-    if (offers.isEmpty) {
-      return const Padding(
-        padding: EdgeInsets.all(16),
-        child: _StateCard(
-          icon: Icons.inbox_outlined,
-          title: 'Nenhuma oferta encontrada',
-          subtitle: 'Novas ofertas de corrida aparecem aqui.',
-        ),
-      );
-    }
-
-    return ListView.separated(
-      padding: const EdgeInsets.fromLTRB(16, 14, 16, 18),
-      itemCount: offers.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 10),
-      itemBuilder: (context, index) {
-        final offer = offers[index];
-        return _OfferCard(
-          offer: offer,
-          ride: store.offerRides[offer.rideId],
-          isBusy: store.offerInActionId == offer.id,
-          onAccept: () => onAccept(offer.id),
-          onReject: () => onReject(offer.id),
-        );
-      },
-    );
-  }
-}
-
-class _OfferCard extends StatelessWidget {
-  final RideOfferModel offer;
-  final DriverRideModel? ride;
-  final bool isBusy;
-  final VoidCallback onAccept;
-  final VoidCallback onReject;
-
-  const _OfferCard({
-    required this.offer,
-    required this.ride,
-    required this.isBusy,
-    required this.onAccept,
-    required this.onReject,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return _Panel(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const _IconBox(icon: Icons.local_shipping_outlined),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  'Corrida #${offer.rideId}',
-                  style: const TextStyle(
-                    color: FretColors.loginFooterLink,
-                    fontSize: 17,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-              ),
-              _StatusBadge(label: offer.statusLabel, color: _offerColor(offer)),
-            ],
-          ),
-          const SizedBox(height: 12),
-          _InfoGrid(
-            items: [
-              _InfoItem('Valor', _formatMoney(ride?.totalPrice ?? 0)),
-              _InfoItem('Tentativa', '${offer.attemptOrder}'),
-              _InfoItem('Peso', '${_formatNumber(ride?.packageWeight ?? 0)} kg'),
-              _InfoItem('Expira', _formatDateTime(offer.expiresAt)),
-            ],
-          ),
-          if (offer.isPending) ...[
-            const SizedBox(height: 14),
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: isBusy ? null : onReject,
-                    icon: const Icon(Icons.close_rounded),
-                    label: const Text('Recusar'),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: isBusy ? null : onAccept,
-                    icon: isBusy
-                        ? const SizedBox(
-                            width: 16,
-                            height: 16,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Icon(Icons.check_rounded),
-                    label: const Text('Aceitar'),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
-class _RidesTab extends StatelessWidget {
-  final DriverOperationsStore store;
-  final ValueChanged<DriverRideModel> onStart;
-  final ValueChanged<DriverRideModel> onCompletePickup;
-  final ValueChanged<DriverRideModel> onFinish;
-
-  const _RidesTab({
-    required this.store,
-    required this.onStart,
-    required this.onCompletePickup,
-    required this.onFinish,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final rides = store.rides;
-
-    if (rides.isEmpty) {
-      return const Padding(
-        padding: EdgeInsets.all(16),
-        child: _StateCard(
-          icon: Icons.route_outlined,
-          title: 'Nenhuma corrida em andamento',
-          subtitle: 'Corridas em andamento aparecem aqui.',
-        ),
-      );
-    }
-
-    return ListView.separated(
-      padding: const EdgeInsets.fromLTRB(16, 14, 16, 18),
-      itemCount: rides.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 10),
-      itemBuilder: (context, index) {
-        final ride = rides[index];
-        return _RideCard(
-          ride: ride,
-          isBusy: store.rideInActionId == ride.id,
-          onStart: () => onStart(ride),
-          onCompletePickup: () => onCompletePickup(ride),
-          onFinish: () => onFinish(ride),
-        );
-      },
-    );
-  }
-}
-
-class _RideCard extends StatelessWidget {
-  final DriverRideModel ride;
-  final bool isBusy;
-  final VoidCallback onStart;
-  final VoidCallback onCompletePickup;
-  final VoidCallback onFinish;
-
-  const _RideCard({
-    required this.ride,
-    required this.isBusy,
-    required this.onStart,
-    required this.onCompletePickup,
-    required this.onFinish,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final actionLabel = _rideProgressActionLabel(ride);
-    final actionIcon = _rideProgressActionIcon(ride);
-    final onAction = _rideProgressActionCallback(
-      ride,
-      onStart: onStart,
-      onCompletePickup: onCompletePickup,
-      onFinish: onFinish,
-    );
-
-    return _Panel(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const _IconBox(icon: Icons.route_rounded),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  'Corrida #${ride.id}',
-                  style: const TextStyle(
-                    color: FretColors.loginFooterLink,
-                    fontSize: 17,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-              ),
-              FretRideStatusBadge(statusId: ride.statusId),
-            ],
-          ),
-          const SizedBox(height: 12),
-          _InfoGrid(
-            items: [
-              _InfoItem('Valor', _formatMoney(ride.totalPrice)),
-              _InfoItem('Cliente', '#${ride.clientUserId}'),
-              _InfoItem('Pacote', '${_formatNumber(ride.packageWeight)} kg'),
-              _InfoItem('Criada em', _formatDateTime(ride.createdAt)),
-            ],
-          ),
-          const SizedBox(height: 10),
-          Text(
-            'Origem ${ride.originLabel}',
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(color: FretColors.neutral600, fontSize: 12),
-          ),
-          const SizedBox(height: 3),
-          Text(
-            'Destino ${ride.destinationLabel}',
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(color: FretColors.neutral600, fontSize: 12),
-          ),
-          if (actionLabel != null && actionIcon != null && onAction != null) ...[
-            const SizedBox(height: 14),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: isBusy ? null : onAction,
-                icon: isBusy
-                    ? const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : Icon(actionIcon),
-                label: Text(actionLabel),
-              ),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
 class _WalletTab extends StatelessWidget {
   final DriverOperationsStore store;
   final VoidCallback onWithdrawTap;
 
-  const _WalletTab({
-    required this.store,
-    required this.onWithdrawTap,
-  });
+  const _WalletTab({required this.store, required this.onWithdrawTap});
 
   @override
   Widget build(BuildContext context) {
@@ -707,7 +248,9 @@ class _WalletBalanceCard extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            wallet == null ? 'Carteira nao encontrada' : _formatMoney(wallet!.availableBalance),
+            wallet == null
+                ? 'Carteira nao encontrada'
+                : _formatMoney(wallet!.availableBalance),
             style: const TextStyle(
               color: FretColors.white,
               fontSize: 30,
@@ -843,10 +386,7 @@ class _SectionTitle extends StatelessWidget {
   final String title;
   final String actionLabel;
 
-  const _SectionTitle({
-    required this.title,
-    required this.actionLabel,
-  });
+  const _SectionTitle({required this.title, required this.actionLabel});
 
   @override
   Widget build(BuildContext context) {
@@ -867,72 +407,11 @@ class _SectionTitle extends StatelessWidget {
   }
 }
 
-class _InfoGrid extends StatelessWidget {
-  final List<_InfoItem> items;
-
-  const _InfoGrid({required this.items});
-
-  @override
-  Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final itemWidth = (constraints.maxWidth - 8) / 2;
-
-        return Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: items
-              .map(
-                (item) => SizedBox(
-                  width: itemWidth,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        item.label,
-                        style: const TextStyle(
-                          color: FretColors.neutral500,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        item.value,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: FretColors.neutral900,
-                          fontSize: 13,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              )
-              .toList(),
-        );
-      },
-    );
-  }
-}
-
-class _InfoItem {
-  final String label;
-  final String value;
-
-  const _InfoItem(this.label, this.value);
-}
-
 class _Panel extends StatelessWidget {
   final Widget child;
   final EdgeInsetsGeometry padding;
 
-  const _Panel({
-    required this.child,
-    this.padding = const EdgeInsets.all(14),
-  });
+  const _Panel({required this.child, this.padding = const EdgeInsets.all(14)});
 
   @override
   Widget build(BuildContext context) {
@@ -979,10 +458,7 @@ class _StatusBadge extends StatelessWidget {
   final String label;
   final Color color;
 
-  const _StatusBadge({
-    required this.label,
-    required this.color,
-  });
+  const _StatusBadge({required this.label, required this.color});
 
   @override
   Widget build(BuildContext context) {
@@ -1049,10 +525,7 @@ class _StateCard extends StatelessWidget {
           ),
           if (actionLabel != null && onTap != null) ...[
             const SizedBox(height: 12),
-            ElevatedButton(
-              onPressed: onTap,
-              child: Text(actionLabel!),
-            ),
+            ElevatedButton(onPressed: onTap, child: Text(actionLabel!)),
           ],
         ],
       ),
@@ -1123,4 +596,93 @@ String _formatDateTime(DateTime? value) {
   final minute = local.minute.toString().padLeft(2, '0');
 
   return '$day/$month $hour:$minute';
+}
+
+class _WithdrawDialog extends StatefulWidget {
+  final DriverOperationsStore store;
+
+  const _WithdrawDialog({required this.store});
+
+  @override
+  State<_WithdrawDialog> createState() => _WithdrawDialogState();
+}
+
+class _WithdrawDialogState extends State<_WithdrawDialog> {
+  final TextEditingController valueController = TextEditingController();
+  final TextEditingController pixController = TextEditingController();
+
+  bool isSaving = false;
+
+  @override
+  void dispose() {
+    valueController.dispose();
+    pixController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    setState(() => isSaving = true);
+
+    final ok = await widget.store.requestWithdraw(
+      valueText: valueController.text,
+      pixKey: pixController.text,
+    );
+
+    if (!mounted) return;
+
+    setState(() => isSaving = false);
+
+    if (!ok) {
+      if (widget.store.actionMessage != null) {
+        showFretErrorPopup(context, message: widget.store.actionMessage!);
+      }
+      return;
+    }
+
+    Navigator.of(context).maybePop();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Solicitar saque'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          TextField(
+            controller: valueController,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            decoration: const InputDecoration(
+              labelText: 'Valor',
+              prefixIcon: Icon(Icons.payments_outlined),
+            ),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: pixController,
+            decoration: const InputDecoration(
+              labelText: 'Chave Pix',
+              prefixIcon: Icon(Icons.key_outlined),
+            ),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: isSaving ? null : () => Navigator.of(context).maybePop(),
+          child: const Text('Cancelar'),
+        ),
+        ElevatedButton(
+          onPressed: isSaving ? null : _submit,
+          child: isSaving
+              ? const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Text('Solicitar'),
+        ),
+      ],
+    );
+  }
 }

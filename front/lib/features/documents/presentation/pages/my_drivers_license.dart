@@ -12,6 +12,8 @@ import '../../data/repositories/driver_document_repository_impl.dart';
 import '../../data/repositories/driver_license_category_repository_impl.dart';
 import '../stores/my_drivers_license_store.dart';
 
+const int _licenseNumberMaxLength = 11;
+
 class MyDriversLicensePage extends StatefulWidget {
   final int? userId;
 
@@ -108,7 +110,9 @@ class _MyDriversLicensePageState extends State<MyDriversLicensePage> {
     final status = _statusForExpirationDate(expirationDate);
 
     setState(() {
-      _registrationController.text = document.licenseNumber;
+      _registrationController.text = _cleanLicenseNumber(
+        document.licenseNumber,
+      );
       _issueDate = issueDate;
       _expirationDate = expirationDate;
       _issueDateController.text =
@@ -221,7 +225,7 @@ class _MyDriversLicensePageState extends State<MyDriversLicensePage> {
 
     final wasUpdating = _store.hasDriverDocument;
     final success = await _store.saveDriverDocument(
-      licenseNumber: _registrationController.text,
+      licenseNumber: _cleanLicenseNumber(_registrationController.text),
       issueDate: _issueDate,
       expirationDate: _expirationDate,
     );
@@ -733,7 +737,7 @@ class _DriversLicenseFormCard extends StatelessWidget {
             validator: _validateLicenseNumber,
             inputFormatters: [
               FilteringTextInputFormatter.digitsOnly,
-              LengthLimitingTextInputFormatter(11),
+              LengthLimitingTextInputFormatter(_licenseNumberMaxLength),
             ],
           ),
           const SizedBox(height: 12),
@@ -1023,15 +1027,24 @@ class _DriversLicenseDateField extends StatelessWidget {
 }
 
 String? _validateLicenseNumber(String? value) {
-  final String digits = (value ?? '').replaceAll(RegExp(r'\D'), '');
+  final String digits = _cleanLicenseNumber(value ?? '');
   if (digits.isEmpty) {
     return 'Informe o número de registro.';
   }
-  if (digits.length != 11) {
+  if (digits.length != _licenseNumberMaxLength) {
     return 'Informe os 11 dígitos do registro.';
   }
 
   return null;
+}
+
+String _cleanLicenseNumber(String value) {
+  final digits = value.replaceAll(RegExp(r'\D'), '');
+  if (digits.length <= _licenseNumberMaxLength) {
+    return digits;
+  }
+
+  return digits.substring(0, _licenseNumberMaxLength);
 }
 
 String? _validateRequiredDate(String? value, String fieldName) {

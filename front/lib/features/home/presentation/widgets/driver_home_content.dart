@@ -13,7 +13,7 @@ import '../../../documents/presentation/pages/my_documents.dart';
 import '../../../rides/presentation/pages/ride_history_page.dart';
 import '../../../vehicles/presentation/pages/my_vehicles.dart';
 
-class DriverHomeContent extends StatelessWidget {
+class DriverHomeContent extends StatefulWidget {
   final String firstName;
   final int userId;
 
@@ -24,12 +24,27 @@ class DriverHomeContent extends StatelessWidget {
   });
 
   @override
+  State<DriverHomeContent> createState() => _DriverHomeContentState();
+}
+
+class _DriverHomeContentState extends State<DriverHomeContent> {
+  int _refreshVersion = 0;
+
+  void _reloadHomeData() {
+    if (!mounted) return;
+
+    setState(() {
+      _refreshVersion++;
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 18),
       children: [
         Text(
-          'Olá, $firstName!',
+          'Olá, ${widget.firstName}!',
           style: const TextStyle(
             fontSize: 30,
             fontWeight: FontWeight.w800,
@@ -42,33 +57,40 @@ class DriverHomeContent extends StatelessWidget {
           style: TextStyle(fontSize: 15, color: FretColors.neutral700),
         ),
         const SizedBox(height: 14),
-        _DriverRequiredSetupAlert(userId: userId),
+        _DriverRequiredSetupAlert(userId: widget.userId),
         const SizedBox(height: 10),
         _DriverAvailabilityCard(
-          userId: userId,
+          userId: widget.userId,
           onFindRequests: () => _openAvailableRequests(context),
         ),
         const SizedBox(height: 14),
         _BalanceCard(
-          userId: userId,
-          onTap: () => _openOperations(context, initialTabIndex: 2),
+          userId: widget.userId,
+          refreshVersion: _refreshVersion,
+          onTap: () => _openOperations(context),
         ),
         const SizedBox(height: 14),
-        _DriverRideInProgressSection(userId: userId),
+        _DriverRideInProgressSection(
+          userId: widget.userId,
+          refreshVersion: _refreshVersion,
+          onRideFinished: _reloadHomeData,
+        ),
         const SizedBox(height: 10),
         _DriverShortcutCard(
           icon: Icons.history_rounded,
           title: 'Historico de corridas',
           subtitle: 'Ver corridas anteriores e finalizadas',
-          onTap: () {
-            Navigator.of(context).push(
+          onTap: () async {
+            await Navigator.of(context).push(
               MaterialPageRoute<void>(
                 builder: (_) => RideHistoryPage(
-                  userId: userId,
+                  userId: widget.userId,
                   profile: HomeProfileEnum.driver,
                 ),
               ),
             );
+
+            _reloadHomeData();
           },
         ),
         const SizedBox(height: 10),
@@ -76,12 +98,14 @@ class DriverHomeContent extends StatelessWidget {
           icon: Icons.local_shipping_rounded,
           title: 'Meus veiculos',
           subtitle: 'Gerenciar meus veiculos',
-          onTap: () {
-            Navigator.of(context).push(
+          onTap: () async {
+            await Navigator.of(context).push(
               MaterialPageRoute<void>(
-                builder: (_) => MyVehiclesPage(userId: userId),
+                builder: (_) => MyVehiclesPage(userId: widget.userId),
               ),
             );
+
+            _reloadHomeData();
           },
         ),
         const SizedBox(height: 10),
@@ -89,35 +113,38 @@ class DriverHomeContent extends StatelessWidget {
           icon: Icons.description_outlined,
           title: 'Meus documentos',
           subtitle: 'Acompanhar validade da CNH',
-          onTap: () {
-            Navigator.of(context).push(
+          onTap: () async {
+            await Navigator.of(context).push(
               MaterialPageRoute<void>(
-                builder: (_) => MyDocumentsPage(userId: userId),
+                builder: (_) => MyDocumentsPage(userId: widget.userId),
               ),
             );
+
+            _reloadHomeData();
           },
         ),
       ],
     );
   }
 
-  void _openOperations(BuildContext context, {int initialTabIndex = 0}) {
-    Navigator.of(context).push(
+  Future<void> _openOperations(BuildContext context) async {
+    await Navigator.of(context).push(
       MaterialPageRoute<void>(
-        builder: (_) => DriverOperationsPage(
-          userId: userId,
-          initialTabIndex: initialTabIndex,
-        ),
+        builder: (_) => DriverOperationsPage(userId: widget.userId),
       ),
     );
+
+    _reloadHomeData();
   }
 
-  void _openAvailableRequests(BuildContext context) {
-    Navigator.of(context).push(
+  Future<void> _openAvailableRequests(BuildContext context) async {
+    await Navigator.of(context).push(
       MaterialPageRoute<void>(
-        builder: (_) => _AvailableRideRequestsPage(userId: userId),
+        builder: (_) => _AvailableRideRequestsPage(userId: widget.userId),
       ),
     );
+
+    _reloadHomeData();
   }
 }
 
@@ -202,14 +229,10 @@ class _AvailableRideRequestsPageState
 
       await _httpService.put(Endpoints.acceptOffer(offerId));
 
-      if (!mounted) {
-        return;
-      }
+      if (!mounted) return;
 
       _showMessage('Corrida aceita.', isError: false);
-      setState(() {
-        _ridesFuture = _loadRides();
-      });
+      _reload();
     } on HttpServiceException catch (e) {
       _showMessage(e.message);
     } catch (_) {
@@ -222,9 +245,7 @@ class _AvailableRideRequestsPageState
   }
 
   void _showMessage(String message, {bool isError = true}) {
-    if (!mounted) {
-      return;
-    }
+    if (!mounted) return;
 
     if (isError) {
       showFretErrorPopup(context, message: message);
@@ -409,7 +430,7 @@ class _DriverRequiredSetupAlertState extends State<_DriverRequiredSetupAlert> {
     } on HttpServiceException catch (e) {
       return _DriverRequiredSetupStatus.error(e.message);
     } catch (_) {
-      return _DriverRequiredSetupStatus.error(
+      return const _DriverRequiredSetupStatus.error(
         'Nao foi possivel verificar seus cadastros obrigatorios.',
       );
     }
@@ -422,10 +443,7 @@ class _DriverRequiredSetupAlertState extends State<_DriverRequiredSetupAlert> {
         Endpoints.vehiclesByUser(widget.userId),
       );
     } on HttpServiceException catch (e) {
-      if (e.statusCode == 404) {
-        return false;
-      }
-
+      if (e.statusCode == 404) return false;
       rethrow;
     }
 
@@ -444,10 +462,7 @@ class _DriverRequiredSetupAlertState extends State<_DriverRequiredSetupAlert> {
 
       return licenseNumber.isNotEmpty && licenseCategoryId > 0;
     } on HttpServiceException catch (e) {
-      if (e.statusCode == 404) {
-        return false;
-      }
-
+      if (e.statusCode == 404) return false;
       rethrow;
     }
   }
@@ -459,9 +474,7 @@ class _DriverRequiredSetupAlertState extends State<_DriverRequiredSetupAlert> {
       ),
     );
 
-    if (mounted) {
-      _reload();
-    }
+    if (mounted) _reload();
   }
 
   Future<void> _openDocumentsPage() async {
@@ -471,9 +484,7 @@ class _DriverRequiredSetupAlertState extends State<_DriverRequiredSetupAlert> {
       ),
     );
 
-    if (mounted) {
-      _reload();
-    }
+    if (mounted) _reload();
   }
 
   @override
@@ -542,22 +553,13 @@ class _DriverRequiredSetupAlertState extends State<_DriverRequiredSetupAlert> {
   }
 
   String _readString(dynamic value) {
-    if (value is String) {
-      return value.trim();
-    }
-
+    if (value is String) return value.trim();
     return '';
   }
 
   int? _readInt(dynamic value) {
-    if (value is int) {
-      return value;
-    }
-
-    if (value is String) {
-      return int.tryParse(value);
-    }
-
+    if (value is int) return value;
+    if (value is String) return int.tryParse(value);
     return null;
   }
 }
@@ -733,9 +735,7 @@ class _DriverAvailabilityCardState extends State<_DriverAvailabilityCard> {
       );
       final online = response['is_online'] == true;
 
-      if (!mounted) {
-        return;
-      }
+      if (!mounted) return;
 
       setState(() {
         _isOnline = online;
@@ -765,9 +765,7 @@ class _DriverAvailabilityCardState extends State<_DriverAvailabilityCard> {
   }
 
   Future<void> _goOnline() async {
-    if (_isLoading) {
-      return;
-    }
+    if (_isLoading) return;
 
     setState(() {
       _isLoading = true;
@@ -784,9 +782,7 @@ class _DriverAvailabilityCardState extends State<_DriverAvailabilityCard> {
   }
 
   Future<void> _goOffline() async {
-    if (_isLoading) {
-      return;
-    }
+    if (_isLoading) return;
 
     setState(() {
       _isLoading = true;
@@ -798,9 +794,7 @@ class _DriverAvailabilityCardState extends State<_DriverAvailabilityCard> {
         Endpoints.driverLocationOffline(widget.userId),
       );
 
-      if (!mounted) {
-        return;
-      }
+      if (!mounted) return;
 
       _stopHeartbeat();
       setState(() {
@@ -809,13 +803,9 @@ class _DriverAvailabilityCardState extends State<_DriverAvailabilityCard> {
         _message = 'Voce esta offline e nao recebera novas ofertas.';
       });
     } on HttpServiceException catch (e) {
-      if (mounted) {
-        setState(() => _message = e.message);
-      }
+      if (mounted) setState(() => _message = e.message);
     } catch (_) {
-      if (mounted) {
-        setState(() => _message = 'Nao foi possivel ficar offline.');
-      }
+      if (mounted) setState(() => _message = 'Nao foi possivel ficar offline.');
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
@@ -843,9 +833,7 @@ class _DriverAvailabilityCardState extends State<_DriverAvailabilityCard> {
       );
       await _runRideDispatchJob();
 
-      if (!mounted) {
-        return;
-      }
+      if (!mounted) return;
 
       _startHeartbeat();
       setState(() {
@@ -877,18 +865,14 @@ class _DriverAvailabilityCardState extends State<_DriverAvailabilityCard> {
 
   Future<void> _runRideDispatchJob() async {
     const jobSecret = String.fromEnvironment('JOB_SECRET');
-    if (jobSecret.isEmpty) {
-      return;
-    }
+    if (jobSecret.isEmpty) return;
 
     try {
       await _httpService.post(
         Endpoints.rideDispatchJob,
         headers: {'X-Job-Secret': jobSecret},
       );
-    } catch (_) {
-      // O agendador do backend ainda pode processar depois.
-    }
+    } catch (_) {}
   }
 
   Future<Position?> _getCurrentPosition({required bool silent}) async {
@@ -1095,8 +1079,14 @@ class _DriverAvailabilityCardState extends State<_DriverAvailabilityCard> {
 
 class _DriverRideInProgressSection extends StatefulWidget {
   final int userId;
+  final int refreshVersion;
+  final VoidCallback onRideFinished;
 
-  const _DriverRideInProgressSection({required this.userId});
+  const _DriverRideInProgressSection({
+    required this.userId,
+    required this.refreshVersion,
+    required this.onRideFinished,
+  });
 
   @override
   State<_DriverRideInProgressSection> createState() =>
@@ -1119,8 +1109,10 @@ class _DriverRideInProgressSectionState
   @override
   void didUpdateWidget(covariant _DriverRideInProgressSection oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.userId != widget.userId) {
-      _ridesFuture = _loadRides();
+
+    if (oldWidget.userId != widget.userId ||
+        oldWidget.refreshVersion != widget.refreshVersion) {
+      _reload();
     }
   }
 
@@ -1166,30 +1158,31 @@ class _DriverRideInProgressSectionState
     final endpoint = _rideProgressActionEndpoint(ride);
     final message = _rideProgressSuccessMessage(ride);
 
-    if (endpoint == null || message == null) {
-      return;
-    }
+    if (endpoint == null || message == null) return;
 
     final bool confirmed = await showFretRideProgressConfirmation(
       context,
       statusId: ride.statusId,
     );
-    if (!confirmed || !mounted) {
-      return;
-    }
+
+    if (!confirmed || !mounted) return;
 
     setState(() => _rideInActionId = ride.id);
 
     try {
       await _httpService.patch(endpoint);
-      if (!mounted) {
-        return;
-      }
+
+      if (!mounted) return;
 
       _showMessage(message, isError: false);
+
       setState(() {
         _ridesFuture = _loadRides();
       });
+
+      if (ride.statusId == 4) {
+        widget.onRideFinished();
+      }
     } on HttpServiceException catch (e) {
       _showMessage(e.message);
     } catch (_) {
@@ -1202,9 +1195,7 @@ class _DriverRideInProgressSectionState
   }
 
   void _showMessage(String message, {bool isError = true}) {
-    if (!mounted) {
-      return;
-    }
+    if (!mounted) return;
 
     if (isError) {
       showFretErrorPopup(context, message: message);
@@ -1537,9 +1528,14 @@ class _DriverRideStateCard extends StatelessWidget {
 
 class _BalanceCard extends StatefulWidget {
   final int userId;
+  final int refreshVersion;
   final VoidCallback onTap;
 
-  const _BalanceCard({required this.userId, required this.onTap});
+  const _BalanceCard({
+    required this.userId,
+    required this.refreshVersion,
+    required this.onTap,
+  });
 
   @override
   State<_BalanceCard> createState() => _BalanceCardState();
@@ -1560,9 +1556,13 @@ class _BalanceCardState extends State<_BalanceCard> {
   @override
   void didUpdateWidget(covariant _BalanceCard oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.userId != widget.userId) {
-      _walletFuture = _loadWallet();
-      _isBalanceVisible = false;
+
+    if (oldWidget.userId != widget.userId ||
+        oldWidget.refreshVersion != widget.refreshVersion) {
+      setState(() {
+        _walletFuture = _loadWallet();
+        _isBalanceVisible = false;
+      });
     }
   }
 
@@ -1579,10 +1579,7 @@ class _BalanceCardState extends State<_BalanceCard> {
       );
       return DriverWalletModel.fromJson(response);
     } on HttpServiceException catch (e) {
-      if (e.statusCode == 404) {
-        return null;
-      }
-
+      if (e.statusCode == 404) return null;
       rethrow;
     }
   }
@@ -1844,9 +1841,7 @@ IconData? _rideProgressActionIcon(DriverRideModel ride) {
 }
 
 String _formatDateTime(DateTime? value) {
-  if (value == null) {
-    return '';
-  }
+  if (value == null) return '';
 
   final local = value.toLocal();
   final day = local.day.toString().padLeft(2, '0');

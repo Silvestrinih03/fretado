@@ -108,7 +108,6 @@ class HomeDrawer extends StatelessWidget {
                     MaterialPageRoute<void>(
                       builder: (_) => DriverOperationsPage(
                         userId: userId ?? MyselfService().currentUserId,
-                        initialTabIndex: 2,
                       ),
                     ),
                   );

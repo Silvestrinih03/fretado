@@ -4,6 +4,9 @@ import 'package:flutter/services.dart';
 import '../../../../app/design_system/design_system.dart';
 import 'register_shared_widgets.dart';
 
+const String _weakPasswordMessage =
+    'A senha deve ter no mínimo 8 caracteres, 1 maiúscula, 1 minúscula, 1 número e 1 caractere especial.';
+
 class RegisterStepTwo extends StatelessWidget {
   final GlobalKey<FormState> formKey;
   final AutovalidateMode autovalidateMode;
@@ -175,11 +178,32 @@ String? _validateCpf(String? value) {
   if (digits.isEmpty) {
     return 'Informe seu CPF.';
   }
-  if (digits.length != 11) {
+  if (!_isValidCpf(digits)) {
     return 'Informe um CPF válido com 11 dígitos.';
   }
 
   return null;
+}
+
+bool _isValidCpf(String cpf) {
+  if (cpf.length != 11 || RegExp(r'^(\d)\1*$').hasMatch(cpf)) {
+    return false;
+  }
+
+  final int firstDigit = _calculateCpfDigit(cpf.substring(0, 9), 10);
+  final int secondDigit = _calculateCpfDigit(cpf.substring(0, 10), 11);
+
+  return cpf.endsWith('$firstDigit$secondDigit');
+}
+
+int _calculateCpfDigit(String digits, int startWeight) {
+  var total = 0;
+  for (var index = 0; index < digits.length; index += 1) {
+    total += int.parse(digits[index]) * (startWeight - index);
+  }
+
+  final int remainder = (total * 10) % 11;
+  return remainder == 10 ? 0 : remainder;
 }
 
 String? _validateEmail(String? value) {
@@ -204,11 +228,19 @@ String? _validatePassword(String? value) {
   if (password.isEmpty) {
     return 'Informe uma senha.';
   }
-  if (password.length < 8) {
-    return 'A senha deve ter no mínimo 8 caracteres.';
+  if (!_isStrongPassword(password)) {
+    return _weakPasswordMessage;
   }
 
   return null;
+}
+
+bool _isStrongPassword(String password) {
+  return password.length >= 8 &&
+      RegExp(r'[A-Z]').hasMatch(password) &&
+      RegExp(r'[a-z]').hasMatch(password) &&
+      RegExp(r'\d').hasMatch(password) &&
+      RegExp(r'[^A-Za-z0-9\s]').hasMatch(password);
 }
 
 String? _validateConfirmPassword(String? value, String password) {

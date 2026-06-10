@@ -16,10 +16,16 @@ router = APIRouter(prefix="/register", tags=["Register"])
 @router.post("", status_code=status.HTTP_201_CREATED, response_model=RegisterUserResponse)
 def register_user(payload: RegisterUserRequest, db: Session = Depends(get_db)):
     cpf = _only_digits(payload.cpf)
-    if len(cpf) != 11:
+    if not _is_valid_cpf(cpf):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid CPF."
+        )
+
+    if not _is_strong_password(payload.password):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Weak password."
         )
 
     phone = _only_digits(payload.phone)
@@ -115,3 +121,32 @@ def register_user(payload: RegisterUserRequest, db: Session = Depends(get_db)):
 
 def _only_digits(value: str) -> str:
     return "".join(char for char in value if char.isdigit())
+
+
+def _is_valid_cpf(cpf: str) -> bool:
+    if len(cpf) != 11 or cpf == cpf[0] * 11:
+        return False
+
+    first_digit = _calculate_cpf_digit(cpf[:9], start_weight=10)
+    second_digit = _calculate_cpf_digit(cpf[:10], start_weight=11)
+
+    return cpf[-2:] == f"{first_digit}{second_digit}"
+
+
+def _calculate_cpf_digit(digits: str, start_weight: int) -> int:
+    total = sum(
+        int(digit) * weight
+        for digit, weight in zip(digits, range(start_weight, 1, -1))
+    )
+    remainder = (total * 10) % 11
+    return 0 if remainder == 10 else remainder
+
+
+def _is_strong_password(password: str) -> bool:
+    return (
+        len(password) >= 8
+        and any(char.isupper() for char in password)
+        and any(char.islower() for char in password)
+        and any(char.isdigit() for char in password)
+        and any(not char.isalnum() and not char.isspace() for char in password)
+    )

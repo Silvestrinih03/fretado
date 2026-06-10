@@ -3,6 +3,9 @@ import 'package:flutter/foundation.dart';
 import '../../data/models/register_user_model.dart';
 import '../../data/repositories/register_repository.dart';
 
+const String _weakPasswordMessage =
+    'A senha deve ter no mínimo 8 caracteres, 1 maiúscula, 1 minúscula, 1 número e 1 caractere especial.';
+
 class RegisterController extends ChangeNotifier {
   final RegisterRepository _registerRepository;
 
@@ -23,7 +26,7 @@ class RegisterController extends ChangeNotifier {
     required String confirmPassword,
   }) {
     final String normalizedCpf = cpf.replaceAll(RegExp(r'\D'), '');
-    if (normalizedCpf.length < 11) {
+    if (!_isValidCpf(normalizedCpf)) {
       _errorMessage = 'Informe um CPF válido.';
       notifyListeners();
       return false;
@@ -39,8 +42,8 @@ class RegisterController extends ChangeNotifier {
       return false;
     }
 
-    if (password.length < 8) {
-      _errorMessage = 'A senha deve ter no mínimo 8 caracteres.';
+    if (!_isStrongPassword(password)) {
+      _errorMessage = _weakPasswordMessage;
       notifyListeners();
       return false;
     }
@@ -66,8 +69,21 @@ class RegisterController extends ChangeNotifier {
     String? birthDate,
     String? phone,
   }) async {
+    final String normalizedCpf = _normalizeCpf(cpf);
     final String trimmedFirstName = firstName.trim();
     final String trimmedLastName = lastName.trim();
+
+    if (!_isValidCpf(normalizedCpf)) {
+      _errorMessage = 'Informe um CPF válido.';
+      notifyListeners();
+      return false;
+    }
+
+    if (!_isStrongPassword(password)) {
+      _errorMessage = _weakPasswordMessage;
+      notifyListeners();
+      return false;
+    }
 
     if (trimmedFirstName.isEmpty || trimmedLastName.isEmpty) {
       _errorMessage = 'Informe nome e sobrenome para continuar.';
@@ -80,7 +96,7 @@ class RegisterController extends ChangeNotifier {
 
     try {
       final RegisterUserModel user = await _registerRepository.register(
-        cpf: _normalizeCpf(cpf),
+        cpf: normalizedCpf,
         email: email,
         password: password,
         userTypeId: userTypeId,
@@ -110,6 +126,35 @@ class RegisterController extends ChangeNotifier {
 
   String _normalizeCpf(String value) {
     return value.replaceAll(RegExp(r'\D'), '');
+  }
+
+  bool _isValidCpf(String cpf) {
+    if (cpf.length != 11 || RegExp(r'^(\d)\1*$').hasMatch(cpf)) {
+      return false;
+    }
+
+    final int firstDigit = _calculateCpfDigit(cpf.substring(0, 9), 10);
+    final int secondDigit = _calculateCpfDigit(cpf.substring(0, 10), 11);
+
+    return cpf.endsWith('$firstDigit$secondDigit');
+  }
+
+  int _calculateCpfDigit(String digits, int startWeight) {
+    var total = 0;
+    for (var index = 0; index < digits.length; index += 1) {
+      total += int.parse(digits[index]) * (startWeight - index);
+    }
+
+    final int remainder = (total * 10) % 11;
+    return remainder == 10 ? 0 : remainder;
+  }
+
+  bool _isStrongPassword(String password) {
+    return password.length >= 8 &&
+        RegExp(r'[A-Z]').hasMatch(password) &&
+        RegExp(r'[a-z]').hasMatch(password) &&
+        RegExp(r'\d').hasMatch(password) &&
+        RegExp(r'[^A-Za-z0-9\s]').hasMatch(password);
   }
 
   String? _normalizePhone(String? value) {

@@ -628,70 +628,183 @@ class _FreightSummaryCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
       decoration: BoxDecoration(
         color: FretColors.white,
-        borderRadius: BorderRadius.circular(4),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-            flex: 3,
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(18, 20, 8, 18),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: const [
-                  Text(
-                    'Resumo do Frete',
-                    style: TextStyle(
-                      color: _ShippingPaymentPageState._primaryBlue,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                  SizedBox(height: 16),
-                  _SummaryLabel(text: 'Origem'),
-                  SizedBox(height: 10),
-                  _SummaryLabel(text: 'Destino'),
-                  SizedBox(height: 10),
-                  _SummaryLabel(text: 'Carga'),
-                ],
-              ),
-            ),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: const Color(0xFFE3E5EC)),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x080F1A4A),
+            blurRadius: 12,
+            offset: Offset(0, 4),
           ),
-          Expanded(
-            flex: 2,
-            child: Container(
-              padding: const EdgeInsets.fromLTRB(8, 18, 12, 18),
-              color: const Color(0xFFF9F9FB),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  FittedBox(
-                    fit: BoxFit.scaleDown,
-                    alignment: Alignment.centerRight,
-                    child: Text(
-                      _formatMoney(quote.totalPrice),
-                      maxLines: 1,
-                      style: const TextStyle(
-                        color: FretColors.neutral900,
-                        fontSize: 18,
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFF3E6),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(
+                  Icons.local_shipping_outlined,
+                  color: _ShippingPaymentPageState._orange,
+                  size: 22,
+                ),
+              ),
+              const SizedBox(width: 10),
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Resumo do frete',
+                      style: TextStyle(
+                        color: _ShippingPaymentPageState._primaryBlue,
+                        fontSize: 16,
                         fontWeight: FontWeight.w900,
                       ),
                     ),
-                  ),
-                  const SizedBox(height: 16),
-                  _SummaryValue(text: addressData.pickupAddress),
-                  const SizedBox(height: 10),
-                  _SummaryValue(text: addressData.deliveryAddress),
-                  const SizedBox(height: 10),
-                  _SummaryValue(
-                    text:
-                        '${quote.vehicleLabel} - ${_formatMetric(packageData.weightKg)} kg',
-                  ),
-                ],
+                    SizedBox(height: 3),
+                    Text(
+                      'Conferência final da solicitação',
+                      style: TextStyle(
+                        color: _ShippingPaymentPageState._mutedText,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
               ),
+              const SizedBox(width: 10),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF2F3FF),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    const Text(
+                      'TOTAL',
+                      style: TextStyle(
+                        color: _ShippingPaymentPageState._primaryBlue,
+                        fontSize: 9,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 0.4,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      _formatMoney(quote.totalPrice),
+                      maxLines: 1,
+                      style: const TextStyle(
+                        color: _ShippingPaymentPageState._primaryBlue,
+                        fontSize: 17,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 18),
+          _SummaryRouteStop(
+            label: 'Coleta',
+            address: addressData.pickupAddress,
+            detail: _addressDetail(
+              addressData.pickupAddressComplement,
+              addressData.pickupReferencePoint,
+            ),
+            icon: Icons.trip_origin_rounded,
+            color: _ShippingPaymentPageState._orange,
+            showConnector: true,
+          ),
+          _SummaryRouteStop(
+            label: 'Entrega',
+            address: addressData.deliveryAddress,
+            detail: _addressDetail(
+              addressData.deliveryAddressComplement,
+              addressData.deliveryReferencePoint,
+            ),
+            icon: Icons.location_on_rounded,
+            color: _ShippingPaymentPageState._primaryBlue,
+          ),
+          const SizedBox(height: 14),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              _SummaryDetailChip(
+                icon: Icons.local_shipping_outlined,
+                label: 'Veículo',
+                value: quote.vehicleLabel,
+              ),
+              _SummaryDetailChip(
+                icon: Icons.scale_outlined,
+                label: 'Peso',
+                value: '${_formatMetric(packageData.weightKg)} kg',
+              ),
+              _SummaryDetailChip(
+                icon: Icons.route_outlined,
+                label: 'Distância',
+                value: '${quote.distanceKm.toStringAsFixed(1)} km',
+              ),
+              _SummaryDetailChip(
+                icon: Icons.schedule_rounded,
+                label: 'Tempo',
+                value: _formatDuration(quote.estimatedTimeMinutes),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF7F8FA),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: const Color(0xFFE6E7EE)),
+            ),
+            child: Column(
+              children: [
+                _PriceBreakdownRow(
+                  label: 'Tarifa base',
+                  value: _formatMoney(quote.basePrice),
+                ),
+                const SizedBox(height: 8),
+                _PriceBreakdownRow(
+                  label: 'Distância',
+                  value: _formatMoney(quote.distancePrice),
+                ),
+                const SizedBox(height: 8),
+                _PriceBreakdownRow(
+                  label: 'Tempo estimado',
+                  value: _formatMoney(quote.durationPrice),
+                ),
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 10),
+                  child: Divider(height: 1, color: Color(0xFFE1E2E8)),
+                ),
+                _PriceBreakdownRow(
+                  label: 'Total do frete',
+                  value: _formatMoney(quote.totalPrice),
+                  emphasized: true,
+                ),
+              ],
             ),
           ),
         ],
@@ -700,43 +813,215 @@ class _FreightSummaryCard extends StatelessWidget {
   }
 }
 
-class _SummaryLabel extends StatelessWidget {
-  final String text;
+class _SummaryRouteStop extends StatelessWidget {
+  final String label;
+  final String address;
+  final String? detail;
+  final IconData icon;
+  final Color color;
+  final bool showConnector;
 
-  const _SummaryLabel({required this.text});
+  const _SummaryRouteStop({
+    required this.label,
+    required this.address,
+    required this.icon,
+    required this.color,
+    this.detail,
+    this.showConnector = false,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Text(
-      text,
-      style: const TextStyle(
-        color: _ShippingPaymentPageState._mutedText,
-        fontSize: 11,
-        fontWeight: FontWeight.w400,
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          width: 30,
+          child: Column(
+            children: [
+              Container(
+                width: 28,
+                height: 28,
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(icon, color: color, size: 17),
+              ),
+              if (showConnector)
+                const SizedBox(
+                  height: 34,
+                  child: VerticalDivider(
+                    width: 1,
+                    thickness: 1,
+                    color: Color(0xFFD9DAE4),
+                  ),
+                ),
+            ],
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Padding(
+            padding: EdgeInsets.only(bottom: showConnector ? 10 : 0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label.toUpperCase(),
+                  style: const TextStyle(
+                    color: Color(0xFF747682),
+                    fontSize: 9,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  address,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: FretColors.neutral900,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w800,
+                    height: 1.2,
+                  ),
+                ),
+                if (detail != null) ...[
+                  const SizedBox(height: 3),
+                  Text(
+                    detail!,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: _ShippingPaymentPageState._mutedText,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _SummaryDetailChip extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String value;
+
+  const _SummaryDetailChip({
+    required this.icon,
+    required this.label,
+    required this.value,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF2F3F7),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: _ShippingPaymentPageState._primaryBlue, size: 16),
+          const SizedBox(width: 6),
+          Text(
+            '$label: ',
+            style: const TextStyle(
+              color: _ShippingPaymentPageState._mutedText,
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          Text(
+            value,
+            style: const TextStyle(
+              color: FretColors.neutral900,
+              fontSize: 11,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+        ],
       ),
     );
   }
 }
 
-class _SummaryValue extends StatelessWidget {
-  final String text;
+class _PriceBreakdownRow extends StatelessWidget {
+  final String label;
+  final String value;
+  final bool emphasized;
 
-  const _SummaryValue({required this.text});
+  const _PriceBreakdownRow({
+    required this.label,
+    required this.value,
+    this.emphasized = false,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Text(
-      text,
-      maxLines: 1,
-      overflow: TextOverflow.ellipsis,
-      textAlign: TextAlign.right,
-      style: const TextStyle(
-        color: FretColors.neutral900,
-        fontSize: 10,
-        fontWeight: FontWeight.w700,
-      ),
+    final TextStyle labelStyle = TextStyle(
+      color: emphasized
+          ? _ShippingPaymentPageState._primaryBlue
+          : _ShippingPaymentPageState._mutedText,
+      fontSize: emphasized ? 13 : 12,
+      fontWeight: emphasized ? FontWeight.w900 : FontWeight.w600,
+    );
+    final TextStyle valueStyle = TextStyle(
+      color: emphasized
+          ? _ShippingPaymentPageState._primaryBlue
+          : FretColors.neutral900,
+      fontSize: emphasized ? 14 : 12,
+      fontWeight: FontWeight.w900,
+    );
+
+    return Row(
+      children: [
+        Expanded(child: Text(label, style: labelStyle)),
+        const SizedBox(width: 12),
+        Text(value, style: valueStyle),
+      ],
     );
   }
+}
+
+String? _addressDetail(String? complement, String? referencePoint) {
+  final values = [
+    complement,
+    referencePoint,
+  ].where((value) => value != null && value.trim().isNotEmpty).map(
+        (value) => value!.trim(),
+      );
+  final detail = values.join(' - ');
+
+  if (detail.isEmpty) {
+    return null;
+  }
+
+  return detail;
+}
+
+String _formatDuration(int minutes) {
+  if (minutes < 60) {
+    return '$minutes min';
+  }
+
+  final hours = minutes ~/ 60;
+  final remainingMinutes = minutes % 60;
+  if (remainingMinutes == 0) {
+    return '${hours}h';
+  }
+
+  return '${hours}h ${remainingMinutes}min';
 }
 
 class _PaymentOptionTile extends StatelessWidget {

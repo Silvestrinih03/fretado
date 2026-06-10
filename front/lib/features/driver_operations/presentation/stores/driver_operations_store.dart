@@ -71,16 +71,11 @@ class DriverOperationsStore extends ChangeNotifier {
     notifyListeners();
 
     try {
-      _offers = await _repository.listOffersByDriver(userId);
-      _rides = await _repository.listRidesInProgressByUser(userId);
-      await _loadOfferRideDetails();
-      _wallet = await _repository.getWalletByDriver(userId);
-      _transactions = await _repository.listTransactionsByDriver(userId);
-      _earnings = await _repository.listEarningsByDriver(userId);
+      await _loadWalletData(userId);
     } on DriverOperationsRepositoryException catch (e) {
       _errorMessage = e.message;
     } catch (_) {
-      _errorMessage = 'Nao foi possivel carregar a operacao do motorista.';
+      _errorMessage = 'Nao foi possivel carregar a carteira do motorista.';
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -97,9 +92,7 @@ class DriverOperationsStore extends ChangeNotifier {
     notifyListeners();
 
     try {
-      _wallet = await _repository.getWalletByDriver(userId);
-      _transactions = await _repository.listTransactionsByDriver(userId);
-      _earnings = await _repository.listEarningsByDriver(userId);
+      await _loadWalletData(userId);
     } finally {
       _isRefreshingWallet = false;
       notifyListeners();
@@ -261,6 +254,12 @@ class DriverOperationsStore extends ChangeNotifier {
 
   int? _resolveUserId() {
     return _myselfService.currentUserId ?? _fallbackUserId;
+  }
+
+  Future<void> _loadWalletData(int userId) async {
+    _wallet = await _repository.getWalletByDriver(userId);
+    _transactions = await _repository.listTransactionsByDriver(userId);
+    _earnings = await _repository.listEarningsByDriver(userId);
   }
 
   Future<void> _loadOfferRideDetails() async {

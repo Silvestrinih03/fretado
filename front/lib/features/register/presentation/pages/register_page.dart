@@ -6,6 +6,8 @@ import '../../../../core/enums/register_account_type.dart';
 import '../../../../core/enums/register_step.dart';
 import '../../../../core/services/http_service.dart';
 import '../../../../core/services/myself/services/myself_service.dart';
+import '../../../auth/data/datasources/auth_datasource.dart';
+import '../../../auth/presentation/pages/login_page.dart';
 import '../../../home/presentation/pages/home_page.dart';
 import '../../data/datasources/register_datasource.dart';
 import '../../data/repositories/register_repository_impl.dart';
@@ -154,9 +156,30 @@ class _RegisterPageState extends State<RegisterPage> {
         return;
       }
 
+      final String? accessToken = await _loginRegisteredUser();
+      if (accessToken == null) {
+        await MyselfService().logout();
+
+        if (!mounted) {
+          return;
+        }
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Cadastro concluido. Entre para continuar.'),
+          ),
+        );
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute<void>(builder: (_) => const LoginPage()),
+          (route) => false,
+        );
+        return;
+      }
+
       await MyselfService().saveSession(
         userId: registeredUser.id,
         userTypeId: registeredUser.userTypeId,
+        accessToken: accessToken,
       );
 
       if (!mounted) {
@@ -185,6 +208,21 @@ class _RegisterPageState extends State<RegisterPage> {
         _registerController.errorMessage ??
         'Não foi possível concluir cadastro.';
     showFretErrorPopup(context, message: message);
+  }
+
+  Future<String?> _loginRegisteredUser() async {
+    final HttpService httpService = HttpService();
+    try {
+      final user = await AuthDatasource(httpService).login(
+        email: _emailController.text,
+        password: _passwordController.text,
+      );
+      return user.accessToken;
+    } catch (_) {
+      return null;
+    } finally {
+      httpService.dispose();
+    }
   }
 
   @override

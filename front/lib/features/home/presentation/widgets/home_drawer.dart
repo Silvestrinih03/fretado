@@ -10,6 +10,7 @@ import '../../../payments/presentation/pages/my_payment_methods_page.dart';
 import '../../../profile/presentation/pages/user_data_page.dart';
 import '../../../rides/presentation/pages/ride_history_page.dart';
 import '../../../vehicles/presentation/pages/my_vehicles.dart';
+import '../controllers/driver_availability_controller.dart';
 
 const int _clientUserTypeId = 1;
 const int _driverUserTypeId = 2;
@@ -17,11 +18,13 @@ const int _driverUserTypeId = 2;
 class HomeDrawer extends StatelessWidget {
   final int? userId;
   final int? userTypeId;
+  final DriverAvailabilityController? driverAvailabilityController;
 
   const HomeDrawer({
     super.key,
     this.userId,
     this.userTypeId,
+    this.driverAvailabilityController,
   });
 
   @override
@@ -40,13 +43,8 @@ class HomeDrawer extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const CircleAvatar(
-                    radius: 22,
-                    backgroundColor: FretColors.white,
-                    child: Icon(
-                      Icons.person,
-                      color: FretColors.loginFooterLink,
-                    ),
+                  _DrawerHeaderAvatar(
+                    controller: driverAvailabilityController,
                   ),
                   const SizedBox(height: 8),
                   _DrawerUserName(userId: userId),
@@ -71,6 +69,10 @@ class HomeDrawer extends StatelessWidget {
               },
             ),
             if (resolvedUserTypeId == _driverUserTypeId) ...[
+              if (driverAvailabilityController != null)
+                _DriverAvailabilityDrawerItem(
+                  controller: driverAvailabilityController!,
+                ),
               _DrawerItem(
                 icon: Icons.article_outlined,
                 label: 'Documentos',
@@ -181,6 +183,99 @@ class HomeDrawer extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _DrawerHeaderAvatar extends StatelessWidget {
+  final DriverAvailabilityController? controller;
+
+  const _DrawerHeaderAvatar({required this.controller});
+
+  @override
+  Widget build(BuildContext context) {
+    final availability = controller;
+    if (availability == null) {
+      return const _DrawerAvatar(isOnline: null);
+    }
+
+    return AnimatedBuilder(
+      animation: availability,
+      builder: (_, __) => _DrawerAvatar(isOnline: availability.isOnline),
+    );
+  }
+}
+
+class _DrawerAvatar extends StatelessWidget {
+  final bool? isOnline;
+
+  const _DrawerAvatar({required this.isOnline});
+
+  @override
+  Widget build(BuildContext context) {
+    final bool showStatus = isOnline != null;
+    final Color statusColor = isOnline == true
+        ? FretColors.success500
+        : FretColors.destructive600;
+
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        const CircleAvatar(
+          radius: 22,
+          backgroundColor: FretColors.white,
+          child: Icon(
+            Icons.person,
+            color: FretColors.loginFooterLink,
+          ),
+        ),
+        if (showStatus)
+          Positioned(
+            right: 0,
+            bottom: 0,
+            child: Container(
+              width: 12,
+              height: 12,
+              decoration: BoxDecoration(
+                color: statusColor,
+                shape: BoxShape.circle,
+                border: Border.all(color: FretColors.loginFooterLink, width: 2),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+class _DriverAvailabilityDrawerItem extends StatelessWidget {
+  final DriverAvailabilityController controller;
+
+  const _DriverAvailabilityDrawerItem({required this.controller});
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: controller,
+      builder: (context, _) {
+        final bool isOnline = controller.isOnline;
+        return _DrawerItem(
+          icon: isOnline
+              ? Icons.power_settings_new_rounded
+              : Icons.my_location_rounded,
+          label: isOnline ? 'Ficar offline' : 'Ficar online',
+          onTap: controller.isLoading
+              ? () {}
+              : () async {
+                  Navigator.of(context).pop();
+                  if (isOnline) {
+                    await controller.goOffline();
+                  } else {
+                    await controller.goOnline();
+                  }
+                },
+        );
+      },
     );
   }
 }

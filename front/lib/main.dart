@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'app/design_system/design_system.dart';
 import 'core/enums/home_profile.dart';
+import 'core/navigation/app_navigator.dart';
 import 'core/services/myself/services/myself_service.dart';
 import 'features/auth/presentation/pages/login_page.dart';
 import 'features/auth/presentation/pages/reset_password_page.dart';
@@ -17,6 +18,7 @@ class FretadoApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      navigatorKey: appNavigatorKey,
       debugShowCheckedModeBanner: false,
       title: 'Fretado',
       builder: (context, child) {
@@ -136,7 +138,14 @@ class _SessionGateState extends State<SessionGate> {
   @override
   void initState() {
     super.initState();
-    _sessionFuture = _myselfService.loadSavedSession();
+    _sessionFuture = _loadSession();
+  }
+
+  Future<void> _loadSession() async {
+    await _myselfService.loadSavedSession();
+    if (!_myselfService.hasValidAccessToken) {
+      await _myselfService.logout();
+    }
   }
 
   @override
@@ -158,7 +167,9 @@ class _SessionGateState extends State<SessionGate> {
         final int? userId = _myselfService.currentUserId;
         final int? userTypeId = _myselfService.currentUserTypeId;
 
-        if (userId == null || userTypeId == null) {
+        if (userId == null ||
+            userTypeId == null ||
+            !_myselfService.hasValidAccessToken) {
           return const LoginPage();
         }
 

@@ -15,6 +15,7 @@ class AuthDatasource {
       final Map<String, dynamic> response = await _httpService.post(
         Endpoints.auth,
         body: {'email': email.trim(), 'password': password},
+        authenticated: false,
       );
 
       final dynamic userData = response['user'];
@@ -22,7 +23,10 @@ class AuthDatasource {
         throw const AuthDatasourceException('Resposta inválida da API.');
       }
 
-      return UserModel.fromJson(userData);
+      return UserModel.fromJson({
+        ...userData,
+        'access_token': response['access_token'],
+      });
     } on HttpServiceException catch (e) {
       throw AuthDatasourceException(e.message, statusCode: e.statusCode);
     }
@@ -33,6 +37,7 @@ class AuthDatasource {
       final Map<String, dynamic> response = await _httpService.post(
         Endpoints.forgotPassword,
         body: {'email': email.trim()},
+        authenticated: false,
       );
 
       return _readMessage(response);
@@ -54,6 +59,7 @@ class AuthDatasource {
           'new_password': newPassword,
           'confirm_password': confirmPassword,
         },
+        authenticated: false,
       );
 
       return _readMessage(response);

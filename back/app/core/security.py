@@ -1,9 +1,9 @@
-import bcrypt
+from datetime import datetime, timedelta, timezone
 from jose import JWTError, jwt
-from datetime import datetime, timedelta
-import re
-from fastapi import HTTPException, status
 from app.core.config import settings
+import re
+import bcrypt
+from fastapi import HTTPException, status
 
 # Criar senhas
 def hash_password(password: str) -> str:
@@ -24,7 +24,7 @@ def create_password_reset_token(user_id: int):
     payload = {
         "user_id": user_id,
         "type": "password_reset",
-        "exp": datetime.utcnow() + timedelta(
+        "exp": datetime.now(timezone.utc) + timedelta(
             minutes=settings.PASSWORD_RESET_TOKEN_EXPIRE_MINUTES
         )
     }
@@ -88,3 +88,43 @@ def validate_password_strength(password: str):
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Password must contain at least one special character."
         )
+
+
+# Criar token de acesso
+def create_access_token(
+    user_id: int,
+    user_type_id: int,
+) -> str:
+    now = datetime.now(timezone.utc)
+
+    payload = {
+        "sub": str(user_id),
+        "user_type_id": user_type_id,
+        "type": "access",
+        "iat": now,
+        "exp": now + timedelta(
+            minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES
+        ),
+    }
+
+    return jwt.encode(
+        payload,
+        _get_secret_key(),
+        algorithm=settings.ALGORITHM,
+    )
+
+
+def verify_access_token(token: str) -> dict:
+    payload = jwt.decode(
+        token,
+        _get_secret_key(),
+        algorithms=[settings.ALGORITHM],
+    )
+
+    if payload.get("type") != "access":
+        raise JWTError("Invalid token type.")
+
+    if not payload.get("sub"):
+        raise JWTError("Invalid token subject.")
+
+    return payload

@@ -15,28 +15,72 @@ def update_driver_location(
     driver_user_id: int,
     payload: DriverLocationUpdateRequest,
 ) -> DriverLocation:
-    validate_user_is_driver(db, driver_user_id)
 
     location = (
         db.query(DriverLocation)
-        .filter(DriverLocation.driver_user_id == driver_user_id)
+        .filter(
+            DriverLocation.driver_user_id == driver_user_id
+        )
+        .first()
+    )
+
+    if not location:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Driver location not found.",
+        )
+
+    if not location.is_online:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Driver is offline.",
+        )
+
+    location.latitude = payload.latitude
+    location.longitude = payload.longitude
+    location.accuracy = payload.accuracy
+    location.location_recorded_at = utc_now()
+    location.last_seen_at = utc_now()
+
+    db.commit()
+    db.refresh(location)
+
+    return location
+
+def set_driver_online(
+    db: Session,
+    driver_user_id: int,
+    payload: DriverLocationUpdateRequest,
+) -> DriverLocation:
+
+    location = (
+        db.query(DriverLocation)
+        .filter(
+            DriverLocation.driver_user_id == driver_user_id
+        )
         .first()
     )
 
     now = utc_now()
 
-    if not location:
+    if location is None:
         location = DriverLocation(
             driver_user_id=driver_user_id,
             latitude=payload.latitude,
             longitude=payload.longitude,
+            accuracy=payload.accuracy,
+            location_recorded_at=now,
             is_online=True,
             last_seen_at=now,
         )
+
         db.add(location)
+
     else:
         location.latitude = payload.latitude
         location.longitude = payload.longitude
+        location.accuracy = payload.accuracy
+        location.location_recorded_at = now
         location.is_online = True
         location.last_seen_at = now
 
@@ -50,7 +94,6 @@ def get_driver_location_by_user_id(
     db: Session,
     driver_user_id: int,
 ) -> DriverLocation:
-    validate_user_is_driver(db, driver_user_id)
 
     location = (
         db.query(DriverLocation)
@@ -61,7 +104,7 @@ def get_driver_location_by_user_id(
     if not location:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Localizacao do motorista nao encontrada.",
+            detail="Driver location not found.",
         )
 
     return location
@@ -71,7 +114,6 @@ def set_driver_offline(
     db: Session,
     driver_user_id: int,
 ) -> DriverLocation:
-    validate_user_is_driver(db, driver_user_id)
 
     location = (
         db.query(DriverLocation)
@@ -82,7 +124,7 @@ def set_driver_offline(
     if not location:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Localizacao do motorista nao encontrada.",
+            detail="Driver location not found.",
         )
 
     location.is_online = False
@@ -92,33 +134,18 @@ def set_driver_offline(
     db.refresh(location)
 
     return location
-
-
-def validate_user_is_driver(db: Session, driver_user_id: int) -> None:
-    user = (
-        db.query(User)
-        .filter(
-            User.id == driver_user_id,
-            User.user_type_id == int(UserTypeEnum.DRIVER),
-        )
-        .first()
-    )
-
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Apenas motoristas podem atualizar localizacao.",
-        )
     
 def mark_inactive_drivers_offline(db: Session) -> int:
     now = utc_now()
-    limit_date = now - timedelta(minutes=settings.DRIVER_LOCATION_MAX_AGE_MINUTES)
+    limit_date = utc_now() - timedelta(
+        minutes=settings.DRIVER_LOCATION_MAX_AGE_MINUTES
+    )
 
     updated_count = (
         db.query(DriverLocation)
         .filter(
             DriverLocation.is_online.is_(True),
-            DriverLocation.last_seen_at < limit_date,
+            DriverLocation.last_seen_at <= limit_date,
         )
         .update(
             {
@@ -132,3 +159,68 @@ def mark_inactive_drivers_offline(db: Session) -> int:
     db.commit()
 
     return updated_count
+
+
+# def get_driver_location_by_user_id(
+#     db: Session,
+#     driver_user_id: int,
+# ) -> DriverLocation:
+#     validate_user_is_driver(db, driver_user_id)
+
+#     location = (
+#         db.query(DriverLocation)
+#         .filter(DriverLocation.driver_user_id == driver_user_id)
+#         .first()
+#     )
+
+#     if not location:
+#         raise HTTPException(
+#             status_code=status.HTTP_404_NOT_FOUND,
+#             detail="Localizacao do motorista nao encontrada.",
+#         )
+
+#     return location
+
+
+# def set_driver_offline(
+#     db: Session,
+#     driver_user_id: int,
+# ) -> DriverLocation:
+#     validate_user_is_driver(db, driver_user_id)
+
+#     location = (
+#         db.query(DriverLocation)
+#         .filter(DriverLocation.driver_user_id == driver_user_id)
+#         .first()
+#     )
+
+#     if not location:
+#         raise HTTPException(
+#             status_code=status.HTTP_404_NOT_FOUND,
+#             detail="Localizacao do motorista nao encontrada.",
+#         )
+
+#     location.is_online = False
+#     location.last_seen_at = utc_now()
+
+#     db.commit()
+#     db.refresh(location)
+
+#     return location
+
+
+# def validate_user_is_driver(db: Session, driver_user_id: int) -> None:
+#     user = (
+#         db.query(User)
+#         .filter(
+#             User.id == driver_user_id,
+#             User.user_type_id == int(UserTypeEnum.DRIVER),
+#         )
+#         .first()
+#     )
+
+#     if not user:
+#         raise HTTPException(
+#             status_code=status.HTTP_403_FORBIDDEN,
+#             detail="Apenas motoristas podem atualizar localizacao.",
+#         )

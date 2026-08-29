@@ -105,6 +105,7 @@ class _LoginPageState extends State<LoginPage> {
         await myselfService.saveSession(
           userId: userId,
           userTypeId: userTypeId,
+          accessToken: _authController.currentUser?.accessToken,
         );
       }
       final HomeProfileEnum profile = HomeProfileMapper.fromUserTypeId(userTypeId);

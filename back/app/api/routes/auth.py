@@ -2,6 +2,7 @@ import logging
 from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 from app.core.config import settings
 from app.core.security import (
@@ -10,6 +11,8 @@ from app.core.security import (
     validate_password_strength,
     verify_password,
     verify_password_reset_token,
+    create_access_token,
+    verify_access_token,
 )
 from app.database.database import get_db
 from app.models.user import User
@@ -21,35 +24,46 @@ from app.services.email_service import (
 )
 from jose import JWTError
 
+from app.enums.user_type import UserTypeEnum
+
+bearer_scheme = HTTPBearer()
 router = APIRouter(prefix="/auth", tags=["Auth"])
 logger = logging.getLogger(__name__)
 
 @router.post("")
-def login(payload: LoginRequest, db: Session = Depends(get_db)):
-    user = db.query(User).filter(User.email == payload.email).first()
+def login(
+    payload: LoginRequest,
+    db: Session = Depends(get_db),
+):
+    user = (
+        db.query(User)
+        .filter(User.email == payload.email)
+        .first()
+    )
 
-    if not user:
+    if not user or not verify_password(
+        payload.password,
+        user.password_hash,
+    ):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid email or password."
+            detail="Invalid email or password.",
         )
 
-    is_valid_password = verify_password(payload.password, user.password_hash)
-
-    if not is_valid_password:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid email or password."
-        )
+    access_token = create_access_token(
+        user_id=user.id,
+        user_type_id=user.user_type_id,
+    )
 
     return {
-        "message": "Login successful.",
+        "access_token": access_token,
+        "token_type": "bearer",
         "user": {
             "id": user.id,
             "email": user.email,
             "cpf": user.cpf,
-            "user_type_id": user.user_type_id
-        }
+            "user_type_id": user.user_type_id,
+        },
     }
 
 @router.patch("/change-password/{user_id}", status_code=status.HTTP_200_OK)
@@ -201,3 +215,45 @@ def _replace_token_param(query: str, token: str) -> str:
     query_params.append(("token", token))
 
     return urlencode(query_params)
+
+def get_current_user(
+    credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
+    db: Session = Depends(get_db),
+) -> User:
+
+    try:
+        payload = verify_access_token(credentials.credentials)
+
+        user_id = int(payload["sub"])
+
+    except (JWTError, ValueError, TypeError):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired access token.",
+        )
+
+    user = (
+        db.query(User)
+        .filter(User.id == user_id)
+        .first()
+    )
+
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="User not found.",
+        )
+
+    return user
+
+def get_current_driver(
+    current_user: User = Depends(get_current_user),
+) -> User:
+
+    if current_user.user_type_id != int(UserTypeEnum.DRIVER):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Driver access required.",
+        )
+
+    return current_user

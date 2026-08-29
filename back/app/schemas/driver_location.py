@@ -5,8 +5,27 @@ from pydantic import BaseModel, Field
 
 
 class DriverLocationUpdateRequest(BaseModel):
-    latitude: Decimal = Field(..., ge=-90, le=90)
-    longitude: Decimal = Field(..., ge=-180, le=180)
+    latitude: Decimal = Field(
+        ...,
+        ge=-90,
+        le=90,
+        max_digits=9,
+        decimal_places=6,
+    )
+
+    longitude: Decimal = Field(
+        ...,
+        ge=-180,
+        le=180,
+        max_digits=9,
+        decimal_places=6,
+    )
+
+    accuracy: float | None = Field(
+        default=None,
+        ge=0,
+        le=1000,
+    )
 
 
 class DriverLocationResponse(BaseModel):

@@ -1,29 +1,32 @@
 import 'dart:convert';
-import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
-class HttpService {
-  static const String _hostedApiBaseUrl = 'https://fretado-api.onrender.com';
+import '../config/app_environment.dart';
+import '../navigation/app_navigator.dart';
+import 'session/session_storage.dart';
 
+class HttpService {
   final String baseUrl;
   final http.Client _client;
 
   HttpService({String? baseUrl, http.Client? client})
-    : baseUrl = _normalizeBaseUrl(baseUrl ?? _resolveBaseUrl()),
+    : baseUrl = _normalizeBaseUrl(baseUrl ?? AppEnvironment.apiBaseUrl),
       _client = client ?? http.Client();
 
   Future<Map<String, dynamic>> post(
     String path, {
     Map<String, dynamic>? body,
     Map<String, String>? headers,
+    bool authenticated = true,
   }) async {
     final Uri uri = Uri.parse('$baseUrl${_normalizePath(path)}');
 
+    final requestHeaders = await _jsonHeaders(headers, authenticated);
     final http.Response response;
     try {
       response = await _client.post(
         uri,
-        headers: {'Content-Type': 'application/json', ...?headers},
+        headers: requestHeaders,
         body: jsonEncode(body ?? <String, dynamic>{}),
       );
     } catch (e) {
@@ -41,6 +44,8 @@ class HttpService {
       return parsedData;
     }
 
+    await _handleAuthFailure(response.statusCode, authenticated);
+
     throw HttpServiceException(
       message: _extractErrorMessage(parsedData),
       statusCode: response.statusCode,
@@ -51,14 +56,16 @@ class HttpService {
   Future<Map<String, dynamic>> get(
     String path, {
     Map<String, String>? headers,
+    bool authenticated = true,
   }) async {
     final Uri uri = Uri.parse('$baseUrl${_normalizePath(path)}');
 
+    final requestHeaders = await _jsonHeaders(headers, authenticated);
     final http.Response response;
     try {
       response = await _client.get(
         uri,
-        headers: {'Content-Type': 'application/json', ...?headers},
+        headers: requestHeaders,
       );
     } catch (e) {
       throw HttpServiceException(
@@ -74,6 +81,8 @@ class HttpService {
     if (response.statusCode >= 200 && response.statusCode < 300) {
       return parsedData;
     }
+
+    await _handleAuthFailure(response.statusCode, authenticated);
 
     throw HttpServiceException(
       message: _extractErrorMessage(parsedData),
@@ -86,14 +95,16 @@ class HttpService {
     String path, {
     Map<String, dynamic>? body,
     Map<String, String>? headers,
+    bool authenticated = true,
   }) async {
     final Uri uri = Uri.parse('$baseUrl${_normalizePath(path)}');
 
+    final requestHeaders = await _jsonHeaders(headers, authenticated);
     final http.Response response;
     try {
       response = await _client.patch(
         uri,
-        headers: {'Content-Type': 'application/json', ...?headers},
+        headers: requestHeaders,
         body: jsonEncode(body ?? <String, dynamic>{}),
       );
     } catch (e) {
@@ -110,6 +121,8 @@ class HttpService {
     if (response.statusCode >= 200 && response.statusCode < 300) {
       return parsedData;
     }
+
+    await _handleAuthFailure(response.statusCode, authenticated);
 
     throw HttpServiceException(
       message: _extractErrorMessage(parsedData),
@@ -122,14 +135,16 @@ class HttpService {
     String path, {
     Map<String, dynamic>? body,
     Map<String, String>? headers,
+    bool authenticated = true,
   }) async {
     final Uri uri = Uri.parse('$baseUrl${_normalizePath(path)}');
 
+    final requestHeaders = await _jsonHeaders(headers, authenticated);
     final http.Response response;
     try {
       response = await _client.put(
         uri,
-        headers: {'Content-Type': 'application/json', ...?headers},
+        headers: requestHeaders,
         body: jsonEncode(body ?? <String, dynamic>{}),
       );
     } catch (e) {
@@ -146,6 +161,8 @@ class HttpService {
     if (response.statusCode >= 200 && response.statusCode < 300) {
       return parsedData;
     }
+
+    await _handleAuthFailure(response.statusCode, authenticated);
 
     throw HttpServiceException(
       message: _extractErrorMessage(parsedData),
@@ -159,6 +176,39 @@ class HttpService {
       return path;
     }
     return '/$path';
+  }
+
+  static Future<Map<String, String>> _jsonHeaders(
+    Map<String, String>? headers,
+    bool authenticated,
+  ) async {
+    final String? accessToken = authenticated
+        ? await _savedAccessToken()
+        : null;
+    return {
+      'Content-Type': 'application/json',
+      if (accessToken != null && accessToken.isNotEmpty)
+        'Authorization': 'Bearer $accessToken',
+      ...?headers,
+    };
+  }
+
+  static Future<String?> _savedAccessToken() async {
+    final sessionStorage = SessionStorage.instance;
+    await sessionStorage.loadSavedSession();
+    return sessionStorage.currentAccessToken;
+  }
+
+  static Future<void> _handleAuthFailure(
+    int statusCode,
+    bool authenticated,
+  ) async {
+    if (!authenticated || (statusCode != 401 && statusCode != 403)) {
+      return;
+    }
+
+    await SessionStorage.instance.clearSession();
+    redirectToLogin();
   }
 
   static String _normalizeBaseUrl(String value) {
@@ -192,49 +242,6 @@ class HttpService {
     }
 
     return 'Ocorreu um erro inesperado.';
-  }
-
-  static String _resolveBaseUrl() {
-    const String envBaseUrl = String.fromEnvironment('API_BASE_URL');
-    if (envBaseUrl.isNotEmpty) {
-      return envBaseUrl;
-    }
-
-    if (kIsWeb) {
-      return _resolveWebBaseUrl();
-    }
-
-    if (defaultTargetPlatform == TargetPlatform.android) {
-      return 'http://10.0.2.2:8000';
-    }
-
-    return 'http://localhost:8000';
-  }
-
-  static String _resolveWebBaseUrl() {
-    final Uri pageUri = Uri.base;
-    final String host = pageUri.host;
-
-    if (host.isEmpty || host == 'localhost' || host == '127.0.0.1') {
-      return 'http://localhost:8000';
-    }
-
-    if (_isLocalNetworkHost(host)) {
-      return 'http://$host:8000';
-    }
-
-    if (pageUri.scheme == 'https') {
-      return _hostedApiBaseUrl;
-    }
-
-    final String scheme = pageUri.scheme == 'https' ? 'https' : 'http';
-    return '$scheme://$host:8000';
-  }
-
-  static bool _isLocalNetworkHost(String host) {
-    return host.startsWith('10.') ||
-        host.startsWith('192.168.') ||
-        RegExp(r'^172\.(1[6-9]|2\d|3[0-1])\.').hasMatch(host);
   }
 
   void dispose() {

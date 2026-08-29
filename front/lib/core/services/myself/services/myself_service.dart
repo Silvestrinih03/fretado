@@ -1,21 +1,15 @@
-import 'package:shared_preferences/shared_preferences.dart';
-
 import '../../../services/http_service.dart';
+import '../../../services/session/session_storage.dart';
 import '../data/datasources/myself_datasource.dart';
 import '../models/myself_user_model.dart';
 import '../repositories/myself_repository.dart';
 import '../repositories/myself_repository_impl.dart';
 
 class MyselfService {
-  static const String _sessionUserIdKey = 'fretado_session_user_id';
-  static const String _sessionUserTypeIdKey = 'fretado_session_user_type_id';
-
   static MyselfService? _instance;
 
   final MyselfRepository _repository;
-  int? _currentUserId;
-  int? _currentUserTypeId;
-  bool _hasLoadedSavedSession = false;
+  final SessionStorage _sessionStorage = SessionStorage.instance;
 
   factory MyselfService({MyselfRepository? repository}) {
     return _instance ??= MyselfService._internal(
@@ -28,51 +22,39 @@ class MyselfService {
 
   MyselfService._internal(this._repository);
 
-  int? get currentUserId => _currentUserId;
-  int? get currentUserTypeId => _currentUserTypeId;
+  int? get currentUserId => _sessionStorage.currentUserId;
+  int? get currentUserTypeId => _sessionStorage.currentUserTypeId;
+  String? get currentAccessToken => _sessionStorage.currentAccessToken;
+  bool get hasValidAccessToken => _sessionStorage.hasValidAccessToken;
 
   set currentUserId(int? value) {
-    _currentUserId = value;
+    _sessionStorage.currentUserId = value;
   }
 
   set currentUserTypeId(int? value) {
-    _currentUserTypeId = value;
+    _sessionStorage.currentUserTypeId = value;
   }
 
-  bool get hasCurrentUserId => _currentUserId != null;
+  bool get hasCurrentUserId => _sessionStorage.hasCurrentUserId;
 
   Future<void> loadSavedSession() async {
-    if (_hasLoadedSavedSession) {
-      return;
-    }
-
-    final SharedPreferences preferences = await SharedPreferences.getInstance();
-    _currentUserId = preferences.getInt(_sessionUserIdKey);
-    _currentUserTypeId = preferences.getInt(_sessionUserTypeIdKey);
-    _hasLoadedSavedSession = true;
+    await _sessionStorage.loadSavedSession();
   }
 
   Future<void> saveSession({
     required int userId,
     required int userTypeId,
+    String? accessToken,
   }) async {
-    _currentUserId = userId;
-    _currentUserTypeId = userTypeId;
-    _hasLoadedSavedSession = true;
-
-    final SharedPreferences preferences = await SharedPreferences.getInstance();
-    await preferences.setInt(_sessionUserIdKey, userId);
-    await preferences.setInt(_sessionUserTypeIdKey, userTypeId);
+    await _sessionStorage.saveSession(
+      userId: userId,
+      userTypeId: userTypeId,
+      accessToken: accessToken,
+    );
   }
 
   Future<void> logout() async {
-    _currentUserId = null;
-    _currentUserTypeId = null;
-    _hasLoadedSavedSession = true;
-
-    final SharedPreferences preferences = await SharedPreferences.getInstance();
-    await preferences.remove(_sessionUserIdKey);
-    await preferences.remove(_sessionUserTypeIdKey);
+    await _sessionStorage.clearSession();
   }
 
   Future<MyselfUserModel> getMyself(int userId) {

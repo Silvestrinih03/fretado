@@ -267,9 +267,11 @@ WHERE status_id = 1;
 CREATE TABLE driver_locations (
     id BIGSERIAL PRIMARY KEY,
     driver_user_id BIGINT NOT NULL REFERENCES users(id),
+    is_online BOOLEAN NOT NULL DEFAULT TRUE,
     latitude NUMERIC(9, 6) NOT NULL,
     longitude NUMERIC(9, 6) NOT NULL,
-    is_online BOOLEAN NOT NULL DEFAULT TRUE,
+    accuracy NUMERIC(8,2),
+    location_recorded_at TIMESTAMPTZ,
     last_seen_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()

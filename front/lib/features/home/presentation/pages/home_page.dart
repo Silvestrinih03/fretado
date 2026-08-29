@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/enums/home_profile.dart';
 import '../../../../core/services/myself/models/myself_user_model.dart';
 import '../../../../core/services/myself/services/myself_service.dart';
+import '../controllers/driver_availability_controller.dart';
 import '../widgets/client_home_content.dart';
 import '../widgets/driver_home_content.dart';
 import '../widgets/home_shell.dart';
@@ -23,13 +24,16 @@ class HomePage extends StatefulWidget {
   State<HomePage> createState() => _HomePageState();
 }
 
-class _HomePageState extends State<HomePage> {
+class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   late final MyselfService _myselfService;
   late final Future<MyselfUserModel> _myselfFuture;
+  DriverAvailabilityController? _driverAvailabilityController;
+  int? _driverAvailabilityUserId;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _myselfService = MyselfService();
     if (widget.userId != null) {
       _myselfService.currentUserId = widget.userId;
@@ -45,7 +49,17 @@ class _HomePageState extends State<HomePage> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _driverAvailabilityController?.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    if (state == AppLifecycleState.resumed) {
+      _driverAvailabilityController?.loadInitialStatus();
+    }
   }
 
   @override
@@ -63,14 +77,22 @@ class _HomePageState extends State<HomePage> {
             ? HomeProfileMapper.fromUserTypeId(userTypeId)
             : widget.profile;
 
+        final int resolvedUserId =
+            widget.userId ?? _myselfService.currentUserId ?? 5;
+        final DriverAvailabilityController? driverAvailability =
+            profile == HomeProfileEnum.driver
+                ? _availabilityControllerFor(resolvedUserId)
+                : null;
+
         final Widget content = switch (profile) {
           HomeProfileEnum.driver => DriverHomeContent(
               firstName: firstName,
-              userId: widget.userId ?? _myselfService.currentUserId ?? 5,
+              userId: resolvedUserId,
+              availabilityController: driverAvailability!,
             ),
           HomeProfileEnum.client => ClientHomeContent(
               userName: firstName,
-              userId: widget.userId ?? _myselfService.currentUserId ?? 5,
+              userId: resolvedUserId,
             ),
         };
 
@@ -78,8 +100,23 @@ class _HomePageState extends State<HomePage> {
           content: content,
           userId: widget.userId ?? _myselfService.currentUserId,
           userTypeId: userTypeId,
+          driverAvailabilityController: driverAvailability,
         );
       },
     );
+  }
+
+  DriverAvailabilityController _availabilityControllerFor(int userId) {
+    final existing = _driverAvailabilityController;
+    if (existing != null && _driverAvailabilityUserId == userId) {
+      return existing;
+    }
+
+    existing?.dispose();
+    final controller = DriverAvailabilityController();
+    _driverAvailabilityController = controller;
+    _driverAvailabilityUserId = userId;
+    controller.loadInitialStatus();
+    return controller;
   }
 }

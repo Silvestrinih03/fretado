@@ -207,6 +207,7 @@ class _ShippingPaymentPageState extends State<ShippingPaymentPage> {
       await _httpService.post(
         Endpoints.rideDispatchJob,
         headers: {'X-Job-Secret': jobSecret},
+        authenticated: false,
       );
     } catch (_) {
       // A corrida ja foi criada; o job agendado do backend ainda pode processar.

@@ -30,6 +30,7 @@ class RegisterDatasource {
           'birth_date': birthDate,
           'phone': phone,
         },
+        authenticated: false,
       );
 
       return RegisterUserModel.fromJson(response);

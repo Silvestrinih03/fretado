@@ -1,7 +1,4 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
-import 'package:geolocator/geolocator.dart';
 
 import '../../../../app/design_system/design_system.dart';
 import '../../../../core/endpoints.dart';
@@ -12,15 +9,21 @@ import '../../../driver_operations/presentation/pages/driver_operations_page.dar
 import '../../../documents/presentation/pages/my_documents.dart';
 import '../../../rides/presentation/pages/ride_history_page.dart';
 import '../../../vehicles/presentation/pages/my_vehicles.dart';
+import '../controllers/driver_availability_controller.dart';
+
+const String _driverOfflineMessage =
+    'Você está offline e não receberá corridas. Clique aqui para ficar online.';
 
 class DriverHomeContent extends StatefulWidget {
   final String firstName;
   final int userId;
+  final DriverAvailabilityController availabilityController;
 
   const DriverHomeContent({
     super.key,
     required this.firstName,
     required this.userId,
+    required this.availabilityController,
   });
 
   @override
@@ -59,8 +62,8 @@ class _DriverHomeContentState extends State<DriverHomeContent> {
         const SizedBox(height: 14),
         _DriverRequiredSetupAlert(userId: widget.userId),
         const SizedBox(height: 10),
-        _DriverAvailabilityCard(
-          userId: widget.userId,
+        _DriverAvailabilitySummary(
+          controller: widget.availabilityController,
           onFindRequests: () => _openAvailableRequests(context),
         ),
         const SizedBox(height: 14),
@@ -676,399 +679,165 @@ class _DriverRequiredSetupStatus {
   }
 }
 
-class _DriverAvailabilityCard extends StatefulWidget {
-  final int userId;
+class _DriverAvailabilitySummary extends StatelessWidget {
+  final DriverAvailabilityController controller;
   final VoidCallback onFindRequests;
 
-  const _DriverAvailabilityCard({
-    required this.userId,
+  const _DriverAvailabilitySummary({
+    required this.controller,
     required this.onFindRequests,
   });
 
   @override
-  State<_DriverAvailabilityCard> createState() =>
-      _DriverAvailabilityCardState();
-}
-
-class _DriverAvailabilityCardState extends State<_DriverAvailabilityCard> {
-  static const Duration _heartbeatInterval = Duration(minutes: 5);
-
-  late final HttpService _httpService;
-  Timer? _heartbeatTimer;
-  bool _isLoading = true;
-  bool _isOnline = false;
-  String? _message;
-  DateTime? _lastSeenAt;
-
-  @override
-  void initState() {
-    super.initState();
-    _httpService = HttpService();
-    _loadInitialStatus();
-  }
-
-  @override
-  void didUpdateWidget(covariant _DriverAvailabilityCard oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.userId != widget.userId) {
-      _stopHeartbeat();
-      _loadInitialStatus();
-    }
-  }
-
-  @override
-  void dispose() {
-    _stopHeartbeat();
-    _httpService.dispose();
-    super.dispose();
-  }
-
-  Future<void> _loadInitialStatus() async {
-    setState(() {
-      _isLoading = true;
-      _message = null;
-    });
-
-    try {
-      final response = await _httpService.get(
-        Endpoints.driverLocationByDriver(widget.userId),
-      );
-      final online = response['is_online'] == true;
-
-      if (!mounted) return;
-
-      setState(() {
-        _isOnline = online;
-        _lastSeenAt = _readDateTime(response['last_seen_at']);
-      });
-
-      if (online) {
-        await _sendCurrentLocation(silent: true, keepLoading: true);
-      } else {
-        _stopHeartbeat();
-      }
-    } on HttpServiceException catch (e) {
-      if (e.statusCode == 404) {
-        await _sendCurrentLocation(silent: true, keepLoading: true);
-      } else if (mounted) {
-        setState(() => _message = e.message);
-      }
-    } catch (_) {
-      if (mounted) {
-        setState(() => _message = 'Nao foi possivel carregar seu status.');
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
-    }
-  }
-
-  Future<void> _goOnline() async {
-    if (_isLoading) return;
-
-    setState(() {
-      _isLoading = true;
-      _message = null;
-    });
-
-    try {
-      await _sendCurrentLocation(silent: false, keepLoading: true);
-    } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
-    }
-  }
-
-  Future<void> _goOffline() async {
-    if (_isLoading) return;
-
-    setState(() {
-      _isLoading = true;
-      _message = null;
-    });
-
-    try {
-      final response = await _httpService.patch(
-        Endpoints.driverLocationOffline(widget.userId),
-      );
-
-      if (!mounted) return;
-
-      _stopHeartbeat();
-      setState(() {
-        _isOnline = false;
-        _lastSeenAt = _readDateTime(response['last_seen_at']);
-        _message = 'Voce esta offline e nao recebera novas ofertas.';
-      });
-    } on HttpServiceException catch (e) {
-      if (mounted) setState(() => _message = e.message);
-    } catch (_) {
-      if (mounted) setState(() => _message = 'Nao foi possivel ficar offline.');
-    } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
-    }
-  }
-
-  Future<void> _sendCurrentLocation({
-    required bool silent,
-    bool keepLoading = false,
-  }) async {
-    final position = await _getCurrentPosition(silent: silent);
-    if (position == null) {
-      _stopHeartbeat();
-      if (mounted) {
-        setState(() => _isOnline = false);
-      }
-      return;
-    }
-
-    try {
-      final response = await _httpService.post(
-        Endpoints.driverLocationByDriver(widget.userId),
-        body: {'latitude': position.latitude, 'longitude': position.longitude},
-      );
-      await _runRideDispatchJob();
-
-      if (!mounted) return;
-
-      _startHeartbeat();
-      setState(() {
-        _isOnline = true;
-        _lastSeenAt = _readDateTime(response['last_seen_at']);
-        _message = silent ? _message : 'Voce esta online.';
-        if (!keepLoading) {
-          _isLoading = false;
-        }
-      });
-    } on HttpServiceException catch (e) {
-      _stopHeartbeat();
-      if (mounted) {
-        setState(() {
-          _isOnline = false;
-          _message = e.message;
-        });
-      }
-    } catch (_) {
-      _stopHeartbeat();
-      if (mounted) {
-        setState(() {
-          _isOnline = false;
-          _message = 'Nao foi possivel atualizar localizacao.';
-        });
-      }
-    }
-  }
-
-  Future<void> _runRideDispatchJob() async {
-    const jobSecret = String.fromEnvironment('JOB_SECRET');
-    if (jobSecret.isEmpty) return;
-
-    try {
-      await _httpService.post(
-        Endpoints.rideDispatchJob,
-        headers: {'X-Job-Secret': jobSecret},
-      );
-    } catch (_) {}
-  }
-
-  Future<Position?> _getCurrentPosition({required bool silent}) async {
-    final serviceEnabled = await Geolocator.isLocationServiceEnabled();
-    if (!serviceEnabled) {
-      if (mounted) {
-        setState(() {
-          _message = 'Ative a localizacao do navegador ou aparelho.';
-        });
-      }
-      return null;
-    }
-
-    LocationPermission permission = await Geolocator.checkPermission();
-    if (permission == LocationPermission.denied) {
-      permission = await Geolocator.requestPermission();
-    }
-
-    if (permission == LocationPermission.denied ||
-        permission == LocationPermission.deniedForever) {
-      if (mounted) {
-        setState(() {
-          _message = 'Permita acesso a localizacao para ficar online.';
-        });
-      }
-      return null;
-    }
-
-    try {
-      return await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
-      );
-    } catch (_) {
-      if (!silent && mounted) {
-        setState(() => _message = 'Nao foi possivel obter sua localizacao.');
-      }
-      return null;
-    }
-  }
-
-  void _startHeartbeat() {
-    _heartbeatTimer?.cancel();
-    _heartbeatTimer = Timer.periodic(
-      _heartbeatInterval,
-      (_) => _sendCurrentLocation(silent: true),
-    );
-  }
-
-  void _stopHeartbeat() {
-    _heartbeatTimer?.cancel();
-    _heartbeatTimer = null;
-  }
-
-  DateTime? _readDateTime(dynamic value) {
-    if (value is String && value.trim().isNotEmpty) {
-      return DateTime.tryParse(value);
-    }
-    return null;
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final Color statusColor = _isOnline
-        ? FretColors.success700
-        : FretColors.destructive600;
-    final String statusLabel = _isOnline ? 'Online' : 'Offline';
-    final String lastSeenLabel = _lastSeenAt == null
-        ? 'Localizacao ainda nao enviada'
-        : 'Ultima atualizacao ${_formatDateTime(_lastSeenAt)}';
+    return AnimatedBuilder(
+      animation: controller,
+      builder: (context, _) {
+        final bool showOfflineAlert =
+            controller.hasLoadedStatus && !controller.isOnline;
+        final String? statusMessage = controller.message;
+        final bool showStatusMessage =
+            statusMessage != null && statusMessage != _driverOfflineMessage;
 
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: FretColors.neutral050,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: FretColors.neutral200),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: _isOnline
-                      ? FretColors.success100
-                      : FretColors.destructive100,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Icon(
-                  _isOnline
-                      ? Icons.location_on_rounded
-                      : Icons.location_off_rounded,
-                  color: statusColor,
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Disponibilidade',
-                      style: TextStyle(
-                        color: FretColors.loginFooterLink,
-                        fontSize: 17,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      lastSeenLabel,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: FretColors.neutral600,
-                        fontSize: 12,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
-                decoration: BoxDecoration(
-                  color: _isOnline
-                      ? FretColors.success100
-                      : FretColors.destructive100,
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Text(
-                  statusLabel,
-                  style: TextStyle(
-                    color: statusColor,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-              ),
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (showOfflineAlert) ...[
+              _DriverOfflineAlert(onGoOnline: controller.goOnline),
+              const SizedBox(height: 10),
             ],
-          ),
-          if (_message != null) ...[
-            const SizedBox(height: 10),
-            Text(
-              _message!,
-              style: const TextStyle(
-                color: FretColors.neutral700,
-                fontSize: 13,
+            if (showStatusMessage) ...[
+              _DriverAvailabilityMessage(
+                message: statusMessage!,
+                isError: !controller.isOnline,
+              ),
+              const SizedBox(height: 10),
+            ],
+            SizedBox(
+              height: 46,
+              child: ElevatedButton.icon(
+                onPressed: onFindRequests,
+                icon: const Icon(Icons.search_rounded),
+                label: const Text('Encontrar solicitacoes'),
               ),
             ),
           ],
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: ElevatedButton.icon(
-                  onPressed: _isLoading
-                      ? null
-                      : (_isOnline ? _goOffline : _goOnline),
-                  icon: _isLoading
-                      ? const SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : Icon(
-                          _isOnline
-                              ? Icons.power_settings_new_rounded
-                              : Icons.my_location_rounded,
-                        ),
-                  label: Text(_isOnline ? 'Ficar offline' : 'Ficar online'),
-                ),
-              ),
-              if (_isOnline) ...[
-                const SizedBox(width: 10),
-                IconButton.filledTonal(
-                  tooltip: 'Atualizar localizacao',
-                  onPressed: _isLoading
-                      ? null
-                      : () => _sendCurrentLocation(silent: false),
-                  icon: const Icon(Icons.refresh_rounded),
-                ),
-              ],
-            ],
+        );
+      },
+    );
+  }
+}
+
+class _DriverOfflineAlert extends StatelessWidget {
+  final VoidCallback onGoOnline;
+
+  const _DriverOfflineAlert({required this.onGoOnline});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: FretColors.destructive050,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: FretColors.destructive200),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(
+            Icons.location_off_rounded,
+            color: FretColors.destructive700,
+            size: 22,
           ),
-          const SizedBox(height: 10),
-          SizedBox(
-            width: double.infinity,
-            height: 46,
-            child: ElevatedButton.icon(
-              onPressed: _isLoading ? null : widget.onFindRequests,
-              icon: const Icon(Icons.search_rounded),
-              label: const Text('Encontrar solicitacoes'),
+          const SizedBox(width: 10),
+          Expanded(
+            child: RichText(
+              text: TextSpan(
+                style: const TextStyle(
+                  color: FretColors.destructive800,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  height: 1.25,
+                ),
+                children: [
+                  const TextSpan(
+                    text: 'Você está offline e não receberá corridas. ',
+                  ),
+                  WidgetSpan(
+                    child: GestureDetector(
+                      onTap: onGoOnline,
+                      child: const Text(
+                        'Clique aqui para ficar online.',
+                        style: TextStyle(
+                          color: FretColors.destructive800,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w800,
+                          decoration: TextDecoration.underline,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DriverAvailabilityMessage extends StatelessWidget {
+  final String message;
+  final bool isError;
+
+  const _DriverAvailabilityMessage({
+    required this.message,
+    required this.isError,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final Color backgroundColor = isError
+        ? FretColors.attention050
+        : FretColors.success050;
+    final Color borderColor = isError
+        ? FretColors.attention300
+        : FretColors.success200;
+    final Color foregroundColor = isError
+        ? FretColors.attention800
+        : FretColors.success800;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: borderColor),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(
+            isError
+                ? Icons.warning_amber_rounded
+                : Icons.check_circle_outline_rounded,
+            color: foregroundColor,
+            size: 20,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              message,
+              style: TextStyle(
+                color: foregroundColor,
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                height: 1.25,
+              ),
             ),
           ),
         ],

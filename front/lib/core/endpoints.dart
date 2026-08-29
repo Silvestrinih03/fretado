@@ -43,6 +43,10 @@ abstract class Endpoints {
   static String rejectOffer(int offerId) => '$rideOffers/$offerId/reject';
 
   static const String driverLocations = '/driver-locations';
+  static const String driverLocationMe = '$driverLocations/me';
+  static const String driverLocationMeOnline = '$driverLocations/me/online';
+  static const String driverLocationMeOffline = '$driverLocations/me/offline';
+  static const String driverLocationMeLocation = '$driverLocations/me/location';
   static String driverLocationByDriver(int driverUserId) =>
       '$driverLocations/$driverUserId';
   static String driverLocationOffline(int driverUserId) =>

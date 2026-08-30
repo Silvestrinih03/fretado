@@ -11,8 +11,12 @@ from app.schemas.ride import (
     RideQuoteResponse,
     RideQuoteRouteResponse,
 )
-from app.services.route_service import MockRouteService, RouteEstimate, RouteService
 
+from app.services.route_service import (
+    MapboxRouteService,
+    RouteEstimate,
+    RouteService,
+)
 
 MONEY = Decimal("0.01")
 VOLUME_M3 = Decimal("0.000001")
@@ -114,7 +118,7 @@ VEHICLE_QUOTE_PROFILES = {
 
 class RideQuoteService:
     def __init__(self, route_service: RouteService | None = None):
-        self.route_service = route_service or MockRouteService()
+        self.route_service = route_service or MapboxRouteService()
 
     def quote(self, payload: RideQuoteRequest) -> RideQuoteResponse:
         vehicle_profile = self._get_smallest_compatible_vehicle(payload)
@@ -160,6 +164,7 @@ class RideQuoteService:
                 provider=route.provider,
                 distance_km=route.distance_km,
                 estimated_time_minutes=route.estimated_time_minutes,
+                geometry=route.geometry,
             ),
             pricing=pricing,
             distance_km=route.distance_km,

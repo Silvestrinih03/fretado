@@ -7,7 +7,7 @@ import '../../../../core/endpoints.dart';
 import '../../../../core/services/http_service.dart';
 
 class DriverAvailabilityController extends ChangeNotifier {
-  static const Duration heartbeatInterval = Duration(minutes: 5);
+  static const Duration heartbeatInterval = Duration(minutes: 10);
 
   final HttpService _httpService;
   Timer? _heartbeatTimer;

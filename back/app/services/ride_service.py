@@ -1,4 +1,4 @@
-from fastapi import HTTPException, status
+from fastapi import APIRouter, Depends, Query, status, HTTPException
 from sqlalchemy.orm import Session
 
 from app.models.ride import Ride
@@ -19,6 +19,7 @@ from app.enums.ride_status_enum import RideStatusEnum
 from datetime import datetime, timezone
 from app.schemas.driver_earning import DriverEarningCreate
 from app.services.driver_earning_service import create_driver_earning
+from app.services.geocoding_service import MapboxGeocodingService
 
 def utc_now():
     return datetime.now(timezone.utc)

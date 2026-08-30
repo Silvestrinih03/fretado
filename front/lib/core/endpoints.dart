@@ -28,6 +28,11 @@ abstract class Endpoints {
       '$rides/in-progress/user/$userId';
   static String rideGeocode(String query) =>
       '$rides/geocode?q=${Uri.encodeQueryComponent(query.trim())}';
+  static String rideReverseGeocode({
+    required double latitude,
+    required double longitude,
+  }) =>
+      '$rides/reverse-geocode?latitude=${Uri.encodeQueryComponent(latitude.toString())}&longitude=${Uri.encodeQueryComponent(longitude.toString())}';
   static const String rideQuote = '$rides/quote';
   static const String createRide = '$rides/create';
   static const String availableRides = '$rides/available';

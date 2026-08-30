@@ -7,6 +7,13 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 from app.enums.delivery_classification import DeliveryClassificationEnum
 from app.enums.vehicle_type import VehicleTypeEnum
 
+class RideGeocodeResult(BaseModel):
+    label: str
+    latitude: float
+    longitude: float
+
+class RideGeocodeResponse(BaseModel):
+    data: list[RideGeocodeResult]
 
 class RideQuoteRequest(BaseModel):
     origin_address: str = Field(..., max_length=255)
@@ -35,19 +42,17 @@ class RideQuoteRequest(BaseModel):
 
         return self
 
-
 class RideQuoteRouteResponse(BaseModel):
     provider: str
     distance_km: Decimal
     estimated_time_minutes: int
-
+    geometry: list[list[float]] = Field(default_factory=list)
 
 class RideQuotePricingResponse(BaseModel):
     base_price: Decimal
     distance_price: Decimal
     duration_price: Decimal
     total_price: Decimal
-
 
 class RideQuoteResponse(BaseModel):
     origin_latitude: Decimal
@@ -82,7 +87,6 @@ class RideQuoteResponse(BaseModel):
     estimated_time_minutes: int
     total_price: Decimal
 
-
 class RideCreate(RideQuoteRequest):
     client_user_id: int = Field(..., gt=0)
     driver_user_id: Optional[int] = Field(default=None, gt=0)
@@ -90,14 +94,12 @@ class RideCreate(RideQuoteRequest):
     total_price: Decimal = Field(..., gt=Decimal("0"))
     status_id: int = Field(..., gt=0)
 
-
 class RideCreateRequest(RideQuoteRequest):
     client_user_id: int = Field(..., gt=0)
     payment_confirmed: bool = Field(
         default=False,
         description="Payment must be confirmed before a ride is persisted.",
     )
-
 
 class RideUpdate(BaseModel):
     driver_user_id: Optional[int] = None
@@ -107,7 +109,6 @@ class RideUpdate(BaseModel):
     started_at: Optional[datetime] = None
     finished_at: Optional[datetime] = None
     cancelled_at: Optional[datetime] = None
-
 
 class RideResponse(BaseModel):
     id: int
@@ -143,7 +144,6 @@ class RideResponse(BaseModel):
 
     class Config:
         from_attributes = True
-
 
 class RideCreateResponse(BaseModel):
     id: int

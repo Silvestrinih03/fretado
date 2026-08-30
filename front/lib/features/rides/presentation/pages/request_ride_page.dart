@@ -48,6 +48,35 @@ class _RequestRidePageState extends State<RequestRidePage> {
     super.dispose();
   }
 
+  void _fitRouteOnMap() {
+    final quote = _quote;
+    final pickup = _pickup;
+    final delivery = _delivery;
+
+    if (quote == null || pickup == null || delivery == null) {
+      return;
+    }
+
+    final points = <LatLng>[
+      pickup,
+      ...quote.routePoints,
+      delivery,
+    ];
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) {
+        return;
+      }
+
+      _mapController.fitCamera(
+        CameraFit.bounds(
+          bounds: LatLngBounds.fromPoints(points),
+          padding: const EdgeInsets.all(48),
+        ),
+      );
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -82,6 +111,18 @@ class _RequestRidePageState extends State<RequestRidePage> {
           urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
           userAgentPackageName: 'com.example.fretado',
         ),
+
+        if (_quote != null && _quote!.routePoints.isNotEmpty)
+          PolylineLayer(
+            polylines: [
+              Polyline(
+                points: _quote!.routePoints,
+                strokeWidth: 5,
+                color: const Color(0xFFFFC928),
+              ),
+            ],
+          ),
+
         MarkerLayer(
           markers: [
             if (_pickup != null)
@@ -95,6 +136,7 @@ class _RequestRidePageState extends State<RequestRidePage> {
                   size: 38,
                 ),
               ),
+
             if (_delivery != null)
               Marker(
                 point: _delivery!,
@@ -311,7 +353,15 @@ class _RequestRidePageState extends State<RequestRidePage> {
     setState(() => _loading = true);
     try {
       final data = await _http.post(Endpoints.rideQuote, body: payload);
-      setState(() => _quote = _RideQuote.fromJson(data));
+
+      final quote = _RideQuote.fromJson(data);
+
+      setState(() {
+        _quote = quote;
+      });
+
+      _fitRouteOnMap();
+
       await _askRequestConfirmation();
     } on HttpServiceException catch (e) {
       _showMessage(e.message);
@@ -807,21 +857,46 @@ class _RideQuote {
   final int estimatedTimeMinutes;
   final String vehicleName;
   final double totalPrice;
+  final List<LatLng> routePoints;
 
   const _RideQuote({
     required this.distanceKm,
     required this.estimatedTimeMinutes,
     required this.vehicleName,
     required this.totalPrice,
+    required this.routePoints,
   });
 
   factory _RideQuote.fromJson(Map<String, dynamic> json) {
+    final route = json['route'] as Map<String, dynamic>? ?? {};
+
+    final geometry = route['geometry'] as List<dynamic>? ?? [];
+
+    final routePoints = <LatLng>[];
+
+    for (final coordinate in geometry) {
+      if (coordinate is! List || coordinate.length < 2) {
+        continue;
+      }
+
+      final longitude = double.tryParse(coordinate[0].toString());
+
+      final latitude = double.tryParse(coordinate[1].toString());
+
+      if (latitude == null || longitude == null) {
+        continue;
+      }
+
+      routePoints.add(LatLng(latitude, longitude));
+    }
+
     return _RideQuote(
       distanceKm: double.tryParse(json['distance_km'].toString()) ?? 0,
       estimatedTimeMinutes:
           int.tryParse(json['estimated_time_minutes'].toString()) ?? 0,
       vehicleName: json['required_vehicle_type_name']?.toString() ?? '',
       totalPrice: double.tryParse(json['total_price'].toString()) ?? 0,
+      routePoints: routePoints,
     );
   }
 }

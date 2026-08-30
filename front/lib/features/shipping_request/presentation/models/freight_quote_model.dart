@@ -1,3 +1,5 @@
+import 'package:latlong2/latlong.dart';
+
 class FreightQuoteModel {
   final double distanceKm;
   final int estimatedTimeMinutes;
@@ -9,6 +11,7 @@ class FreightQuoteModel {
   final double distancePrice;
   final double durationPrice;
   final double totalPrice;
+  final List<LatLng> routePoints;
 
   const FreightQuoteModel({
     required this.distanceKm,
@@ -21,11 +24,15 @@ class FreightQuoteModel {
     required this.distancePrice,
     required this.durationPrice,
     required this.totalPrice,
+    required this.routePoints,
   });
 
   factory FreightQuoteModel.fromJson(Map<String, dynamic> json) {
     final pricing = json['pricing'] is Map<String, dynamic>
         ? json['pricing'] as Map<String, dynamic>
+        : <String, dynamic>{};
+    final route = json['route'] is Map<String, dynamic>
+        ? json['route'] as Map<String, dynamic>
         : <String, dynamic>{};
 
     return FreightQuoteModel(
@@ -39,6 +46,7 @@ class FreightQuoteModel {
       distancePrice: _readDouble(pricing['distance_price']),
       durationPrice: _readDouble(pricing['duration_price']),
       totalPrice: _readDouble(json['total_price']),
+      routePoints: _readRoutePoints(route['geometry']),
     );
   }
 
@@ -65,5 +73,38 @@ class FreightQuoteModel {
       return value.toInt();
     }
     return int.tryParse(value?.toString() ?? '') ?? 0;
+  }
+
+  static List<LatLng> _readRoutePoints(dynamic geometry) {
+    if (geometry is! List<dynamic>) {
+      return <LatLng>[];
+    }
+
+    final points = <LatLng>[];
+
+    for (final coordinate in geometry) {
+      if (coordinate is! List<dynamic> || coordinate.length < 2) {
+        continue;
+      }
+
+      final double? longitude = _tryReadDouble(coordinate[0]);
+      final double? latitude = _tryReadDouble(coordinate[1]);
+
+      if (latitude == null || longitude == null) {
+        continue;
+      }
+
+      points.add(LatLng(latitude, longitude));
+    }
+
+    return points;
+  }
+
+  static double? _tryReadDouble(dynamic value) {
+    if (value is num) {
+      return value.toDouble();
+    }
+
+    return double.tryParse(value?.toString() ?? '');
   }
 }

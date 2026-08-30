@@ -1,13 +1,11 @@
-import 'dart:convert';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
-import 'package:front/core/config.dart';
-import 'package:http/http.dart' as http;
 import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart';
 
 import '../../../../app/design_system/design_system.dart';
+import '../../../../core/endpoints.dart';
+import '../../../../core/services/http_service.dart';
 import '../models/freight_address_data.dart';
 import 'fill_in_package_details_page.dart';
 
@@ -30,11 +28,9 @@ class _AddressMapPageState extends State<AddressMapPage> {
   static const Color _mutedText = Color(0xFF3F4050);
   static const LatLng _initialCenter = LatLng(-23.550520, -46.633308);
   static const Duration _minSearchInterval = Duration(seconds: 1);
-  static const String _geoapifyApiKey = AppConfig.geoapifyApiKey;
-
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   final MapController _mapController = MapController();
-  final http.Client _httpClient = http.Client();
+  final HttpService _httpService = HttpService();
   final TextEditingController _pickupController = TextEditingController();
   final TextEditingController _deliveryController = TextEditingController();
 
@@ -58,7 +54,7 @@ class _AddressMapPageState extends State<AddressMapPage> {
   @override
   void dispose() {
     _mapController.dispose();
-    _httpClient.close();
+    _httpService.dispose();
     _pickupController.dispose();
     _deliveryController.dispose();
     super.dispose();
@@ -260,56 +256,20 @@ class _AddressMapPageState extends State<AddressMapPage> {
       return;
     }
 
-    if (_geoapifyApiKey.isEmpty) {
-      _showMessage(
-        'Configure `GEOAPIFY_API_KEY` para liberar a busca de endereços.',
-      );
-      return;
-    }
-
     FocusScope.of(context).unfocus();
     setState(() => _searchingMode = mode);
 
     try {
       await _respectSearchLimit();
-      final Map<String, String> params = {
-        'text': query,
-        'format': 'geojson',
-        'limit': '6',
-        'lang': 'pt',
-        'filter': 'countrycode:br',
-        'apiKey': _geoapifyApiKey,
-      };
-      final LatLng? bias = _userLocation;
-      if (bias != null) {
-        params['bias'] = 'proximity:${bias.longitude},${bias.latitude}';
-      }
-
-      final Uri uri = Uri.https(
-        'api.geoapify.com',
-        '/v1/geocode/autocomplete',
-        params,
+      final Map<String, dynamic> response = await _httpService.get(
+        Endpoints.rideGeocode(query),
       );
-
-      final http.Response response = await _httpClient.get(
-        uri,
-        headers: const {'Accept': 'application/json'},
-      );
-
-      if (response.statusCode < 200 || response.statusCode >= 300) {
-        throw const _AddressSearchException(
-          'Não foi possível buscar endereços agora.',
-        );
-      }
-
-      final dynamic decoded = jsonDecode(response.body);
-      final List<_AddressResult> results = decoded is Map<String, dynamic>
-          ? (decoded['features'] as List<dynamic>? ?? <dynamic>[])
-                .whereType<Map<String, dynamic>>()
-                .map(_AddressResult.fromGeoJsonFeature)
-                .whereType<_AddressResult>()
-                .toList()
-          : <_AddressResult>[];
+      final List<_AddressResult> results =
+          (response['data'] as List<dynamic>? ?? <dynamic>[])
+              .whereType<Map<String, dynamic>>()
+              .map(_AddressResult.fromGeocodeJson)
+              .whereType<_AddressResult>()
+              .toList();
 
       if (!mounted) {
         return;
@@ -337,7 +297,7 @@ class _AddressMapPageState extends State<AddressMapPage> {
       }
 
       _selectAddress(mode, selected);
-    } on _AddressSearchException catch (e) {
+    } on HttpServiceException catch (e) {
       _showMessage(e.message);
     } catch (_) {
       _showMessage('Erro ao consultar endereços. Verifique sua conexão.');
@@ -495,43 +455,25 @@ class _AddressMapPageState extends State<AddressMapPage> {
   }
 
   Future<_AddressResult> _buildCurrentLocationAddress(LatLng location) async {
-    if (_geoapifyApiKey.isEmpty) {
-      return _fallbackCurrentLocationAddress(location);
-    }
-
     try {
-      final Uri uri = Uri.https(
-        'api.geoapify.com',
-        '/v1/geocode/reverse',
-        {
-          'lat': location.latitude.toString(),
-          'lon': location.longitude.toString(),
-          'format': 'geojson',
-          'lang': 'pt',
-          'apiKey': _geoapifyApiKey,
-        },
+      final Map<String, dynamic> response = await _httpService.get(
+        Endpoints.rideReverseGeocode(
+          latitude: location.latitude,
+          longitude: location.longitude,
+        ),
       );
+      final List<_AddressResult> results =
+          (response['data'] as List<dynamic>? ?? <dynamic>[])
+              .whereType<Map<String, dynamic>>()
+              .map(_AddressResult.fromGeocodeJson)
+              .whereType<_AddressResult>()
+              .toList();
 
-      final http.Response response = await _httpClient.get(
-        uri,
-        headers: const {'Accept': 'application/json'},
-      );
-
-      if (response.statusCode < 200 || response.statusCode >= 300) {
+      if (results.isEmpty) {
         return _fallbackCurrentLocationAddress(location);
       }
 
-      final dynamic decoded = jsonDecode(response.body);
-      final List<dynamic> features = decoded is Map<String, dynamic>
-          ? decoded['features'] as List<dynamic>? ?? <dynamic>[]
-          : <dynamic>[];
-      final Map<String, dynamic>? firstFeature = _firstFeature(features);
-      if (firstFeature == null) {
-        return _fallbackCurrentLocationAddress(location);
-      }
-
-      return _AddressResult.fromGeoJsonFeature(firstFeature) ??
-          _fallbackCurrentLocationAddress(location);
+      return results.first;
     } catch (_) {
       return _fallbackCurrentLocationAddress(location);
     }
@@ -544,16 +486,6 @@ class _AddressMapPageState extends State<AddressMapPage> {
       addressLine2:
           '${location.latitude.toStringAsFixed(5)}, ${location.longitude.toStringAsFixed(5)}',
     );
-  }
-
-  Map<String, dynamic>? _firstFeature(List<dynamic> features) {
-    for (final feature in features) {
-      if (feature is Map<String, dynamic>) {
-        return feature;
-      }
-    }
-
-    return null;
   }
 
   void _clearSelectionIfEdited(_AddressPointMode mode, String value) {
@@ -1123,47 +1055,25 @@ class _AddressResult {
         '${point.longitude.toStringAsFixed(5)}';
   }
 
-  static _AddressResult? fromGeoJsonFeature(Map<String, dynamic> feature) {
-    final Map<String, dynamic>? properties =
-        feature['properties'] is Map<String, dynamic>
-        ? feature['properties'] as Map<String, dynamic>
-        : null;
-    final Map<String, dynamic>? geometry =
-        feature['geometry'] is Map<String, dynamic>
-        ? feature['geometry'] as Map<String, dynamic>
-        : null;
-    final List<dynamic>? coordinates = geometry?['coordinates'] is List<dynamic>
-        ? geometry!['coordinates'] as List<dynamic>
-        : null;
-
-    final String label =
-        properties?['formatted']?.toString().trim() ??
-        properties?['address_line1']?.toString().trim() ??
-        properties?['name']?.toString().trim() ??
-        '';
-    final double? longitude = coordinates != null && coordinates.length >= 2
-        ? double.tryParse(coordinates[0].toString())
-        : null;
-    final double? latitude = coordinates != null && coordinates.length >= 2
-        ? double.tryParse(coordinates[1].toString())
-        : null;
+  static _AddressResult? fromGeocodeJson(Map<String, dynamic> json) {
+    final String label = json['label']?.toString().trim() ?? '';
+    final double? latitude = double.tryParse(json['latitude']?.toString() ?? '');
+    final double? longitude = double.tryParse(
+      json['longitude']?.toString() ?? '',
+    );
 
     if (label.isEmpty || latitude == null || longitude == null) {
       return null;
     }
 
+    final LatLng point = LatLng(latitude, longitude);
+
     return _AddressResult(
       label: label,
-      point: LatLng(latitude, longitude),
-      placeId: properties?['place_id']?.toString(),
-      addressLine1: properties?['address_line1']?.toString(),
-      addressLine2: properties?['address_line2']?.toString(),
+      point: point,
+      addressLine2:
+          '${point.latitude.toStringAsFixed(5)}, ${point.longitude.toStringAsFixed(5)}',
     );
   }
 }
 
-class _AddressSearchException implements Exception {
-  final String message;
-
-  const _AddressSearchException(this.message);
-}

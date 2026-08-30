@@ -39,7 +39,7 @@ class FretAuthBrandHeader extends StatelessWidget {
 
   const FretAuthBrandHeader({
     super.key,
-    this.assetPath = 'assets/images/logo.png',
+    this.assetPath = 'assets/images/logo_fretado.png',
     this.height = 104,
   });
 
@@ -168,14 +168,13 @@ class FretAuthTextField extends StatelessWidget {
         ),
         filled: true,
         fillColor: FretColors.loginInputBackground,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 15,
+        ),
         prefixIcon: Padding(
           padding: const EdgeInsetsDirectional.only(start: 14, end: 10),
-          child: Icon(
-            prefixIcon,
-            size: 22,
-            color: FretColors.loginInputIcon,
-          ),
+          child: Icon(prefixIcon, size: 22, color: FretColors.loginInputIcon),
         ),
         prefixIconConstraints: const BoxConstraints(minWidth: 0, minHeight: 0),
         suffixIcon: suffixIcon == null
@@ -295,10 +294,7 @@ class FretAuthForgotPasswordLink extends StatelessWidget {
         ),
         child: const Text(
           'Esqueci minha senha',
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-          ),
+          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
         ),
       ),
     );
@@ -337,10 +333,7 @@ class FretAuthFooterPrompt extends StatelessWidget {
             ),
             child: const Text(
               'Cadastre-se',
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w700,
-              ),
+              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
             ),
           ),
         ],

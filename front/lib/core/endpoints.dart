@@ -33,6 +33,13 @@ abstract class Endpoints {
     required double longitude,
   }) =>
       '$rides/reverse-geocode?latitude=${Uri.encodeQueryComponent(latitude.toString())}&longitude=${Uri.encodeQueryComponent(longitude.toString())}';
+  static String rideRoutePreview({
+    required double originLatitude,
+    required double originLongitude,
+    required double destinationLatitude,
+    required double destinationLongitude,
+  }) =>
+      '$rides/route?origin_latitude=${Uri.encodeQueryComponent(originLatitude.toString())}&origin_longitude=${Uri.encodeQueryComponent(originLongitude.toString())}&destination_latitude=${Uri.encodeQueryComponent(destinationLatitude.toString())}&destination_longitude=${Uri.encodeQueryComponent(destinationLongitude.toString())}';
   static const String rideQuote = '$rides/quote';
   static const String createRide = '$rides/create';
   static const String availableRides = '$rides/available';

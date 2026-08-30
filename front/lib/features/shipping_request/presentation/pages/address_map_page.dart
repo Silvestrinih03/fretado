@@ -36,14 +36,19 @@ class _AddressMapPageState extends State<AddressMapPage> {
 
   _AddressResult? _pickupAddress;
   _AddressResult? _deliveryAddress;
+  List<LatLng> _routePoints = <LatLng>[];
   LatLng? _userLocation;
   _AddressPointMode? _searchingMode;
+  bool _loadingRoute = false;
   bool _loadingLocation = false;
   bool _selectingPickupFromCurrentLocation = false;
+  int _routeRequestId = 0;
   DateTime? _lastSearchAt;
 
   bool get _isSearching =>
-      _searchingMode != null || _selectingPickupFromCurrentLocation;
+      _searchingMode != null ||
+      _loadingRoute ||
+      _selectingPickupFromCurrentLocation;
 
   @override
   void initState() {
@@ -152,10 +157,6 @@ class _AddressMapPageState extends State<AddressMapPage> {
   }
 
   Widget _buildMap() {
-    final List<LatLng> routePoints = [
-      if (_pickupAddress != null) _pickupAddress!.point,
-      if (_deliveryAddress != null) _deliveryAddress!.point,
-    ];
     final LatLng center = _userLocation ?? _initialCenter;
 
     return FlutterMap(
@@ -166,11 +167,11 @@ class _AddressMapPageState extends State<AddressMapPage> {
           urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
           userAgentPackageName: 'com.example.fretado',
         ),
-        if (routePoints.length == 2)
+        if (_routePoints.length >= 2)
           PolylineLayer(
             polylines: [
               Polyline(
-                points: routePoints,
+                points: _routePoints,
                 strokeWidth: 4,
                 color: _primaryBlue,
                 borderStrokeWidth: 2,
@@ -331,21 +332,28 @@ class _AddressMapPageState extends State<AddressMapPage> {
         _deliveryAddress = result;
         _deliveryController.text = result.label;
       }
+      _routePoints = <LatLng>[];
+      _routeRequestId++;
     });
 
     _focusSelectedAddresses();
+    _loadRoutePreview();
   }
 
   void _focusSelectedAddresses() {
-    final List<LatLng> points = [
+    final List<LatLng> selectedPoints = [
       if (_pickupAddress != null) _pickupAddress!.point,
       if (_deliveryAddress != null) _deliveryAddress!.point,
     ];
 
-    if (points.length == 2) {
+    if (selectedPoints.length == 2) {
+      final List<LatLng> cameraPoints = _routePoints.isNotEmpty
+          ? <LatLng>[selectedPoints.first, ..._routePoints, selectedPoints.last]
+          : selectedPoints;
+
       _mapController.fitCamera(
         CameraFit.coordinates(
-          coordinates: points,
+          coordinates: cameraPoints,
           padding: const EdgeInsets.fromLTRB(72, 210, 72, 120),
           maxZoom: 15,
         ),
@@ -353,12 +361,98 @@ class _AddressMapPageState extends State<AddressMapPage> {
       return;
     }
 
-    if (points.length == 1) {
-      _mapController.move(points.first, 16);
+    if (selectedPoints.length == 1) {
+      _mapController.move(selectedPoints.first, 16);
       return;
     }
 
     _mapController.move(_initialCenter, 12);
+  }
+
+  Future<void> _loadRoutePreview() async {
+    final LatLng? pickup = _pickupAddress?.point;
+    final LatLng? delivery = _deliveryAddress?.point;
+
+    if (pickup == null || delivery == null) {
+      return;
+    }
+
+    final int requestId = _routeRequestId;
+    setState(() => _loadingRoute = true);
+
+    try {
+      final Map<String, dynamic> response = await _httpService.get(
+        Endpoints.rideRoutePreview(
+          originLatitude: pickup.latitude,
+          originLongitude: pickup.longitude,
+          destinationLatitude: delivery.latitude,
+          destinationLongitude: delivery.longitude,
+        ),
+      );
+      final List<LatLng> routePoints = _readMapboxRoutePoints(
+        response['geometry'],
+      );
+
+      if (!mounted ||
+          requestId != _routeRequestId ||
+          !_isCurrentRoute(pickup, delivery)) {
+        return;
+      }
+
+      setState(() {
+        _routePoints = routePoints;
+      });
+      _focusSelectedAddresses();
+    } catch (_) {
+      if (mounted &&
+          requestId == _routeRequestId &&
+          _isCurrentRoute(pickup, delivery)) {
+        setState(() => _routePoints = <LatLng>[]);
+      }
+    } finally {
+      if (mounted && requestId == _routeRequestId) {
+        setState(() => _loadingRoute = false);
+      }
+    }
+  }
+
+  bool _isCurrentRoute(LatLng pickup, LatLng delivery) {
+    final LatLng? currentPickup = _pickupAddress?.point;
+    final LatLng? currentDelivery = _deliveryAddress?.point;
+
+    return currentPickup != null &&
+        currentDelivery != null &&
+        _samePoint(currentPickup, pickup) &&
+        _samePoint(currentDelivery, delivery);
+  }
+
+  bool _samePoint(LatLng a, LatLng b) {
+    return a.latitude == b.latitude && a.longitude == b.longitude;
+  }
+
+  List<LatLng> _readMapboxRoutePoints(dynamic geometry) {
+    if (geometry is! List<dynamic>) {
+      return <LatLng>[];
+    }
+
+    final List<LatLng> points = <LatLng>[];
+
+    for (final dynamic coordinate in geometry) {
+      if (coordinate is! List<dynamic> || coordinate.length < 2) {
+        continue;
+      }
+
+      final double? longitude = double.tryParse(coordinate[0].toString());
+      final double? latitude = double.tryParse(coordinate[1].toString());
+
+      if (latitude == null || longitude == null) {
+        continue;
+      }
+
+      points.add(LatLng(latitude, longitude));
+    }
+
+    return points;
   }
 
   Future<void> _loadCurrentLocation({bool silent = false}) async {
@@ -500,6 +594,8 @@ class _AddressMapPageState extends State<AddressMapPage> {
       } else {
         _deliveryAddress = null;
       }
+      _routePoints = <LatLng>[];
+      _routeRequestId++;
     });
   }
 

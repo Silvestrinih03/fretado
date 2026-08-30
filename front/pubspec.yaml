@@ -47,6 +47,7 @@ dev_dependencies:
     sdk: flutter
 
   flutter_native_splash: ^2.4.6
+  flutter_launcher_icons: ^0.14.4
 
   # The "flutter_lints" package below contains a set of recommended lints to
   # encourage good coding practices. The lint set provided by the package is
@@ -71,14 +72,27 @@ flutter:
 
 flutter_native_splash:
   color: "#FFFFFF"
-  image: assets/images/logo.png
+  image: assets/images/logo_fretado.png
   android: true
   android_12:
     color: "#FFFFFF"
-    image: assets/images/logo.png
+    image: assets/images/logo_fretado.png
     icon_background_color: "#FFFFFF"
   ios: true
   web: false
+
+flutter_launcher_icons:
+  image_path: assets/images/logo_fretado.png
+  android: true
+  ios: false
+  adaptive_icon_background: "#FFFFFF"
+  adaptive_icon_foreground: assets/images/logo_fretado.png
+  adaptive_icon_foreground_inset: 5
+  web:
+    generate: true
+    image_path: assets/images/logo_fretado.png
+    background_color: "#FFFFFF"
+    theme_color: "#FFFFFF"
 
   # To add assets to your application, add an assets section, like this:
   # assets:

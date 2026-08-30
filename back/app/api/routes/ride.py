@@ -1,3 +1,4 @@
+from decimal import Decimal
 from typing import List
 
 from fastapi import APIRouter, Depends, Query, status
@@ -9,6 +10,7 @@ from app.schemas.ride import (
     RideGeocodeResponse,
     RideQuoteRequest,
     RideQuoteResponse,
+    RideQuoteRouteResponse,
     RideResponse,
     RideUpdate,
 )
@@ -26,6 +28,7 @@ from app.services.ride_service import (
     start_ride,
     update_ride,
 )
+from app.services.route_service import MapboxRouteService
 
 
 router = APIRouter(prefix="/rides", tags=["Rides"])
@@ -128,6 +131,28 @@ def reverse_geocode(
 
     return {
         "data": [result] if result else [],
+    }
+
+
+@router.get("/route", response_model=RideQuoteRouteResponse)
+def route_preview(
+    origin_latitude: float = Query(..., ge=-90, le=90),
+    origin_longitude: float = Query(..., ge=-180, le=180),
+    destination_latitude: float = Query(..., ge=-90, le=90),
+    destination_longitude: float = Query(..., ge=-180, le=180),
+):
+    route = MapboxRouteService().estimate_route(
+        origin_latitude=Decimal(str(origin_latitude)),
+        origin_longitude=Decimal(str(origin_longitude)),
+        destination_latitude=Decimal(str(destination_latitude)),
+        destination_longitude=Decimal(str(destination_longitude)),
+    )
+
+    return {
+        "provider": route.provider,
+        "distance_km": route.distance_km,
+        "estimated_time_minutes": route.estimated_time_minutes,
+        "geometry": route.geometry,
     }
 
 

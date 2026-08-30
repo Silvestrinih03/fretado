@@ -30,7 +30,7 @@ class _SplashPageState extends State<SplashPage> {
       body: SafeArea(
         child: Center(
           child: Image(
-            image: AssetImage('assets/images/logo.png'),
+            image: AssetImage('assets/images/logo_fretado.png'),
             width: 140,
             fit: BoxFit.contain,
           ),

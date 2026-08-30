@@ -20,7 +20,7 @@ class FretadoApp extends StatelessWidget {
     return MaterialApp(
       navigatorKey: appNavigatorKey,
       debugShowCheckedModeBanner: false,
-      title: 'Fretado',
+      title: 'FreteJá',
       builder: (context, child) {
         final mediaQuery = MediaQuery.of(context);
 

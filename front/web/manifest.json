@@ -1,11 +1,11 @@
 {
-    "name": "Fretado",
-    "short_name": "Fretado",
+    "name": "FreteJá",
+    "short_name": "FreteJá",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#FFFFFF",
     "theme_color": "#FFFFFF",
-    "description": "Fretado PWA",
+    "description": "FreteJá PWA",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

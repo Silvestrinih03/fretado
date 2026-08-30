@@ -29,35 +29,7 @@ class FretadoApp extends StatelessWidget {
           child: child ?? const SizedBox.shrink(),
         );
       },
-      theme: ThemeData(
-        useMaterial3: true,
-        visualDensity: VisualDensity.compact,
-        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF1F4E79)),
-        inputDecorationTheme: InputDecorationTheme(
-          errorMaxLines: 2,
-          errorStyle: const TextStyle(
-            color: FretColors.destructive600,
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
-            height: 1.25,
-          ),
-          errorBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(10),
-            borderSide: const BorderSide(
-              color: FretColors.destructive500,
-              width: 1.2,
-            ),
-          ),
-          focusedErrorBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(10),
-            borderSide: const BorderSide(
-              color: FretColors.destructive600,
-              width: 1.4,
-            ),
-          ),
-        ),
-      ),
+      theme: FretTheme.light(),
       onGenerateRoute: (settings) {
         final String? resetPasswordToken =
             _extractResetPasswordTokenFromRoute(settings.name) ??

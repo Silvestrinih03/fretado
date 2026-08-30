@@ -24,9 +24,9 @@ class FillInPackageDetailsPage extends StatefulWidget {
 }
 
 class _FillInPackageDetailsPageState extends State<FillInPackageDetailsPage> {
-  static const Color _primaryBlue = Color(0xFF080A73);
-  static const Color _screenBackground = Color(0xFFF7F8FA);
-  static const Color _orange = Color(0xFF9F3F00);
+  static const Color _primaryBlue = FretColors.brandGraphite;
+  static const Color _screenBackground = FretColors.appBackground;
+  static const Color _orange = FretColors.brandGoldDark;
 
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   final TextEditingController _widthController = TextEditingController();
@@ -372,7 +372,7 @@ class _SectionPanel extends StatelessWidget {
         border: Border.all(color: const Color(0xFFE6E7ED)),
         boxShadow: const [
           BoxShadow(
-            color: Color(0x08080A73),
+            color: Color(0x08181818),
             blurRadius: 14,
             offset: Offset(0, 6),
           ),

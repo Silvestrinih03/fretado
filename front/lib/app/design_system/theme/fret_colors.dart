@@ -16,6 +16,21 @@ class FretColors {
   // static const error = Color(0xFFD32F2F);
   // static const warning = Color(0xFFF9A825);
 
+  // Brand colors
+  static const brandBlack = Color(0xFF181818);
+  static const brandGraphite = Color(0xFF2B2B2B);
+  static const brandGraphiteSoft = Color(0xFF3A3A3A);
+  static const brandGold = Color(0xFFCDB13F);
+  static const brandGoldDark = Color(0xFFA98618);
+  static const brandGoldSoft = Color(0xFFF5EBC2);
+  static const appBackground = Color(0xFFF8F7F3);
+  static const appSurface = Color(0xFFFFFFFF);
+  static const appSurfaceSoft = Color(0xFFFBFAF7);
+  static const appBorder = Color(0xFFE8E4DB);
+  static const appDivider = Color(0xFFEDEAE3);
+  static const textPrimary = brandBlack;
+  static const textSecondary = Color(0xFF77746C);
+
   // Neutral colors
   static const neutral050 = Color(0xffFAFAFA);
   static const neutral100 = Color(0xffF5F5F5);
@@ -28,29 +43,29 @@ class FretColors {
   static const neutral800 = Color(0xff262626);
   static const neutral900 = Color(0xff171717);
 
-  // Primary colors - Cesla Blue
-  static const primary050 = Color(0xffF2F4FF);
-  static const primary100 = Color(0xffDEE3FF);
-  static const primary200 = Color(0xffB3BDF0);
-  static const primary300 = Color(0xff8295F1);
-  static const primary400 = Color(0xff334ED6);
-  static const primary500 = Color(0xff0022CC);
-  static const primary600 = Color(0xff001EB2);
-  static const primary700 = Color(0xff001A99);
-  static const primary800 = Color(0xff001061);
-  static const primary900 = Color(0xff000C47);
+  // Primary colors
+  static const primary050 = Color(0xFFFBFAF7);
+  static const primary100 = brandGoldSoft;
+  static const primary200 = Color(0xFFE7D894);
+  static const primary300 = Color(0xFFD8BF52);
+  static const primary400 = brandGold;
+  static const primary500 = Color(0xFFC2A232);
+  static const primary600 = brandGoldDark;
+  static const primary700 = Color(0xFF866811);
+  static const primary800 = brandGraphiteSoft;
+  static const primary900 = brandBlack;
 
-  // Primary variation colors - Cesla Cyan
-  static const primaryVariation050 = Color(0xffEBFDFF);
-  static const primaryVariation100 = Color(0xffD2F6FA);
-  static const primaryVariation200 = Color(0xffB2E5EB);
-  static const primaryVariation300 = Color(0xff7ED7E0);
-  static const primaryVariation400 = Color(0xff48CDDB);
-  static const primaryVariation500 = Color(0xff00BFD3);
-  static const primaryVariation600 = Color(0xff008391);
-  static const primaryVariation700 = Color(0xff006C78);
-  static const primaryVariation800 = Color(0xff004C54);
-  static const primaryVariation900 = Color(0xff003A40);
+  // Primary variation colors
+  static const primaryVariation050 = Color(0xFFF7F6F2);
+  static const primaryVariation100 = Color(0xFFEFEDE8);
+  static const primaryVariation200 = Color(0xFFD9D5CB);
+  static const primaryVariation300 = Color(0xFFB9B2A5);
+  static const primaryVariation400 = Color(0xFF918A80);
+  static const primaryVariation500 = Color(0xFF6F6A63);
+  static const primaryVariation600 = Color(0xFF56524C);
+  static const primaryVariation700 = Color(0xFF46423D);
+  static const primaryVariation800 = Color(0xFF302D29);
+  static const primaryVariation900 = brandBlack;
 
   // Secondary colors - Cesla Green
   static const secondary050 = Color(0xffF8FFE0);
@@ -64,17 +79,17 @@ class FretColors {
   static const secondary800 = Color(0xff3D5000);
   static const secondary900 = Color(0xff2F3D00);
 
-  // Secondary variation colors - Cesla Orange
-  static const secondaryVariation050 = Color(0xffFFF7F1);
-  static const secondaryVariation100 = Color(0xffFFEBDE);
-  static const secondaryVariation200 = Color(0xffFCCBAB);
-  static const secondaryVariation300 = Color(0xffFFA970);
-  static const secondaryVariation400 = Color(0xffFF8330);
-  static const secondaryVariation500 = Color(0xffE65C00);
-  static const secondaryVariation600 = Color(0xffC85000);
-  static const secondaryVariation700 = Color(0xff9F3F00);
-  static const secondaryVariation800 = Color(0xff6B2B00);
-  static const secondaryVariation900 = Color(0xff471D00);
+  // Secondary variation colors
+  static const secondaryVariation050 = Color(0xFFFFFBED);
+  static const secondaryVariation100 = Color(0xFFF9F0CC);
+  static const secondaryVariation200 = Color(0xFFEBD984);
+  static const secondaryVariation300 = Color(0xFFD6BE55);
+  static const secondaryVariation400 = brandGold;
+  static const secondaryVariation500 = Color(0xFFC09F29);
+  static const secondaryVariation600 = Color(0xFFB08D1D);
+  static const secondaryVariation700 = brandGoldDark;
+  static const secondaryVariation800 = Color(0xFF73580D);
+  static const secondaryVariation900 = Color(0xFF4A3909);
 
   // Success colors
   static const success050 = Color(0xffF0FDF4);
@@ -117,18 +132,18 @@ class FretColors {
   static const black = Color(0xff000000);
 
   // Auth / login screen
-  static const loginBackground = Color(0xFFF7F1E8);
-  static const loginTitle = Color(0xFF1D1D1F);
-  static const loginSubtitle = Color(0xFF474B63);
-  static const loginFieldLabel = Color(0xFF35394F);
-  static const loginInputBackground = Color(0xFFE7E8EB);
-  static const loginInputHint = Color(0xFFC1C4D6);
-  static const loginInputText = Color(0xFF23262F);
-  static const loginInputIcon = Color(0xFF7D8090);
-  static const loginForgotPassword = Color(0xFFA94F0F);
-  static const loginButtonStart = Color(0xFF090E7E);
-  static const loginButtonEnd = Color(0xFF1E1F96);
-  static const loginDivider = Color(0xFFE2E2E2);
-  static const loginFooterText = Color(0xFF3F4358);
-  static const loginFooterLink = Color(0xFF10206E);
+  static const loginBackground = appBackground;
+  static const loginTitle = brandBlack;
+  static const loginSubtitle = textSecondary;
+  static const loginFieldLabel = brandGraphite;
+  static const loginInputBackground = Color(0xFFEFEDE8);
+  static const loginInputHint = Color(0xFFAAA69D);
+  static const loginInputText = brandGraphite;
+  static const loginInputIcon = Color(0xFF858178);
+  static const loginForgotPassword = brandGoldDark;
+  static const loginButtonStart = brandBlack;
+  static const loginButtonEnd = brandGraphiteSoft;
+  static const loginDivider = appDivider;
+  static const loginFooterText = textSecondary;
+  static const loginFooterLink = brandGraphite;
 }

@@ -21,11 +21,11 @@ class AddressMapPage extends StatefulWidget {
 }
 
 class _AddressMapPageState extends State<AddressMapPage> {
-  static const Color _primaryBlue = Color(0xFF080A73);
-  static const Color _originOrange = Color(0xFF9F3F00);
-  static const Color _screenBackground = Color(0xFFF7F8FA);
-  static const Color _fieldBackground = Color(0xFFE8E8EA);
-  static const Color _mutedText = Color(0xFF3F4050);
+  static const Color _primaryBlue = FretColors.brandGraphite;
+  static const Color _originOrange = FretColors.brandGoldDark;
+  static const Color _screenBackground = FretColors.appBackground;
+  static const Color _fieldBackground = FretColors.appSurfaceSoft;
+  static const Color _mutedText = FretColors.textSecondary;
   static const LatLng _initialCenter = LatLng(-23.550520, -46.633308);
   static const Duration _minSearchInterval = Duration(seconds: 1);
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
@@ -215,7 +215,7 @@ class _AddressMapPageState extends State<AddressMapPage> {
                     border: Border.all(color: _primaryBlue, width: 2),
                     boxShadow: const [
                       BoxShadow(
-                        color: Color(0x22080A73),
+                        color: Color(0x22181818),
                         blurRadius: 8,
                         offset: Offset(0, 3),
                       ),

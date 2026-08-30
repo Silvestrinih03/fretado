@@ -79,6 +79,7 @@ abstract class Endpoints {
       '$walletTransactions/driver/$driverUserId';
 
   static const String cards = '/cards';
+  static const String createCard = '$cards/';
   static String cardsByUser(int userId) => '$cards/user/$userId';
   static String cardByUser({
     required int userId,

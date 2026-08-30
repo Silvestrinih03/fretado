@@ -31,10 +31,10 @@ class ShippingPaymentPage extends StatefulWidget {
 }
 
 class _ShippingPaymentPageState extends State<ShippingPaymentPage> {
-  static const Color _primaryBlue = Color(0xFF080A73);
-  static const Color _orange = Color(0xFFB45C00);
-  static const Color _screenBackground = Color(0xFFF7F8FA);
-  static const Color _mutedText = Color(0xFF3F4050);
+  static const Color _primaryBlue = FretColors.brandGraphite;
+  static const Color _orange = FretColors.brandGoldDark;
+  static const Color _screenBackground = FretColors.appBackground;
+  static const Color _mutedText = FretColors.textSecondary;
 
   late final HttpService _httpService;
   late final UserCardDatasource _cardDatasource;
@@ -693,7 +693,7 @@ class _FreightSummaryCard extends StatelessWidget {
                   vertical: 8,
                 ),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF2F3FF),
+                  color: FretColors.brandGoldSoft,
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Column(
@@ -1115,7 +1115,7 @@ class _PaymentOptionTile extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFEFF0FF),
+                  color: FretColors.brandGoldSoft,
                   borderRadius: BorderRadius.circular(7),
                 ),
                 child: const Text(
@@ -1221,7 +1221,7 @@ class _ConfirmShippingButton extends StatelessWidget {
         onPressed: loading || !enabled ? null : onPressed,
         style: ElevatedButton.styleFrom(
           elevation: 8,
-          shadowColor: const Color(0x33080A73),
+          shadowColor: const Color(0x33181818),
           backgroundColor: _ShippingPaymentPageState._primaryBlue,
           foregroundColor: FretColors.white,
           disabledBackgroundColor: const Color(0xFFB7B9D5),

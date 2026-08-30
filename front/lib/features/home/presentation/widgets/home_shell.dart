@@ -21,7 +21,7 @@ class HomeShell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF2F3F7),
+      backgroundColor: FretColors.appBackground,
       endDrawer: HomeDrawer(
         userId: userId,
         userTypeId: userTypeId,
@@ -49,21 +49,37 @@ class _HomeHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 62,
-      decoration: const BoxDecoration(
-        color: FretColors.neutral050,
-        border: Border(bottom: BorderSide(color: FretColors.neutral200)),
-      ),
+      height: 72,
+      color: FretColors.appBackground,
       child: Row(
         children: [
-          const SizedBox(width: 16),
-          const Text(
-            'FreteJá',
-            style: TextStyle(
-              color: FretColors.loginFooterLink,
-              fontSize: 22,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 0,
+          const SizedBox(width: 20),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: Image.asset(
+              'assets/images/logo_fretado.png',
+              width: 32,
+              height: 32,
+              fit: BoxFit.cover,
+              filterQuality: FilterQuality.high,
+            ),
+          ),
+          const SizedBox(width: 10),
+          RichText(
+            text: const TextSpan(
+              text: 'Frete',
+              style: TextStyle(
+                color: FretColors.brandBlack,
+                fontSize: 18,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 0,
+              ),
+              children: [
+                TextSpan(
+                  text: 'J\u00e1',
+                  style: TextStyle(color: FretColors.brandGold),
+                ),
+              ],
             ),
           ),
           const Spacer(),
@@ -92,7 +108,7 @@ class _HomeHeader extends StatelessWidget {
               );
             },
           ),
-          const SizedBox(width: 10),
+          const SizedBox(width: 18),
         ],
       ),
     );
@@ -118,12 +134,13 @@ class _HeaderAvatar extends StatelessWidget {
           width: 34,
           height: 34,
           decoration: BoxDecoration(
-            color: FretColors.primary100,
-            borderRadius: BorderRadius.circular(10),
+            color: FretColors.brandBlack,
+            borderRadius: BorderRadius.circular(12),
           ),
           child: const Icon(
-            Icons.person,
-            color: FretColors.loginFooterLink,
+            Icons.person_outline_rounded,
+            color: FretColors.white,
+            size: 19,
           ),
         ),
         if (showStatus)
@@ -136,7 +153,7 @@ class _HeaderAvatar extends StatelessWidget {
               decoration: BoxDecoration(
                 color: statusColor,
                 shape: BoxShape.circle,
-                border: Border.all(color: FretColors.neutral050, width: 2),
+                border: Border.all(color: FretColors.appBackground, width: 2),
               ),
             ),
           ),

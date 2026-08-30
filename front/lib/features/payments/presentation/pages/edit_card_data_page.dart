@@ -18,11 +18,11 @@ class EditCardDataPage extends StatefulWidget {
 }
 
 class _EditCardDataPageState extends State<EditCardDataPage> {
-  static const Color _primaryBlue = Color(0xFF080A73);
-  static const Color _screenBackground = Color(0xFFF7F8FA);
-  static const Color _fieldBackground = Color(0xFFE8E8EA);
-  static const Color _mutedText = Color(0xFF3F4050);
-  static const Color _hintText = Color(0xFFAEB0BA);
+  static const Color _primaryBlue = FretColors.brandGraphite;
+  static const Color _screenBackground = FretColors.appBackground;
+  static const Color _fieldBackground = FretColors.appSurfaceSoft;
+  static const Color _mutedText = FretColors.textSecondary;
+  static const Color _hintText = Color(0xFFAAA69D);
 
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   final TextEditingController _cardNumberController = TextEditingController();
@@ -429,11 +429,11 @@ class _CreditCardPreview extends StatelessWidget {
         gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [Color(0xFF080A73), Color(0xFF24268D)],
+          colors: [FretColors.brandGraphite, FretColors.brandBlack],
         ),
         boxShadow: const [
           BoxShadow(
-            color: Color(0x19080A73),
+            color: Color(0x19181818),
             blurRadius: 24,
             offset: Offset(0, 14),
           ),
@@ -710,7 +710,7 @@ class _SaveCardBar extends StatelessWidget {
           onPressed: isSaving ? null : onPressed,
           style: ElevatedButton.styleFrom(
             elevation: 10,
-            shadowColor: const Color(0x33080A73),
+            shadowColor: const Color(0x33181818),
             backgroundColor: _EditCardDataPageState._primaryBlue,
             foregroundColor: FretColors.white,
             disabledBackgroundColor: const Color(0xFFB7B9D5),

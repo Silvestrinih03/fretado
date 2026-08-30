@@ -29,7 +29,7 @@ class UserCardDatasource {
   Future<UserCardModel> createCard(UserCardCreateModel card) async {
     try {
       final response = await _httpService.post(
-        Endpoints.cards,
+        Endpoints.createCard,
         body: card.toJson(),
       );
 

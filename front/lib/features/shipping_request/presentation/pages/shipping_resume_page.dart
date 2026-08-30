@@ -22,10 +22,10 @@ class ShippingResumePage extends StatelessWidget {
     required this.quote,
   });
 
-  static const Color _primaryBlue = Color(0xFF080A73);
-  static const Color _orange = Color(0xFFB45C00);
-  static const Color _screenBackground = Color(0xFFF7F8FA);
-  static const Color _mutedText = Color(0xFF3F4050);
+  static const Color _primaryBlue = FretColors.brandGraphite;
+  static const Color _orange = FretColors.brandGoldDark;
+  static const Color _screenBackground = FretColors.appBackground;
+  static const Color _mutedText = FretColors.textSecondary;
 
   @override
   Widget build(BuildContext context) {
@@ -467,7 +467,7 @@ class _PriceConfirmationCard extends StatelessWidget {
             'Valor total da corrida',
             textAlign: TextAlign.center,
             style: TextStyle(
-              color: Color(0xFFD8DAFF),
+              color: FretColors.brandGoldSoft,
               fontSize: 13,
               fontWeight: FontWeight.w600,
             ),
@@ -501,7 +501,7 @@ class _PriceConfirmationCard extends StatelessWidget {
               onPressed: onCancel,
               style: OutlinedButton.styleFrom(
                 foregroundColor: FretColors.white,
-                side: const BorderSide(color: Color(0xFF3133AA)),
+                side: const BorderSide(color: FretColors.brandGraphiteSoft),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(5),
                 ),

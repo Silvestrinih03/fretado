@@ -11,13 +11,18 @@ import 'edit_card_data_page.dart';
 
 class MyPaymentMethodsPage extends StatefulWidget {
   final int? userId;
+  final bool showBackButton;
 
-  const MyPaymentMethodsPage({super.key, this.userId});
+  const MyPaymentMethodsPage({
+    super.key,
+    this.userId,
+    this.showBackButton = true,
+  });
 
-  static const Color _primaryBlue = Color(0xFF080A73);
-  static const Color _screenBackground = Color(0xFFF7F8FA);
-  static const Color _mutedText = Color(0xFF3F4050);
-  static const Color _cardBorder = Color(0xFFC8C9D8);
+  static const Color _primaryBlue = FretColors.brandGraphite;
+  static const Color _screenBackground = FretColors.appBackground;
+  static const Color _mutedText = FretColors.textSecondary;
+  static const Color _cardBorder = FretColors.appBorder;
 
   @override
   State<MyPaymentMethodsPage> createState() => _MyPaymentMethodsPageState();
@@ -75,7 +80,10 @@ class _MyPaymentMethodsPageState extends State<MyPaymentMethodsPage> {
           body: SafeArea(
             child: Column(
               children: [
-                _PaymentMethodsHeader(onAddTap: _openCardForm),
+                _PaymentMethodsHeader(
+                  onAddTap: _openCardForm,
+                  showBackButton: widget.showBackButton,
+                ),
                 Expanded(
                   child: ListView(
                     padding: const EdgeInsets.fromLTRB(14, 34, 14, 24),
@@ -152,8 +160,12 @@ class _MyPaymentMethodsPageState extends State<MyPaymentMethodsPage> {
 
 class _PaymentMethodsHeader extends StatelessWidget {
   final VoidCallback onAddTap;
+  final bool showBackButton;
 
-  const _PaymentMethodsHeader({required this.onAddTap});
+  const _PaymentMethodsHeader({
+    required this.onAddTap,
+    required this.showBackButton,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -164,19 +176,22 @@ class _PaymentMethodsHeader extends StatelessWidget {
       child: Row(
         children: [
           const SizedBox(width: 8),
-          IconButton(
-            onPressed: () => Navigator.of(context).maybePop(),
-            visualDensity: VisualDensity.compact,
-            icon: const Icon(
-              Icons.arrow_back_rounded,
-              color: MyPaymentMethodsPage._mutedText,
-              size: 24,
-            ),
-          ),
-          const SizedBox(width: 8),
+          if (showBackButton)
+            IconButton(
+              onPressed: () => Navigator.of(context).maybePop(),
+              visualDensity: VisualDensity.compact,
+              icon: const Icon(
+                Icons.arrow_back_rounded,
+                color: MyPaymentMethodsPage._mutedText,
+                size: 24,
+              ),
+            )
+          else
+            const SizedBox(width: 12),
+          SizedBox(width: showBackButton ? 8 : 12),
           const Expanded(
             child: Text(
-              'Metodos de pagamento',
+              'M\u00e9todos de pagamento',
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
@@ -373,7 +388,7 @@ class _DefaultBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
       decoration: BoxDecoration(
-        color: const Color(0xFFEFF0FF),
+        color: FretColors.brandGoldSoft,
         borderRadius: BorderRadius.circular(8),
       ),
       child: const Text(

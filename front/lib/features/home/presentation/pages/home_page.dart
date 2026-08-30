@@ -4,7 +4,7 @@ import '../../../../core/enums/home_profile.dart';
 import '../../../../core/services/myself/models/myself_user_model.dart';
 import '../../../../core/services/myself/services/myself_service.dart';
 import '../controllers/driver_availability_controller.dart';
-import '../widgets/client_home_content.dart';
+import '../widgets/client_home_shell.dart';
 import '../widgets/driver_home_content.dart';
 import '../widgets/home_shell.dart';
 
@@ -84,20 +84,19 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                 ? _availabilityControllerFor(resolvedUserId)
                 : null;
 
-        final Widget content = switch (profile) {
-          HomeProfileEnum.driver => DriverHomeContent(
-              firstName: firstName,
-              userId: resolvedUserId,
-              availabilityController: driverAvailability!,
-            ),
-          HomeProfileEnum.client => ClientHomeContent(
-              userName: firstName,
-              userId: resolvedUserId,
-            ),
-        };
+        if (profile == HomeProfileEnum.client) {
+          return ClientHomeShell(
+            userName: firstName,
+            userId: resolvedUserId,
+          );
+        }
 
         return HomeShell(
-          content: content,
+          content: DriverHomeContent(
+            firstName: firstName,
+            userId: resolvedUserId,
+            availabilityController: driverAvailability!,
+          ),
           userId: widget.userId ?? _myselfService.currentUserId,
           userTypeId: userTypeId,
           driverAvailabilityController: driverAvailability,

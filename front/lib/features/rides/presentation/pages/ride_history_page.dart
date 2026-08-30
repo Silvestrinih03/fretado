@@ -9,11 +9,13 @@ import '../../../driver_operations/data/models/driver_operation_models.dart';
 class RideHistoryPage extends StatefulWidget {
   final int userId;
   final HomeProfileEnum profile;
+  final bool showBackButton;
 
   const RideHistoryPage({
     super.key,
     required this.userId,
     required this.profile,
+    this.showBackButton = true,
   });
 
   @override
@@ -85,11 +87,14 @@ class _RideHistoryPageState extends State<RideHistoryPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF3F4F8),
+      backgroundColor: FretColors.appBackground,
       body: SafeArea(
         child: Column(
           children: [
-            _HistoryHeader(onRefresh: _reload),
+            _HistoryHeader(
+              onRefresh: _reload,
+              showBackButton: widget.showBackButton,
+            ),
             Expanded(
               child: FutureBuilder<List<DriverRideModel>>(
                 future: _ridesFuture,
@@ -150,8 +155,12 @@ class _RideHistoryPageState extends State<RideHistoryPage> {
 
 class _HistoryHeader extends StatelessWidget {
   final VoidCallback onRefresh;
+  final bool showBackButton;
 
-  const _HistoryHeader({required this.onRefresh});
+  const _HistoryHeader({
+    required this.onRefresh,
+    required this.showBackButton,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -159,21 +168,24 @@ class _HistoryHeader extends StatelessWidget {
       height: 62,
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(10, 8, 12, 8),
-      color: const Color(0xFFF3F4F8),
+      color: FretColors.appBackground,
       child: Row(
         children: [
-          IconButton(
-            onPressed: () => Navigator.of(context).maybePop(),
-            icon: const Icon(
-              Icons.arrow_back_ios_new_rounded,
-              color: FretColors.loginFooterLink,
-              size: 20,
-            ),
-          ),
-          const SizedBox(width: 4),
+          if (showBackButton)
+            IconButton(
+              onPressed: () => Navigator.of(context).maybePop(),
+              icon: const Icon(
+                Icons.arrow_back_ios_new_rounded,
+                color: FretColors.loginFooterLink,
+                size: 20,
+              ),
+            )
+          else
+            const SizedBox(width: 8),
+          SizedBox(width: showBackButton ? 4 : 12),
           const Expanded(
             child: Text(
-              'Historico de corridas',
+              'Hist\u00f3rico de corridas',
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(

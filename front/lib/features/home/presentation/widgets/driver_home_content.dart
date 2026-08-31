@@ -1070,75 +1070,17 @@ class _DriverActiveRideCard extends StatelessWidget {
     final actionLabel = customActionLabel ?? _rideProgressActionLabel(ride);
     final actionIcon = customActionIcon ?? _rideProgressActionIcon(ride);
 
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: FretColors.neutral050,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: FretColors.neutral200),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: FretColors.neutral100,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Icon(
-                  Icons.route_rounded,
-                  color: FretColors.loginFooterLink,
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  'Corrida #${ride.id}',
-                  style: const TextStyle(
-                    fontSize: 17,
-                    fontWeight: FontWeight.w700,
-                    color: FretColors.loginFooterLink,
-                  ),
-                ),
-              ),
-              FretRideStatusBadge(statusId: ride.statusId),
-            ],
-          ),
-          const SizedBox(height: 12),
-          _DriverRouteText(label: 'Coleta', value: ride.originLabel),
-          const SizedBox(height: 6),
-          _DriverRouteText(label: 'Entrega', value: ride.destinationLabel),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: _DriverRideInfo(
-                  label: 'Valor',
-                  value: _formatMoney(ride.totalPrice),
-                ),
-              ),
-              Expanded(
-                child: _DriverRideInfo(
-                  label: 'Peso',
-                  value: '${_formatNumber(ride.packageWeight)} kg',
-                ),
-              ),
-              Expanded(
-                child: _DriverRideInfo(
-                  label: 'Cliente',
-                  value: '#${ride.clientUserId}',
-                ),
-              ),
-            ],
-          ),
-          if (actionLabel != null && actionIcon != null) ...[
-            const SizedBox(height: 14),
-            SizedBox(
+    return FretRideSummaryCard(
+      rideId: ride.id,
+      statusId: ride.statusId,
+      createdAt: ride.createdAt,
+      origin: ride.originLabel,
+      destination: ride.destinationLabel,
+      totalPrice: ride.totalPrice,
+      packageWeight: ride.packageWeight,
+      footer: actionLabel == null || actionIcon == null
+          ? null
+          : SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
                 onPressed: isBusy ? null : onAdvance,
@@ -1148,87 +1090,18 @@ class _DriverActiveRideCard extends StatelessWidget {
                         height: 16,
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
-                    : Icon(actionIcon),
+                    : Icon(actionIcon, size: 18),
                 label: Text(actionLabel),
+                style: ElevatedButton.styleFrom(
+                  minimumSize: const Size.fromHeight(46),
+                  backgroundColor: FretColors.brandBlack,
+                  foregroundColor: FretColors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
               ),
             ),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
-class _DriverRouteText extends StatelessWidget {
-  final String label;
-  final String value;
-
-  const _DriverRouteText({required this.label, required this.value});
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        SizedBox(
-          width: 55,
-          child: Text(
-            label,
-            style: const TextStyle(
-              color: FretColors.neutral600,
-              fontSize: 11,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-        ),
-        Expanded(
-          child: Text(
-            value,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              color: FretColors.neutral900,
-              fontSize: 13,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _DriverRideInfo extends StatelessWidget {
-  final String label;
-  final String value;
-
-  const _DriverRideInfo({required this.label, required this.value});
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: const TextStyle(
-            color: FretColors.neutral500,
-            fontSize: 10,
-            fontWeight: FontWeight.w800,
-          ),
-        ),
-        const SizedBox(height: 2),
-        Text(
-          value,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: const TextStyle(
-            color: FretColors.neutral900,
-            fontSize: 12,
-            fontWeight: FontWeight.w800,
-          ),
-        ),
-      ],
     );
   }
 }
@@ -1569,10 +1442,6 @@ String _formatMoney(double value) {
   return 'R\$ $fixed';
 }
 
-String _formatNumber(double value) {
-  return value.toStringAsFixed(1).replaceAll('.', ',');
-}
-
 String? _rideProgressActionEndpoint(DriverRideModel ride) {
   return switch (ride.statusId) {
     2 => Endpoints.startRide(ride.id),
@@ -1607,16 +1476,4 @@ IconData? _rideProgressActionIcon(DriverRideModel ride) {
     4 => Icons.flag_outlined,
     _ => null,
   };
-}
-
-String _formatDateTime(DateTime? value) {
-  if (value == null) return '';
-
-  final local = value.toLocal();
-  final day = local.day.toString().padLeft(2, '0');
-  final month = local.month.toString().padLeft(2, '0');
-  final hour = local.hour.toString().padLeft(2, '0');
-  final minute = local.minute.toString().padLeft(2, '0');
-
-  return '$day/$month $hour:$minute';
 }

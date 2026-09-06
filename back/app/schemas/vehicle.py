@@ -1,5 +1,6 @@
 from datetime import datetime
 from typing import Optional
+from app.schemas.vehicle_model import VehicleModelResponse
 
 from pydantic import (
     BaseModel,
@@ -21,6 +22,10 @@ class VehicleResponse(BaseModel):
     updated_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class VehicleListResponse(VehicleResponse):
+    vehicle_model: Optional[VehicleModelResponse] = None
 
 
 class VehicleCreateRequest(BaseModel):

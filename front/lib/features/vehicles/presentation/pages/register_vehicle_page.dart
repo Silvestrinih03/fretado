@@ -154,7 +154,7 @@ class _RegisterVehiclePageState extends State<RegisterVehiclePage> {
                   ),
                   const SizedBox(height: 24),
                   FretPrimaryButton(
-                    label: 'Cadastrar ve?culo',
+                    label: 'Cadastrar veículo',
                     loading: _store.isRegisteringVehicle,
                     onPressed: _save,
                     trailingIcon: null,

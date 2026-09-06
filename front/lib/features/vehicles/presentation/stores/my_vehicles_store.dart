@@ -16,6 +16,8 @@ class MyVehiclesStore extends ChangeNotifier {
   }) : _fallbackUserId = fallbackUserId;
 
   bool _isLoading = false;
+  bool _disposed = false;
+  int _request = 0;
   String? _errorMessage;
   List<VehicleListItemModel> _vehicles = <VehicleListItemModel>[];
 
@@ -25,11 +27,12 @@ class MyVehiclesStore extends ChangeNotifier {
       List<VehicleListItemModel>.unmodifiable(_vehicles);
 
   Future<void> loadVehicles() async {
+    final request = ++_request;
     final int? userId = _myselfService.currentUserId ?? _fallbackUserId;
     if (userId == null) {
       _errorMessage = 'Usuário logado não encontrado.';
       _vehicles = <VehicleListItemModel>[];
-      notifyListeners();
+      _notify();
       return;
     }
 
@@ -37,20 +40,34 @@ class MyVehiclesStore extends ChangeNotifier {
     _errorMessage = null;
 
     try {
-      _vehicles = await _vehicleRepository.listVehiclesByUser(userId);
+      final vehicles = await _vehicleRepository.listVehiclesByUser(userId);
+      if (_disposed || request != _request) return;
+      _vehicles = vehicles;
     } on VehicleRepositoryException catch (e) {
+      if (_disposed || request != _request) return;
       _errorMessage = e.message;
       _vehicles = <VehicleListItemModel>[];
     } catch (_) {
+      if (_disposed || request != _request) return;
       _errorMessage = 'Não foi possível carregar seus veículos.';
       _vehicles = <VehicleListItemModel>[];
     } finally {
-      _setLoading(false);
+      if (!_disposed && request == _request) _setLoading(false);
     }
   }
 
   void _setLoading(bool value) {
     _isLoading = value;
-    notifyListeners();
+    _notify();
+  }
+
+  void _notify() {
+    if (!_disposed) notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    _disposed = true;
+    super.dispose();
   }
 }

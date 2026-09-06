@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../../app/design_system/design_system.dart';
+
 import '../../../../core/services/http_service.dart';
 import '../../../../core/services/myself/services/myself_service.dart';
 import '../../data/datasources/vehicle_datasource.dart';
@@ -53,333 +55,137 @@ class _MyVehiclesPageState extends State<MyVehiclesPage> {
   Widget build(BuildContext context) {
     return AnimatedBuilder(
       animation: _store,
-      builder: (context, _) {
-        return Scaffold(
-          backgroundColor: const Color(0xFFF3F4F8),
-          body: SafeArea(
-            child: Column(
+      builder: (context, _) => Scaffold(
+        backgroundColor: FretColors.appBackground,
+        appBar: AppBar(
+          title: const Text('Meus veículos'),
+          backgroundColor: FretColors.appBackground,
+          foregroundColor: FretColors.textPrimary,
+          actions: [
+            IconButton(
+              tooltip: 'Adicionar veículo',
+              onPressed: _openRegisterVehicle,
+              icon: const Icon(Icons.add_rounded),
+            ),
+          ],
+        ),
+        body: SafeArea(
+          child: RefreshIndicator(
+            onRefresh: _store.loadVehicles,
+            child: ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.all(16),
               children: [
-                _MyVehiclesHeader(onAddTap: _openRegisterVehicle),
-                Expanded(
-                  child: ListView(
-                    padding: const EdgeInsets.fromLTRB(16, 14, 16, 18),
-                    children: [
-                      if (_store.isLoading) ...[
-                        const Padding(
-                          padding: EdgeInsets.only(top: 24),
-                          child: Center(
-                            child: CircularProgressIndicator(),
-                          ),
-                        ),
-                      ] else if (_store.errorMessage != null) ...[
-                        _VehiclesErrorState(
-                          title: 'Não foi possível carregar seus veículos',
-                          subtitle: _store.errorMessage!,
-                          onRetry: _store.loadVehicles,
-                        ),
-                      ] else if (_store.vehicles.isEmpty) ...[
-                        _EmptyState(
-                          title: 'Nenhum veículo cadastrado',
-                          subtitle:
-                              'Cadastre o primeiro veículo para começar.',
-                          onTap: _openRegisterVehicle,
-                        ),
-                      ] else ...[
-                        ..._store.vehicles.asMap().entries.map((entry) {
-                          final index = entry.key;
-                          final vehicle = entry.value;
-
-                          return Column(
-                            children: [
-                              VehicleCard(
-                                plate: vehicle.plate,
-                                year: vehicle.yearText,
-                                brand: vehicle.brand,
-                                model: vehicle.model,
-                                statusLabel: vehicle.statusLabel,
-                                statusBackgroundColor: vehicle.isActive
-                                    ? const Color(0xFFF2D45C)
-                                    : const Color(0xFFE4E6EC),
-                                statusTextColor: vehicle.isActive
-                                    ? const Color(0xFF4A3D00)
-                                    : const Color(0xFF4B505D),
-                              ),
-                              if (index != _store.vehicles.length - 1)
-                                const SizedBox(height: 10),
-                            ],
-                          );
-                        }),
-                        const SizedBox(height: 14),
-                        _NewVehicleCallout(onTap: _openRegisterVehicle),
-                      ],
-                    ],
+                Text(
+                  'Gerencie seus veículos',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: FretColors.textSecondary,
                   ),
                 ),
+                const SizedBox(height: 24),
+                if (_store.isLoading)
+                  const Padding(
+                    padding: EdgeInsets.all(32),
+                    child: Center(child: CircularProgressIndicator()),
+                  )
+                else if (_store.errorMessage != null)
+                  _VehiclesState(
+                    icon: Icons.error_outline_rounded,
+                    title: 'Não foi possível carregar seus veículos',
+                    subtitle: _store.errorMessage!,
+                    action: 'Tentar novamente',
+                    onPressed: _store.loadVehicles,
+                  )
+                else if (_store.vehicles.isEmpty)
+                  _VehiclesState(
+                    icon: Icons.local_shipping_outlined,
+                    title: 'Nenhum veículo cadastrado',
+                    subtitle: 'Adicione seu primeiro veículo para começar.',
+                    action: 'Adicionar veículo',
+                    onPressed: _openRegisterVehicle,
+                  )
+                else ...[
+                  Text(
+                    '${_store.vehicles.length} ${_store.vehicles.length == 1 ? 'veículo cadastrado' : 'veículos cadastrados'}',
+                    style: Theme.of(context).textTheme.titleSmall,
+                  ),
+                  const SizedBox(height: 16),
+                  for (final vehicle in _store.vehicles)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 16),
+                      child: VehicleCard(
+                        key: ValueKey(vehicle.id),
+                        vehicle: vehicle,
+                      ),
+                    ),
+                  const SizedBox(height: 8),
+                  FretPrimaryButton(
+                    label: 'Adicionar veículo',
+                    trailingIcon: Icons.add_rounded,
+                    onPressed: _openRegisterVehicle,
+                  ),
+                ],
               ],
             ),
           ),
-        );
-      },
+        ),
+      ),
     );
   }
 
   Future<void> _openRegisterVehicle() async {
-    final bool? didRegister = await Navigator.of(context).push<bool>(
+    final didRegister = await Navigator.of(context).push<bool>(
       MaterialPageRoute<bool>(
         builder: (_) => RegisterVehiclePage(userId: widget.userId),
       ),
     );
-
-    if (!mounted) {
-      return;
-    }
-
-    if (didRegister == true) {
-      _store.loadVehicles();
-    }
+    if (!mounted) return;
+    if (didRegister == true) await _store.loadVehicles();
   }
 }
 
-class _EmptyState extends StatelessWidget {
+class _VehiclesState extends StatelessWidget {
+  final IconData icon;
   final String title;
   final String subtitle;
-  final VoidCallback onTap;
+  final String action;
+  final VoidCallback onPressed;
 
-  const _EmptyState({
+  const _VehiclesState({
+    required this.icon,
     required this.title,
     required this.subtitle,
-    required this.onTap,
+    required this.action,
+    required this.onPressed,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE4E6EE)),
-      ),
+    return FretSurfaceCard(
       child: Column(
         children: [
-          const Icon(
-            Icons.local_shipping_outlined,
-            size: 34,
-            color: Color(0xFF9CA0C8),
-          ),
-          const SizedBox(height: 8),
+          FretIconBox(icon: icon, size: 48, iconSize: 26),
+          const SizedBox(height: 16),
           Text(
             title,
             textAlign: TextAlign.center,
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w700,
-              color: Color(0xFF121E84),
-            ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            subtitle,
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              fontSize: 13,
-              color: Color(0xFF6B7285),
-            ),
-          ),
-          const SizedBox(height: 14),
-          ElevatedButton(
-            onPressed: onTap,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF0E1386),
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-            child: const Text('Cadastrar veículo'),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _VehiclesErrorState extends StatelessWidget {
-  final String title;
-  final String subtitle;
-  final VoidCallback onRetry;
-
-  const _VehiclesErrorState({
-    required this.title,
-    required this.subtitle,
-    required this.onRetry,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE4E6EE)),
-      ),
-      child: Column(
-        children: [
-          const Icon(
-            Icons.error_outline_rounded,
-            size: 34,
-            color: Color(0xFFB42318),
+            style: Theme.of(context).textTheme.titleMedium,
           ),
           const SizedBox(height: 8),
           Text(
-            title,
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w700,
-              color: Color(0xFF121E84),
-            ),
-          ),
-          const SizedBox(height: 6),
-          Text(
             subtitle,
             textAlign: TextAlign.center,
-            style: const TextStyle(
-              fontSize: 13,
-              color: Color(0xFF6B7285),
-            ),
+            style: Theme.of(
+              context,
+            ).textTheme.bodyMedium?.copyWith(color: FretColors.textSecondary),
           ),
-          const SizedBox(height: 14),
-          OutlinedButton.icon(
-            onPressed: onRetry,
-            icon: const Icon(Icons.refresh_rounded, size: 18),
-            style: OutlinedButton.styleFrom(
-              foregroundColor: const Color(0xFF0E1386),
-              side: const BorderSide(color: Color(0xFF0E1386)),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-            label: const Text('Tentar novamente'),
+          const SizedBox(height: 24),
+          FretPrimaryButton(
+            label: action,
+            onPressed: onPressed,
+            trailingIcon: null,
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _MyVehiclesHeader extends StatelessWidget {
-  final VoidCallback onAddTap;
-
-  const _MyVehiclesHeader({required this.onAddTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: 66,
-      width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(10, 8, 12, 8),
-      decoration: const BoxDecoration(
-        color: Color(0xFFF3F4F8),
-        border: Border(
-          bottom: BorderSide(color: Color(0xFFE7E9F0), width: 1),
-        ),
-      ),
-      child: Row(
-        children: [
-          IconButton(
-            onPressed: () => Navigator.of(context).maybePop(),
-            icon: const Icon(
-              Icons.arrow_back_ios_new_rounded,
-              color: Color(0xFF121E84),
-              size: 20,
-            ),
-          ),
-          const SizedBox(width: 4),
-          const Expanded(
-            child: Text(
-              'Meus veículos',
-              style: TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.w700,
-                color: Color(0xFF121E84),
-              ),
-            ),
-          ),
-          InkWell(
-            onTap: onAddTap,
-            borderRadius: BorderRadius.circular(12),
-            child: Container(
-              width: 46,
-              height: 42,
-              decoration: BoxDecoration(
-                color: const Color(0xFF0E1386),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: const Icon(
-                Icons.add_rounded,
-                color: Colors.white,
-                size: 26,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _NewVehicleCallout extends StatelessWidget {
-  final VoidCallback onTap;
-
-  const _NewVehicleCallout({required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(14),
-      child: Ink(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-        decoration: BoxDecoration(
-          color: const Color(0xFFF7F8FC),
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(
-            color: const Color(0xFFD8DBE6),
-            width: 1.2,
-            strokeAlign: BorderSide.strokeAlignOutside,
-          ),
-        ),
-        child: const Column(
-          children: [
-            CircleAvatar(
-              radius: 17,
-              backgroundColor: Color(0xFF6C74B7),
-              child: Icon(Icons.add_rounded, color: Colors.white, size: 24),
-            ),
-            SizedBox(height: 10),
-            Text(
-              'Novo Veículo',
-              style: TextStyle(
-                fontSize: 16,
-                color: Color(0xFF5A61A3),
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            SizedBox(height: 4),
-            Text(
-              'Cadastre um novo veículo no sistema.',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 13,
-                height: 1.3,
-                color: Color(0xFF8B8F9E),
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }

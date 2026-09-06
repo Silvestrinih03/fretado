@@ -6,6 +6,7 @@ import '../../../../core/services/myself/services/myself_service.dart';
 import '../../data/datasources/profile_datasource.dart';
 import '../../data/repositories/profile_repository_impl.dart';
 import '../controllers/profile_controller.dart';
+import '../widgets/profile_widgets.dart';
 
 class ChangePasswordPopup extends StatefulWidget {
   const ChangePasswordPopup({super.key});
@@ -43,6 +44,7 @@ class _ChangePasswordPopupState extends State<ChangePasswordPopup> {
   }
 
   Future<void> _save() async {
+    if (_isLoading) return;
     FocusScope.of(context).unfocus();
 
     final bool isFormValid = _formKey.currentState?.validate() ?? false;
@@ -101,114 +103,52 @@ class _ChangePasswordPopupState extends State<ChangePasswordPopup> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Dialog(
-      insetPadding: const EdgeInsets.symmetric(horizontal: 20),
-      backgroundColor: FretColors.white,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(18, 20, 18, 18),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            const Text(
-              'Alteração de senha',
-              textAlign: TextAlign.left,
-              style: TextStyle(
-                color: FretColors.loginFooterLink,
-                fontSize: 20,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              'Digite a sua senha atual e a nova senha para alterar sua senha de acesso.',
-              textAlign: TextAlign.left,
-              style: TextStyle(
-                color: FretColors.neutral500,
-                fontSize: 13,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
+  Widget build(BuildContext context) => Scaffold(
+    backgroundColor: FretColors.screenBackground,
+    body: SafeArea(child: Column(children: [
+      const ProfileHeader(title: 'Segurança e senha'),
+      Expanded(child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(20, 4, 20, 20),
+        child: Form(key: _formKey, autovalidateMode: _autovalidateMode,
+          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            const ProfileSurface(child: Row(children: [
+              ProfileIcon(icon: Icons.shield_outlined, size: 42),
+              SizedBox(width: 12),
+              Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text('Conta protegida', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: FretColors.screenDark)),
+                SizedBox(height: 2),
+                // Temporary until password change dates are provided by the API.
+                Text('Última alteração: há 2 meses', style: TextStyle(fontSize: 11, color: FretColors.screenMuted)),
+              ])),
+            ])),
+            const SizedBox(height: 22),
+            const Text('Alterar senha', style: TextStyle(fontSize: 13,
+              fontWeight: FontWeight.w700, color: FretColors.screenDark)),
             const SizedBox(height: 14),
-            Form(
-              key: _formKey,
-              autovalidateMode: _autovalidateMode,
-              child: Column(
-                children: [
-                  _PasswordPopupField(
-                    controller: _currentPasswordController,
-                    hintText: 'Senha atual.',
-                    textInputAction: TextInputAction.next,
-                    validator: _validateCurrentPassword,
-                  ),
-                  const SizedBox(height: 14),
-                  _PasswordPopupField(
-                    controller: _newPasswordController,
-                    hintText: 'Digite a nova senha.',
-                    textInputAction: TextInputAction.next,
-                    validator: (value) => _validateNewPassword(
-                      value,
-                      _currentPasswordController.text,
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  _PasswordPopupField(
-                    controller: _confirmPasswordController,
-                    hintText: 'Confirme a nova senha.',
-                    textInputAction: TextInputAction.done,
-                    onFieldSubmitted: (_) => _save(),
-                    validator: (value) => _validatePasswordConfirmation(
-                      value,
-                      _newPasswordController.text,
-                    ),
-                  ),
-                ],
-              ),
-            ),
+            ProfileField(label: 'Senha atual', controller: _currentPasswordController,
+              password: true, textInputAction: TextInputAction.next, validator: _validateCurrentPassword),
+            const SizedBox(height: 14),
+            ProfileField(label: 'Nova senha', controller: _newPasswordController,
+              password: true, textInputAction: TextInputAction.next,
+              validator: (value) => _validateNewPassword(value, _currentPasswordController.text)),
+            const SizedBox(height: 14),
+            ProfileField(label: 'Confirmar nova senha', controller: _confirmPasswordController,
+              password: true, textInputAction: TextInputAction.done,
+              onFieldSubmitted: (_) => _save(),
+              validator: (value) => _validatePasswordConfirmation(value, _newPasswordController.text)),
+            const SizedBox(height: 12),
+            const Text('Use no mínimo 8 caracteres com letras maiúsculas, minúsculas e números.',
+              style: TextStyle(fontSize: 11, color: FretColors.screenMuted, height: 1.6)),
             if (_errorMessage != null) ...[
               const SizedBox(height: 14),
-              Text(
-                _errorMessage!,
-                style: const TextStyle(
-                  color: FretColors.destructive600,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
+              Text(_errorMessage!, style: const TextStyle(fontSize: 12, color: FretColors.destructive600)),
             ],
-            const SizedBox(height: 18),
-            Align(
-              alignment: Alignment.center,
-              child: SizedBox(
-                width: 150,
-                height: 44,
-                child: ElevatedButton(
-                  onPressed: _isLoading ? null : _save,
-                  style: ElevatedButton.styleFrom(
-                    elevation: 0,
-                    backgroundColor: const Color(0xFF070873),
-                    foregroundColor: FretColors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
-                  child: Text(
-                    _isLoading ? 'Salvando...' : 'Salvar',
-                    style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ],
+          ]),
         ),
-      ),
-    );
-  }
+      )),
+      ProfileSaveBar(label: 'Atualizar senha', isLoading: _isLoading, onPressed: _save),
+    ])),
+  );
 }
 
 String? _validateCurrentPassword(String? value) {
@@ -230,6 +170,10 @@ String? _validateNewPassword(String? value, String currentPassword) {
   }
   if (password.length < 8) {
     return 'A senha deve ter pelo menos 8 caracteres.';
+  }
+  if (!RegExp(r'[A-Z]').hasMatch(password) ||
+      !RegExp(r'[a-z]').hasMatch(password) || !RegExp(r'[0-9]').hasMatch(password)) {
+    return 'Use letras maiúsculas, minúsculas e números.';
   }
   if (password == currentPassword.trim()) {
     return 'A nova senha deve ser diferente da senha atual.';
@@ -259,54 +203,4 @@ String _readErrorMessage(Object error) {
   }
 
   return message.substring(separatorIndex + 2);
-}
-
-class _PasswordPopupField extends StatelessWidget {
-  final TextEditingController controller;
-  final String hintText;
-  final String? Function(String?)? validator;
-  final TextInputAction? textInputAction;
-  final ValueChanged<String>? onFieldSubmitted;
-
-  const _PasswordPopupField({
-    required this.controller,
-    required this.hintText,
-    this.validator,
-    this.textInputAction,
-    this.onFieldSubmitted,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return TextFormField(
-      controller: controller,
-      obscureText: true,
-      validator: validator,
-      textInputAction: textInputAction,
-      onFieldSubmitted: onFieldSubmitted,
-      style: const TextStyle(
-        color: FretColors.neutral900,
-        fontSize: 15,
-        fontWeight: FontWeight.w500,
-      ),
-      decoration: InputDecoration(
-        hintText: hintText,
-        hintStyle: const TextStyle(
-          color: FretColors.neutral500,
-          fontSize: 14,
-          fontWeight: FontWeight.w500,
-        ),
-        filled: true,
-        fillColor: const Color(0xFFF0F1F3),
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 14,
-          vertical: 12,
-        ),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-          borderSide: BorderSide.none,
-        ),
-      ),
-    );
-  }
 }

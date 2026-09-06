@@ -85,19 +85,19 @@ def change_password(
     if not is_valid_password:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Current password is incorrect."
+            detail="Senha atual incorreta."
         )
 
     if payload.new_password != payload.confirm_password:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="New password and confirmation do not match."
+            detail="Nova senha e confirmação não coincidem."
         )
 
     if payload.current_password == payload.new_password:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="New password must be different from the current password."
+            detail="Nova senha deve ser diferente da senha atual."
         )
 
     user.password_hash = hash_password(payload.new_password)
@@ -106,7 +106,7 @@ def change_password(
     db.refresh(user)
 
     return {
-        "message": "Password updated successfully."
+        "message": "Senha atualizada com sucesso."
     }
 
 @router.post("/forgot-password")
@@ -181,7 +181,7 @@ def reset_password(
     db.commit()
 
     return {
-        "message": "Password reset successfully."
+        "message": "Senha redefinida com sucesso."
     }
 
 def _build_password_reset_link(token: str) -> str:
@@ -253,7 +253,7 @@ def get_current_driver(
     if current_user.user_type_id != int(UserTypeEnum.DRIVER):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Driver access required.",
+            detail="Acesso de motorista requerido.",
         )
 
     return current_user

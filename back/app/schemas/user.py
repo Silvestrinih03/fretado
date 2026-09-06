@@ -9,6 +9,8 @@ class UserProfileResponse(BaseModel):
     cpf: str
     birth_date: Optional[date] = None
     phone: Optional[str] = None
+    user_type_id: int
+    completed_rides_count: int = Field(default=0, ge=0)
 
     model_config = ConfigDict(from_attributes=True)
 

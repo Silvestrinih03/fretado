@@ -240,7 +240,7 @@ class _LoginPageState extends State<LoginPage> {
                   crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
                     const Text(
-                      'N?o possui uma conta? ',
+                      'Não possui uma conta? ',
                       style: TextStyle(
                         fontSize: 13,
                         color: FretColors.screenMuted,

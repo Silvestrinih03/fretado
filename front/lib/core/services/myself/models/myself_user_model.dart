@@ -6,6 +6,7 @@ class MyselfUserModel {
   final int? userTypeId;
   final String? birthDate;
   final String? phone;
+  final int completedRidesCount;
 
   const MyselfUserModel({
     required this.firstName,
@@ -15,6 +16,7 @@ class MyselfUserModel {
     this.userTypeId,
     this.birthDate,
     this.phone,
+    this.completedRidesCount = 0,
   });
 
   factory MyselfUserModel.fromJson(Map<String, dynamic> json) {
@@ -26,6 +28,7 @@ class MyselfUserModel {
       userTypeId: _readInt(json['user_type_id']),
       birthDate: _readString(json['birth_date']),
       phone: _readString(json['phone']),
+      completedRidesCount: _readInt(json['completed_rides_count']) ?? 0,
     );
   }
 

@@ -8,7 +8,7 @@ import '../../../../core/services/myself/services/myself_service.dart';
 import '../../data/datasources/profile_datasource.dart';
 import '../../data/repositories/profile_repository_impl.dart';
 import '../controllers/profile_controller.dart';
-import 'change_password_popup.dart';
+import '../widgets/profile_widgets.dart';
 
 class UserDataPage extends StatefulWidget {
   const UserDataPage({super.key});
@@ -25,31 +25,52 @@ class _UserDataPageState extends State<UserDataPage> {
   final TextEditingController _cpfController = TextEditingController();
   final TextEditingController _birthDateController = TextEditingController();
   final TextEditingController _phoneController = TextEditingController();
-  final TextEditingController _passwordController = TextEditingController(
-    text: '**************',
-  );
+
 
   late final int _userId;
-  late final Future<MyselfUserModel> _userFuture;
+  late Future<MyselfUserModel> _userFuture;
   late final HttpService _httpService;
   late final ProfileController _profileController;
   bool _didFillControllers = false;
   bool _isSaving = false;
+  bool _userLoaded = false;
   AutovalidateMode _autovalidateMode = AutovalidateMode.disabled;
 
   @override
   void initState() {
     super.initState();
     final MyselfService myselfService = MyselfService();
-    _userId = myselfService.currentUserId ?? 5;
+    _userId = myselfService.currentUserId ?? 0;
 
-    _userFuture = myselfService.getMyself(_userId);
+    _userFuture = _loadUser();
     _httpService = HttpService();
     _profileController = ProfileController(
       ProfileRepositoryImpl(
         ProfileDatasource(_httpService),
       ),
     );
+  }
+
+  Future<MyselfUserModel> _loadUser() async {
+    final user = await MyselfService().getMyself(_userId);
+    if (mounted) setState(() => _userLoaded = true);
+    return user;
+  }
+
+  Future<void> _selectBirthDate() async {
+    final digits = _birthDateController.text.replaceAll(RegExp(r'\D'), '');
+    final now = DateTime.now();
+    DateTime initial = DateTime(now.year - 18, now.month, now.day);
+    if (digits.length == 8) {
+      final parsed = DateTime(int.parse(digits.substring(4)),
+        int.parse(digits.substring(2, 4)), int.parse(digits.substring(0, 2)));
+      if (!parsed.isAfter(now) && !parsed.isBefore(DateTime(1900))) initial = parsed;
+    }
+    final selected = await showDatePicker(context: context, initialDate: initial,
+      firstDate: DateTime(1900), lastDate: now);
+    if (selected != null && mounted) {
+      _birthDateController.text = _formatBirthDate(selected.toIso8601String());
+    }
   }
 
   @override
@@ -60,7 +81,6 @@ class _UserDataPageState extends State<UserDataPage> {
     _cpfController.dispose();
     _birthDateController.dispose();
     _phoneController.dispose();
-    _passwordController.dispose();
     _httpService.dispose();
     super.dispose();
   }
@@ -133,400 +153,76 @@ class _UserDataPageState extends State<UserDataPage> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF7F8FA),
-      body: SafeArea(
-        child: Column(
-          children: [
-            const _UserDataHeader(),
-            Expanded(
-              child: FutureBuilder<MyselfUserModel>(
-                future: _userFuture,
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Center(child: CircularProgressIndicator());
-                  }
-
-                  if (snapshot.hasData) {
-                    _fillControllers(snapshot.data!);
-                  }
-
-                  return Form(
-                    key: _formKey,
-                    autovalidateMode: _autovalidateMode,
-                    child: SingleChildScrollView(
-                      padding: const EdgeInsets.fromLTRB(16, 18, 16, 18),
-                      child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        _ProfileSummary(
-                          firstNameController: _firstNameController,
-                          lastNameController: _lastNameController,
-                          userTypeLabel: snapshot.hasData
-                              ? RegisterAccountTypeApiMapper.fromUserTypeId(
-                                  snapshot.data!.userTypeId ??
-                                      MyselfService().currentUserTypeId ??
-                                      1,
-                                ).displayName
-                              : '',
-                        ),
-                        const SizedBox(height: 20),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: _ProfileTextField(
-                                label: 'NOME',
-                                controller: _firstNameController,
-                                validator: (value) =>
-                                    _validateRequiredField(value, 'nome'),
-                              ),
-                            ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: _ProfileTextField(
-                                label: 'SOBRENOME',
-                                controller: _lastNameController,
-                                validator: (value) =>
-                                    _validateRequiredField(value, 'sobrenome'),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 14),
-                        _ProfileTextField(
-                          label: 'E-MAIL',
-                          controller: _emailController,
-                          keyboardType: TextInputType.emailAddress,
-                          validator: _validateEmail,
-                        ),
-                        const SizedBox(height: 14),
-                        _ProfileTextField(
-                          label: 'CPF',
-                          controller: _cpfController,
-                          keyboardType: TextInputType.number,
-                          readOnly: true,
-                          canRequestFocus: false,
-                          suffixIcon: Icons.check_rounded,
-                        ),
-                        const SizedBox(height: 14),
-                        _ProfileTextField(
-                          label: 'DATA DE NASCIMENTO',
-                          controller: _birthDateController,
-                          keyboardType: TextInputType.datetime,
-                          suffixIcon: Icons.calendar_today_outlined,
-                          validator: _validateOptionalBirthDate,
-                        ),
-                        const SizedBox(height: 14),
-                        _ProfileTextField(
-                          label: 'TELEFONE',
-                          controller: _phoneController,
-                          keyboardType: TextInputType.phone,
-                          validator: _validateOptionalPhone,
-                        ),
-                        const SizedBox(height: 14),
-                        _ProfileTextField(
-                          label: 'SENHA',
-                          controller: _passwordController,
-                          obscureText: true,
-                          readOnly: true,
-                          canRequestFocus: false,
-                          suffixIcon: Icons.edit_rounded,
-                          onSuffixTap: () {
-                            showDialog<void>(
-                              context: context,
-                              builder: (_) => const ChangePasswordPopup(),
-                            );
-                          },
-                        ),
-                      ],
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ),
-            _SaveBar(onPressed: _save, isLoading: _isSaving),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _UserDataHeader extends StatelessWidget {
-  const _UserDataHeader();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: 62,
-      decoration: const BoxDecoration(
-        color: FretColors.white,
-        border: Border(bottom: BorderSide(color: Color(0xFFE9EAEE))),
-      ),
-      child: Row(
-        children: [
-          const SizedBox(width: 8),
-          IconButton(
-            onPressed: () => Navigator.of(context).maybePop(),
-            icon: const Icon(
-              Icons.arrow_back_rounded,
-              color: FretColors.loginFooterLink,
-              size: 24,
-            ),
-          ),
-          const SizedBox(width: 8),
-          const Text(
-            'Dados pessoais',
-            style: TextStyle(
-              color: FretColors.loginFooterLink,
-              fontSize: 21,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ProfileSummary extends StatelessWidget {
-  final TextEditingController firstNameController;
-  final TextEditingController lastNameController;
-  final String userTypeLabel;
-
-  const _ProfileSummary({
-    required this.firstNameController,
-    required this.lastNameController,
-    required this.userTypeLabel,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Stack(
-          clipBehavior: Clip.none,
-          children: [
-            Container(
-              width: 82,
-              height: 82,
-              decoration: BoxDecoration(
-                color: const Color(0xFFE3E4E6),
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: FretColors.white, width: 2),
-                boxShadow: const [
-                  BoxShadow(
-                    color: Color(0x14000000),
-                    blurRadius: 8,
-                    offset: Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: const Icon(
-                Icons.account_circle_outlined,
-                color: Color(0xFF4A4B55),
-                size: 48,
-              ),
-            ),
-            Positioned(
-              right: -2,
-              bottom: -2,
-              child: Container(
-                width: 34,
-                height: 34,
-                decoration: BoxDecoration(
-                  color: FretColors.secondaryVariation700,
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: const [
-                    BoxShadow(
-                      color: Color(0x33000000),
-                      blurRadius: 14,
-                      offset: Offset(0, 7),
-                    ),
-                  ],
+  Widget build(BuildContext context) => Scaffold(
+    backgroundColor: FretColors.screenBackground,
+    body: SafeArea(child: Column(children: [
+      const ProfileHeader(title: 'Dados pessoais'),
+      Expanded(child: FutureBuilder<MyselfUserModel>(
+        future: _userFuture,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState != ConnectionState.done) {
+            return const Center(child: CircularProgressIndicator(color: FretColors.screenGold));
+          }
+          if (snapshot.hasError || !snapshot.hasData) {
+            return Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
+              const Text('Não foi possível carregar seus dados.'),
+              TextButton(onPressed: () => setState(() { _userFuture = _loadUser(); }),
+                child: const Text('Tentar novamente')),
+            ]));
+          }
+          _fillControllers(snapshot.data!);
+          final type = RegisterAccountTypeApiMapper.fromUserTypeId(
+            snapshot.data!.userTypeId ?? MyselfService().currentUserTypeId ?? 1).displayName;
+          return Form(
+            key: _formKey, autovalidateMode: _autovalidateMode,
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(20, 4, 20, 20),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                AnimatedBuilder(
+                  animation: Listenable.merge([_firstNameController, _lastNameController, _emailController]),
+                  builder: (context, _) {
+                    final name = '${_firstNameController.text} ${_lastNameController.text}'.trim();
+                    return Row(children: [
+                      ProfileAvatar(name: name, size: 68),
+                      const SizedBox(width: 16),
+                      Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        Text(name, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: FretColors.screenDark)),
+                        const SizedBox(height: 3),
+                        Text('$type · ${_emailController.text}',
+                          style: const TextStyle(fontSize: 12, color: FretColors.screenMuted)),
+                      ])),
+                    ]);
+                  },
                 ),
-                child: const Icon(
-                  Icons.photo_camera_outlined,
-                  color: FretColors.white,
-                  size: 16,
-                ),
-              ),
+                const SizedBox(height: 22),
+                Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Expanded(child: ProfileField(label: 'Nome', controller: _firstNameController,
+                    validator: (value) => _validateRequiredField(value, 'nome'))),
+                  const SizedBox(width: 10),
+                  Expanded(child: ProfileField(label: 'Sobrenome', controller: _lastNameController,
+                    validator: (value) => _validateRequiredField(value, 'sobrenome'))),
+                ]),
+                const SizedBox(height: 14),
+                ProfileField(label: 'E-mail', controller: _emailController,
+                  keyboardType: TextInputType.emailAddress, validator: _validateEmail),
+                const SizedBox(height: 14),
+                ProfileField(label: 'CPF', controller: _cpfController, readOnly: true, icon: Icons.check_rounded),
+                const SizedBox(height: 14),
+                ProfileField(label: 'Data de nascimento', controller: _birthDateController,
+                  keyboardType: TextInputType.datetime, icon: Icons.calendar_today_outlined,
+                  onIconTap: _selectBirthDate, validator: _validateOptionalBirthDate),
+                const SizedBox(height: 14),
+                ProfileField(label: 'Telefone', controller: _phoneController,
+                  keyboardType: TextInputType.phone, validator: _validateOptionalPhone),
+              ]),
             ),
-          ],
-        ),
-        const SizedBox(width: 16),
-        Expanded(
-          child: AnimatedBuilder(
-            animation: Listenable.merge([
-              firstNameController,
-              lastNameController,
-            ]),
-            builder: (context, _) {
-              final String fullName =
-                  '${firstNameController.text} ${lastNameController.text}'
-                      .trim();
-
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    fullName.isEmpty ? 'Usuário' : fullName,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: FretColors.loginFooterLink,
-                      fontSize: 20,
-                      height: 1.05,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    userTypeLabel,
-                    style: const TextStyle(
-                      color: Color(0xFF4D4E57),
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ), 
-                ],
-              );
-            },
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _ProfileTextField extends StatelessWidget {
-  final String label;
-  final TextEditingController controller;
-  final TextInputType? keyboardType;
-  final bool obscureText;
-  final bool readOnly;
-  final bool canRequestFocus;
-  final IconData suffixIcon;
-  final VoidCallback? onSuffixTap;
-  final String? Function(String?)? validator;
-
-  const _ProfileTextField({
-    required this.label,
-    required this.controller,
-    this.keyboardType,
-    this.obscureText = false,
-    this.readOnly = false,
-    this.canRequestFocus = true,
-    this.suffixIcon = Icons.edit_rounded,
-    this.onSuffixTap,
-    this.validator,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: const TextStyle(
-            color: Color(0xFF7A7D88),
-            fontSize: 11,
-            fontWeight: FontWeight.w800,
-            letterSpacing: 0,
-          ),
-        ),
-        const SizedBox(height: 5),
-        TextFormField(
-          controller: controller,
-          keyboardType: keyboardType,
-          obscureText: obscureText,
-          readOnly: readOnly,
-          canRequestFocus: canRequestFocus,
-          validator: validator,
-          style: const TextStyle(
-            color: FretColors.black,
-            fontSize: 15,
-            fontWeight: FontWeight.w500,
-          ),
-          decoration: InputDecoration(
-            filled: true,
-            fillColor: const Color(0xFFF0F1F3),
-            contentPadding: const EdgeInsets.fromLTRB(14, 12, 10, 12),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10),
-              borderSide: BorderSide.none,
-            ),
-            suffixIcon: IconButton(
-              onPressed: onSuffixTap,
-              icon: Icon(
-                suffixIcon,
-                color: const Color(0xFFA7A9B1),
-                size: 22,
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _SaveBar extends StatelessWidget {
-  final Future<void> Function() onPressed;
-  final bool isLoading;
-
-  const _SaveBar({
-    required this.onPressed,
-    required this.isLoading,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-      decoration: const BoxDecoration(
-        color: FretColors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
-        boxShadow: [
-          BoxShadow(
-            color: Color(0x12000000),
-            blurRadius: 12,
-            offset: Offset(0, -4),
-          ),
-        ],
-      ),
-      child: SizedBox(
-        height: 50,
-        child: ElevatedButton(
-          onPressed: isLoading
-              ? null
-              : () async {
-                  await onPressed();
-                },
-          style: ElevatedButton.styleFrom(
-            elevation: 10,
-            shadowColor: FretColors.loginFooterLink.withOpacity(0.3),
-            backgroundColor: const Color(0xFF070873),
-            foregroundColor: FretColors.white,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10),
-            ),
-          ),
-          child: Text(
-            isLoading ? 'Salvando...' : 'Salvar',
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
+          );
+        },
+      )),
+      ProfileSaveBar(label: 'Salvar alterações', isLoading: _isSaving,
+        onPressed: _userLoaded ? _save : null),
+    ])),
+  );
 }
 
 String _formatBirthDate(String? value) {

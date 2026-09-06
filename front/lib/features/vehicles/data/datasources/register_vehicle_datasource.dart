@@ -16,10 +16,23 @@ class RegisterVehicleDatasource {
         body: vehicle.toJson(),
       );
 
-      return RegisterVehicleModel.fromJson(response);
+      return RegisterVehicleModel.fromJson({...vehicle.toJson(), ...response});
     } on HttpServiceException catch (e) {
+      final detail = e.data?['detail'];
+      final validationMessages = detail is List
+          ? detail
+                .whereType<Map>()
+                .map((item) {
+                  final location = item['loc'];
+                  final field = location is List && location.isNotEmpty
+                      ? location.last.toString()
+                      : 'veículo';
+                  return '$field: ${item['msg'] ?? 'Valor inválido.'}';
+                })
+                .join('\n')
+          : '';
       throw RegisterVehicleDatasourceException(
-        e.message,
+        validationMessages.isEmpty ? e.message : validationMessages,
         statusCode: e.statusCode,
       );
     }

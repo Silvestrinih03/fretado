@@ -5,21 +5,18 @@ import '../../../../core/services/http_service.dart';
 import '../../../../core/services/myself/services/myself_service.dart';
 import '../../data/datasources/vehicle_type_datasource.dart';
 import '../../data/datasources/register_vehicle_datasource.dart';
-import '../../data/datasources/vehicle_fipe_datasource.dart';
+import '../../data/datasources/vehicle_catalog_datasource.dart';
 import '../../data/repositories/register_vehicle_repository_impl.dart';
-import '../../data/repositories/vehicle_fipe_repository_impl.dart';
+import '../../data/repositories/vehicle_catalog_repository_impl.dart';
 import '../../data/repositories/vehicle_type_repository_impl.dart';
 import '../stores/register_vehicle_store.dart';
-import 'package:front/features/vehicles/presentation/widgets/select_vehicle_type.dart';
-import 'package:front/features/vehicles/presentation/widgets/fill_vehicle_brand_data.dart';
-import 'package:front/features/vehicles/presentation/widgets/fill_vehicle_load_capacity.dart';
-import 'package:front/features/vehicles/presentation/widgets/fill_vehicle_plate.dart';
-import 'package:front/features/vehicles/presentation/widgets/fill_vehicle_detailed_data.dart';
-//import 'package:front/features/vehicles/presentation/widgets/fill_vehicle_activation.dart';
+import '../widgets/select_vehicle_type.dart';
+import '../widgets/fill_vehicle_brand_data.dart';
+import '../widgets/fill_vehicle_plate.dart';
+import '../widgets/fill_vehicle_detailed_data.dart';
 
 class RegisterVehiclePage extends StatefulWidget {
   final int? userId;
-
   const RegisterVehiclePage({super.key, this.userId});
 
   @override
@@ -27,55 +24,26 @@ class RegisterVehiclePage extends StatefulWidget {
 }
 
 class _RegisterVehiclePageState extends State<RegisterVehiclePage> {
-  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
-
+  final _formKey = GlobalKey<FormState>();
+  final _plateController = TextEditingController();
+  final _colorController = TextEditingController();
   late final HttpService _httpService;
-  late final VehicleTypeDatasource _vehicleTypeDatasource;
-  late final VehicleTypeRepositoryImpl _vehicleTypeRepository;
-  late final VehicleFipeDatasource _vehicleFipeDatasource;
-  late final VehicleFipeRepositoryImpl _vehicleFipeRepository;
-  late final RegisterVehicleDatasource _registerVehicleDatasource;
-  late final RegisterVehicleRepositoryImpl _registerVehicleRepository;
-  late final MyselfService _myselfService;
   late final RegisterVehicleStore _store;
-
-  String _registerMode = 'fipe';
-  bool _isActive = true;
-
-  final TextEditingController _plateController = TextEditingController();
-  final TextEditingController _loadCapacityController = TextEditingController();
-  final TextEditingController _colorController = TextEditingController();
-  final TextEditingController _widthController = TextEditingController();
-  final TextEditingController _heightController = TextEditingController();
-  final TextEditingController _lengthController = TextEditingController();
-
-  final TextEditingController _manualBrandController = TextEditingController();
-  final TextEditingController _manualModelController = TextEditingController();
-  final TextEditingController _manualYearController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
     _httpService = HttpService();
-    _vehicleTypeDatasource = VehicleTypeDatasource(_httpService);
-    _vehicleTypeRepository = VehicleTypeRepositoryImpl(_vehicleTypeDatasource);
-    _vehicleFipeDatasource = VehicleFipeDatasource(_httpService);
-    _vehicleFipeRepository = VehicleFipeRepositoryImpl(_vehicleFipeDatasource);
-    _registerVehicleDatasource = RegisterVehicleDatasource(_httpService);
-    _registerVehicleRepository = RegisterVehicleRepositoryImpl(
-      _registerVehicleDatasource,
-    );
-    _myselfService = MyselfService();
-    if (widget.userId != null) {
-      _myselfService.currentUserId = widget.userId;
-    }
+    final myself = MyselfService();
+    if (widget.userId != null) myself.currentUserId = widget.userId;
     _store = RegisterVehicleStore(
-      _vehicleTypeRepository,
-      _vehicleFipeRepository,
-      _registerVehicleRepository,
-      _myselfService,
+      VehicleTypeRepositoryImpl(VehicleTypeDatasource(_httpService)),
+      VehicleCatalogRepositoryImpl(VehicleCatalogDatasource(_httpService)),
+      RegisterVehicleRepositoryImpl(RegisterVehicleDatasource(_httpService)),
+      myself,
     );
     _store.loadVehicleTypes();
+    _store.loadBrands();
   }
 
   @override
@@ -83,267 +51,118 @@ class _RegisterVehiclePageState extends State<RegisterVehiclePage> {
     _store.dispose();
     _httpService.dispose();
     _plateController.dispose();
-    _loadCapacityController.dispose();
     _colorController.dispose();
-    _widthController.dispose();
-    _heightController.dispose();
-    _lengthController.dispose();
-    _manualBrandController.dispose();
-    _manualModelController.dispose();
-    _manualYearController.dispose();
     super.dispose();
   }
 
   Future<void> _save() async {
+    if (_store.isRegisteringVehicle) return;
+    if (!_formKey.currentState!.validate()) return;
     if (_store.selectedVehicleTypeId == null) {
-      showFretErrorPopup(
-        context,
-        message: 'Selecione o tipo de veículo.',
-      );
+      showFretErrorPopup(context, message: 'Selecione o tipo de veículo.');
       return;
     }
-
-    if (!_formKey.currentState!.validate()) {
-      return;
-    }
-
-    final bool success = await _store.registerVehicle(
-      registerMode: _registerMode,
-      brand: _manualBrandController.text,
-      model: _manualModelController.text,
-      year: _manualYearController.text,
+    FocusScope.of(context).unfocus();
+    final success = await _store.registerVehicle(
       plate: _plateController.text,
-      loadCapacityKg: _loadCapacityController.text,
       color: _colorController.text,
-      widthCm: _widthController.text,
-      heightCm: _heightController.text,
-      lengthCm: _lengthController.text,
-      status: _isActive,
     );
-
-    if (!mounted) {
-      return;
-    }
-
+    if (!mounted) return;
     if (success) {
       final messenger = ScaffoldMessenger.of(context);
       Navigator.of(context).pop(true);
       messenger.showSnackBar(
-        const SnackBar(content: Text('Veículo cadastrado com sucesso.')),
+        const SnackBar(content: Text('Ve?culo cadastrado com sucesso.')),
       );
-      return;
+    } else {
+      showFretErrorPopup(
+        context,
+        message:
+            _store.registerVehicleError ??
+            'Não foi possível cadastrar o veículo.',
+      );
     }
-
-    final String errorMessage =
-        _store.registerVehicleError ?? 'Não foi possível cadastrar o veículo.';
-    showFretErrorPopup(context, message: errorMessage);
-  }
-
-  String? _requiredValidator(String? value, String fieldName) {
-    if (value == null || value.trim().isEmpty) {
-      return 'Informe $fieldName';
-    }
-    return null;
   }
 
   @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
       animation: _store,
-      builder: (context, _) {
-        return Scaffold(
-          backgroundColor: const Color(0xFFF1F2F6),
+      builder: (context, _) => PopScope(
+        canPop: !_store.isRegisteringVehicle,
+        child: Scaffold(
+          backgroundColor: FretColors.appBackground,
+          appBar: AppBar(
+            backgroundColor: FretColors.appBackground,
+            foregroundColor: FretColors.textPrimary,
+            title: const Text('Adicionar veículo'),
+          ),
           body: SafeArea(
             child: Form(
               key: _formKey,
               child: ListView(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 18),
+                padding: const EdgeInsets.all(16),
                 children: [
-                  _buildHeader(context),
-                  const SizedBox(height: 10),
-                  SelectVehicleType(
-                    isLoading: _store.isLoadingVehicleTypes,
-                    errorMessage: _store.vehicleTypesError,
-                    vehicleTypes: _store.vehicleTypes,
-                    selectedVehicleTypeId: _store.selectedVehicleTypeId,
-                    onSelected: (id) async {
-                      _store.selectVehicleType(id);
-                      if (_registerMode == 'fipe') {
-                        await _store.loadVehicleFipeBrands();
-                      }
-                    },
+                  const Text(
+                    'Selecione os dados do veículo. As informações técnicas serão identificadas automaticamente.',
+                    style: TextStyle(
+                      color: FretColors.textSecondary,
+                      height: 1.4,
+                    ),
                   ),
-                  const SizedBox(height: 12),
-                  FillVehicleBrandData(
-                    registerMode: _registerMode,
-                    onRegisterModeChanged: (value) {
-                      setState(() => _registerMode = value);
-                      if (value == 'fipe' && _store.selectedVehicleTypeId != null) {
-                        _store.loadVehicleFipeBrands();
-                      }
-                    },
-                    isLoadingFipe: _store.isLoadingVehicleFipe,
-                    errorMessage: _store.vehicleFipeError,
-                    selectedBrand: _store.selectedVehicleFipeBrandCode,
-                    selectedModel: _store.selectedVehicleFipeModelCode,
-                    selectedYear: _store.selectedVehicleFipeYearCode,
-                    brands: _store.vehicleFipeBrands,
-                    models: _store.vehicleFipeModels,
-                    years: _store.vehicleFipeYears,
-                    manualBrandController: _manualBrandController,
-                    manualModelController: _manualModelController,
-                    manualYearController: _manualYearController,
-                    onBrandChanged: (value) {
-                      _store.selectVehicleFipeBrand(value);
-                      if (value != null && _registerMode == 'fipe') {
-                        _store.loadVehicleFipeModels();
-                      }
-                    },
-                    onBrandSearchChanged: (value) {
-                      if (_registerMode == 'fipe') {
-                        _store.loadVehicleFipeBrands(search: value);
-                      }
-                    },
-                    onModelChanged: (value) {
-                      _store.selectVehicleFipeModel(value);
-                      if (value != null && _registerMode == 'fipe') {
-                        _store.loadVehicleFipeYears();
-                      }
-                    },
-                    onModelSearchChanged: (value) {
-                      if (_registerMode == 'fipe' &&
-                          _store.selectedVehicleFipeBrandCode != null) {
-                        _store.loadVehicleFipeModels(search: value);
-                      }
-                    },
-                    onYearChanged: (value) {
-                      _store.selectVehicleFipeYear(value);
-                    },
-                    requiredValidator: _requiredValidator,
+                  const SizedBox(height: 24),
+                  AbsorbPointer(
+                    absorbing: _store.isRegisteringVehicle,
+                    child: Column(
+                      children: [
+                        FretSurfaceCard(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              SelectVehicleType(
+                                isLoading: _store.isLoadingVehicleTypes,
+                                errorMessage: _store.vehicleTypesError,
+                                vehicleTypes: _store.vehicleTypes,
+                                selectedVehicleTypeId:
+                                    _store.selectedVehicleTypeId,
+                                onSelected: _store.selectVehicleType,
+                              ),
+                              if (!_store.isLoadingVehicleTypes &&
+                                  (_store.vehicleTypesError != null ||
+                                      _store.vehicleTypes.isEmpty))
+                                TextButton(
+                                  onPressed: _store.loadVehicleTypes,
+                                  child: const Text('Tentar novamente'),
+                                ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        FillVehicleBrandData(store: _store),
+                        const SizedBox(height: 16),
+                        FillVehicleDetailedData(
+                          colorController: _colorController,
+                          enabled: _store.selectedYear != null,
+                        ),
+                        const SizedBox(height: 16),
+                        FillVehiclePlate(
+                          controller: _plateController,
+                          enabled: _store.selectedYear != null,
+                        ),
+                      ],
+                    ),
                   ),
-                  const SizedBox(height: 10),
-                  FillVehiclePlate(
-                    controller: _plateController,
-                    requiredValidator: _requiredValidator,
+                  const SizedBox(height: 24),
+                  FretPrimaryButton(
+                    label: 'Cadastrar ve?culo',
+                    loading: _store.isRegisteringVehicle,
+                    onPressed: _save,
+                    trailingIcon: null,
                   ),
-                  const SizedBox(height: 10),
-                  FillVehicleLoadCapacity(
-                    controller: _loadCapacityController,
-                    requiredValidator: _requiredValidator,
-                  ),
-                  const SizedBox(height: 10),
-                  FillVehicleDetailedData(
-                    colorController: _colorController,
-                    widthController: _widthController,
-                    heightController: _heightController,
-                    lengthController: _lengthController,
-                  ),
-                  const SizedBox(height: 10),
-                  // FillVehicleActivation(
-                  //   isActive: _isActive,
-                  //   onChanged: (value) {
-                  //     setState(() => _isActive = value);
-                  //   },
-                  // ),
-                  const SizedBox(height: 12),
-                  _buildBottomActionBar(context),
-                  const SizedBox(height: 10),
                 ],
               ),
             ),
           ),
-        );
-      },
-    );
-  }
-
-  Widget _buildHeader(BuildContext context) {
-    return Container(
-      height: 58,
-      padding: const EdgeInsets.symmetric(horizontal: 6),
-      decoration: const BoxDecoration(
-        color: Color(0xFFF1F2F6),
-        border: Border(bottom: BorderSide(color: Color(0xFFE2E4EC))),
-      ),
-      child: Row(
-        children: [
-          IconButton(
-            onPressed: () => Navigator.of(context).maybePop(),
-            icon: const Icon(
-              Icons.arrow_back_ios_new_rounded,
-              size: 20,
-              color: Color(0xFF111B83),
-            ),
-          ),
-          const SizedBox(width: 4),
-          const Text(
-            'Cadastrar veículo',
-            style: TextStyle(
-              color: Color(0xFF111B83),
-              fontSize: 22,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildBottomActionBar(BuildContext context) {
-    // mudar para widget separado, melhorar tbm
-    return Container(
-      color: const Color(0xFFF1F2F6),
-      padding: const EdgeInsets.fromLTRB(0, 8, 0, 8),
-      child: SafeArea(
-        top: false,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            SizedBox(
-              width: double.infinity,
-              height: 48,
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF121B85),
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                ),
-                onPressed: _store.isRegisteringVehicle ? null : _save,
-                child: Text(
-                  _store.isRegisteringVehicle
-                      ? 'Cadastrando...'
-                      : 'Cadastrar veículo',
-                  style: const TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 8),
-            TextButton(
-              onPressed: () => Navigator.of(context).maybePop(),
-              child: const Text(
-                'Cancelar',
-                style: TextStyle(
-                  color: Color(0xFFB15D16),
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-            const SizedBox(height: 4),
-            const Text(
-              'FreteJá - 2026',
-              style: TextStyle(
-                color: Color(0xFFB4B8C6),
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ],
         ),
       ),
     );

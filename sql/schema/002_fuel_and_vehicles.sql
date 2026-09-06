@@ -73,6 +73,9 @@ CREATE TABLE vehicle_models (
     technical_data_source VARCHAR(100),
     technical_data_status VARCHAR(20) NOT NULL DEFAULT 'missing',
 
+    external_provider VARCHAR(30),
+    external_id BIGINT,
+
     created_at TIMESTAMP NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
 
@@ -133,6 +136,16 @@ ON vehicle_models(vehicle_type_id);
 
 CREATE INDEX idx_vehicle_models_fuel_type
 ON vehicle_models(fuel_type_id);
+
+CREATE UNIQUE INDEX uq_vehicle_models_external
+ON vehicle_models (
+    external_provider,
+    external_id,
+    year
+)
+WHERE
+    external_provider IS NOT NULL
+    AND external_id IS NOT NULL;
 
 CREATE TABLE vehicles (
     id BIGSERIAL PRIMARY KEY,

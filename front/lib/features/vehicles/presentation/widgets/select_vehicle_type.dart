@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../app/design_system/design_system.dart';
 
 import '../../data/models/vehicle_type_model.dart';
 
@@ -26,7 +27,7 @@ class SelectVehicleType extends StatelessWidget {
         const Text(
           'TIPO DE VEÍCULO',
           style: TextStyle(
-            color: Color(0xFF6D7080),
+            color: FretColors.textSecondary,
             fontWeight: FontWeight.w700,
             letterSpacing: 0,
             fontSize: 12,
@@ -45,12 +46,12 @@ class SelectVehicleType extends StatelessWidget {
         else if (errorMessage != null)
           Text(
             errorMessage!,
-            style: const TextStyle(color: Color(0xFFB15D16)),
+            style: const TextStyle(color: FretColors.textSecondary),
           )
         else if (vehicleTypes.isEmpty)
           const Text(
             'Nenhum tipo de veículo encontrado.',
-            style: TextStyle(color: Color(0xFF7C8090)),
+            style: TextStyle(color: FretColors.textSecondary),
           )
         else
           Wrap(
@@ -62,18 +63,18 @@ class SelectVehicleType extends StatelessWidget {
                 selected: isSelected,
                 label: Text(vehicleType.label),
                 onSelected: (_) => onSelected(vehicleType.id),
-                backgroundColor: const Color(0xFFF1F2F6),
-                selectedColor: const Color(0xFF0E1788),
+                backgroundColor: FretColors.appSurfaceSoft,
+                selectedColor: FretColors.brandBlack,
                 side: BorderSide(
                   color: isSelected
-                      ? const Color(0xFF0E1788)
-                      : const Color(0xFFB8BDCC),
+                      ? FretColors.brandBlack
+                      : FretColors.appBorder,
                 ),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(10),
                 ),
                 labelStyle: TextStyle(
-                  color: isSelected ? Colors.white : const Color(0xFF2C2F3A),
+                  color: isSelected ? FretColors.brandGold : FretColors.textPrimary,
                   fontWeight: FontWeight.w600,
                   fontSize: 12,
                 ),

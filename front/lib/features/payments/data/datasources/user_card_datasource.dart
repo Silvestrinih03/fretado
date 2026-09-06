@@ -26,6 +26,22 @@ class UserCardDatasource {
     }
   }
 
+  Future<void> removeCard(int userId, int cardId) async {
+    try {
+      await _httpService.delete(Endpoints.cardByUser(userId: userId, cardId: cardId));
+    } on HttpServiceException catch (e) {
+      throw UserCardDatasourceException(e.message, statusCode: e.statusCode);
+    }
+  }
+
+  Future<void> setDefaultCard(int userId, int cardId) async {
+    try {
+      await _httpService.patch('${Endpoints.cardByUser(userId: userId, cardId: cardId)}/default');
+    } on HttpServiceException catch (e) {
+      throw UserCardDatasourceException(e.message, statusCode: e.statusCode);
+    }
+  }
+
   Future<UserCardModel> createCard(UserCardCreateModel card) async {
     try {
       final response = await _httpService.post(

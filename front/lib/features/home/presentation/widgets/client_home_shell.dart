@@ -160,53 +160,60 @@ class _ClientBottomNavigation extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    const labels = ['Início', 'Corridas', 'Pagamentos', 'Perfil'];
+    const icons = [
+      Icons.home_outlined,
+      Icons.local_shipping_outlined,
+      Icons.credit_card_outlined,
+      Icons.person_outline_rounded,
+    ];
     return DecoratedBox(
       decoration: const BoxDecoration(
-        color: FretColors.appSurface,
-        border: Border(top: BorderSide(color: FretColors.appDivider)),
+        color: FretColors.white,
+        border: Border(top: BorderSide(color: FretColors.screenBorder)),
       ),
       child: SafeArea(
         top: false,
         child: SizedBox(
           height: 66,
-          child: BottomNavigationBar(
-            currentIndex: currentIndex,
-            onTap: onTap,
-            type: BottomNavigationBarType.fixed,
-            elevation: 0,
-            backgroundColor: FretColors.appSurface,
-            selectedItemColor: FretColors.brandGoldDark,
-            unselectedItemColor: FretColors.textSecondary,
-            selectedLabelStyle: const TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w800,
-            ),
-            unselectedLabelStyle: const TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
-            ),
-            items: const [
-              BottomNavigationBarItem(
-                icon: Icon(Icons.home_outlined),
-                activeIcon: Icon(Icons.home_rounded),
-                label: 'In\u00edcio',
-              ),
-              BottomNavigationBarItem(
-                icon: Icon(Icons.local_shipping_outlined),
-                activeIcon: Icon(Icons.local_shipping_rounded),
-                label: 'Corridas',
-              ),
-              BottomNavigationBarItem(
-                icon: Icon(Icons.credit_card_outlined),
-                activeIcon: Icon(Icons.credit_card_rounded),
-                label: 'Pagamentos',
-              ),
-              BottomNavigationBarItem(
-                icon: Icon(Icons.person_outline_rounded),
-                activeIcon: Icon(Icons.person_rounded),
-                label: 'Perfil',
-              ),
-            ],
+          child: Row(
+            children: List.generate(labels.length, (index) {
+              final selected = currentIndex == index;
+              final color = selected
+                  ? FretColors.screenGold
+                  : FretColors.screenMuted;
+              return Expanded(
+                child: Semantics(
+                  selected: selected,
+                  button: true,
+                  child: InkWell(
+                    onTap: () => onTap(index),
+                    child: Column(
+                      children: [
+                        Container(
+                          width: 20,
+                          height: 2,
+                          color: selected
+                              ? FretColors.screenGold
+                              : Colors.transparent,
+                        ),
+                        const SizedBox(height: 12),
+                        Icon(icons[index], size: 22, color: color),
+                        const SizedBox(height: 5),
+                        Text(
+                          labels[index],
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: color,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            }),
           ),
         ),
       ),

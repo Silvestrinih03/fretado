@@ -16,6 +16,10 @@ class PaymentCardsStore extends ChangeNotifier {
     int? fallbackUserId,
   }) : _fallbackUserId = fallbackUserId;
 
+  bool _disposed = false;
+  int? updatingCardId;
+  String? actionErrorMessage;
+  bool get isUpdating => updatingCardId != null;
   bool _isLoading = false;
   bool _isSaving = false;
   String? _loadErrorMessage;
@@ -33,7 +37,7 @@ class PaymentCardsStore extends ChangeNotifier {
     if (userId == null) {
       _loadErrorMessage = 'Usuario logado nao encontrado.';
       _cards = <UserCardModel>[];
-      notifyListeners();
+      _notify();
       return;
     }
 
@@ -53,6 +57,51 @@ class PaymentCardsStore extends ChangeNotifier {
     }
   }
 
+  Future<bool> removeCard(int cardId) => _updateCard(cardId, remove: true);
+  Future<bool> setDefaultCard(int cardId) => _updateCard(cardId, remove: false);
+
+  Future<bool> _updateCard(int cardId, {required bool remove}) async {
+    if (isUpdating) return false;
+    final userId = _myselfService.currentUserId ?? _fallbackUserId;
+    if (userId == null) {
+      actionErrorMessage = 'Usuário logado não encontrado.';
+      _notify();
+      return false;
+    }
+    updatingCardId = cardId;
+    actionErrorMessage = null;
+    _notify();
+    try {
+      if (remove) {
+        await _repository.removeCard(userId, cardId);
+      } else {
+        await _repository.setDefaultCard(userId, cardId);
+      }
+      await loadCards();
+      return true;
+    } on UserCardRepositoryException catch (e) {
+      actionErrorMessage = e.message;
+      return false;
+    } catch (_) {
+      actionErrorMessage =
+          'Não foi possível atualizar o cartão. Tente novamente.';
+      return false;
+    } finally {
+      updatingCardId = null;
+      _notify();
+    }
+  }
+
+  void _notify() {
+    if (!_disposed) notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    _disposed = true;
+    super.dispose();
+  }
+
   Future<bool> createCard({
     required String cardholderName,
     required String cardNumber,
@@ -63,7 +112,7 @@ class PaymentCardsStore extends ChangeNotifier {
     final userId = _myselfService.currentUserId ?? _fallbackUserId;
     if (userId == null) {
       _saveErrorMessage = 'Usuario logado nao encontrado.';
-      notifyListeners();
+      _notify();
       return false;
     }
 
@@ -76,8 +125,8 @@ class PaymentCardsStore extends ChangeNotifier {
         cleanedCardholderName.isEmpty ||
         cleanedCvv.isEmpty ||
         parsedExpiration == null) {
-      _saveErrorMessage = 'Preencha todos os dados do cartao.';
-      notifyListeners();
+      _saveErrorMessage = 'Preencha todos os dados do cartão.';
+      _notify();
       return false;
     }
 
@@ -110,17 +159,17 @@ class PaymentCardsStore extends ChangeNotifier {
 
   void clearSaveError() {
     _saveErrorMessage = null;
-    notifyListeners();
+    _notify();
   }
 
   void _setLoading(bool value) {
     _isLoading = value;
-    notifyListeners();
+    _notify();
   }
 
   void _setSaving(bool value) {
     _isSaving = value;
-    notifyListeners();
+    _notify();
   }
 
   _CardExpiration? _parseExpiration(String value) {
@@ -143,8 +192,5 @@ class _CardExpiration {
   final int month;
   final int year;
 
-  const _CardExpiration({
-    required this.month,
-    required this.year,
-  });
+  const _CardExpiration({required this.month, required this.year});
 }

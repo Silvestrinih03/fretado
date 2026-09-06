@@ -86,6 +86,7 @@ class FretPrimaryButton extends StatelessWidget {
   final Color foregroundColor;
   final double height;
   final double radius;
+  final TextStyle? textStyle;
 
   const FretPrimaryButton({
     super.key,
@@ -97,6 +98,7 @@ class FretPrimaryButton extends StatelessWidget {
     this.foregroundColor = FretColors.brandBlack,
     this.height = 48,
     this.radius = 12,
+    this.textStyle,
   });
 
   @override
@@ -131,7 +133,7 @@ class FretPrimaryButton extends StatelessWidget {
                 children: [
                   Text(
                     label,
-                    style: const TextStyle(
+                    style: textStyle ?? const TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w900,
                       letterSpacing: 1.1,

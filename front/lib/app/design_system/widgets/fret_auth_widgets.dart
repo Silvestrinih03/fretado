@@ -124,6 +124,7 @@ class FretAuthTextField extends StatelessWidget {
   final IconData prefixIcon;
   final Widget? suffixIcon;
   final bool obscureText;
+  final bool redesigned;
   final String? Function(String?)? validator;
   final AutovalidateMode? autovalidateMode;
   final TextInputAction? textInputAction;
@@ -137,6 +138,7 @@ class FretAuthTextField extends StatelessWidget {
     this.keyboardType,
     this.suffixIcon,
     this.obscureText = false,
+    this.redesigned = false,
     this.validator,
     this.autovalidateMode,
     this.textInputAction,
@@ -167,14 +169,14 @@ class FretAuthTextField extends StatelessWidget {
           color: FretColors.loginInputHint,
         ),
         filled: true,
-        fillColor: FretColors.loginInputBackground,
+        fillColor: redesigned ? FretColors.white : FretColors.loginInputBackground,
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 16,
           vertical: 15,
         ),
         prefixIcon: Padding(
           padding: const EdgeInsetsDirectional.only(start: 14, end: 10),
-          child: Icon(prefixIcon, size: 22, color: FretColors.loginInputIcon),
+          child: Icon(prefixIcon, size: redesigned ? 17 : 22, color: FretColors.screenMuted),
         ),
         prefixIconConstraints: const BoxConstraints(minWidth: 0, minHeight: 0),
         suffixIcon: suffixIcon == null
@@ -184,19 +186,27 @@ class FretAuthTextField extends StatelessWidget {
                 child: suffixIcon,
               ),
         suffixIconConstraints: const BoxConstraints(minWidth: 0, minHeight: 0),
+        enabledBorder: redesigned ? OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: const BorderSide(color: FretColors.screenBorder),
+        ) : null,
+        focusedBorder: redesigned ? OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: const BorderSide(color: FretColors.screenGold),
+        ) : null,
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(redesigned ? 14 : 12),
           borderSide: BorderSide.none,
         ),
         errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(redesigned ? 14 : 12),
           borderSide: const BorderSide(
             color: FretColors.destructive500,
             width: 1.2,
           ),
         ),
         focusedErrorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(redesigned ? 14 : 12),
           borderSide: const BorderSide(
             color: FretColors.destructive600,
             width: 1.4,
@@ -338,6 +348,69 @@ class FretAuthFooterPrompt extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Shared layout for the login and recovery screens in the approved prototype.
+class FretAuthScreen extends StatelessWidget {
+  final String title;
+  final String subtitle;
+  final Widget child;
+  final Widget? footer;
+  final double titleSize;
+  const FretAuthScreen({super.key, required this.title, required this.subtitle,
+    required this.child, this.footer, this.titleSize = 26});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: FretColors.screenBackground,
+      body: SafeArea(child: LayoutBuilder(builder: (context, constraints) {
+        return SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(24, 0, 24, 28),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(minHeight: (constraints.maxHeight - 28).clamp(0.0, double.infinity)),
+            child: IntrinsicHeight(child: Align(
+              alignment: Alignment.topCenter,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 480),
+                child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                  const SizedBox(height: 40),
+                  Center(child: Container(
+                    width: 70, height: 70,
+                    decoration: BoxDecoration(
+                      color: FretColors.screenDark,
+                      borderRadius: BorderRadius.circular(22),
+                      border: Border.all(color: FretColors.screenGold.withOpacity(0.22)),
+                    ),
+                    child: Center(child: Image.asset('assets/images/logo_fretado.png',
+                      width: 44, height: 44, fit: BoxFit.contain)),
+                  )),
+                  const SizedBox(height: 16),
+                  Text(title, textAlign: TextAlign.center, style: TextStyle(
+                    fontSize: titleSize, fontWeight: FontWeight.w800,
+                    color: FretColors.screenDark, letterSpacing: -0.6, height: 1.2,
+                  )),
+                  const SizedBox(height: 6),
+                  Text(subtitle, textAlign: TextAlign.center, style: const TextStyle(
+                    fontSize: 13, color: FretColors.screenMuted, height: 1.5,
+                  )),
+                  const SizedBox(height: 24),
+                  child,
+                  const Spacer(),
+                  const SizedBox(height: 24),
+                  if (footer != null) ...[footer!, const SizedBox(height: 12)],
+                  const Text('V${String.fromEnvironment('APP_VERSION', defaultValue: '0.0.0')}',
+                    textAlign: TextAlign.center, style: TextStyle(
+                      fontSize: 10, color: Color(0x33000000), letterSpacing: 0.6,
+                    )),
+                ]),
+              ),
+            )),
+          ),
+        );
+      })),
     );
   }
 }

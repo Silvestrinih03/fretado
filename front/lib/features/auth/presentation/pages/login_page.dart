@@ -11,11 +11,6 @@ import '../controllers/auth_controller.dart';
 import 'forgot_password_page.dart';
 import '../../../register/presentation/pages/register_page.dart';
 
-const String _appVersion = String.fromEnvironment(
-  'APP_VERSION',
-  defaultValue: '0.0.0',
-);
-
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
 
@@ -64,16 +59,16 @@ class _LoginPageState extends State<LoginPage> {
     }
 
     if (didRegister == true) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Cadastro realizado.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Cadastro realizado.')));
     }
   }
 
   Future<void> _openForgotPasswordPage() async {
-    await Navigator.of(context).push(
-      MaterialPageRoute<void>(builder: (_) => const ForgotPasswordPage()),
-    );
+    await Navigator.of(
+      context,
+    ).push(MaterialPageRoute<void>(builder: (_) => const ForgotPasswordPage()));
   }
 
   Future<void> _login() async {
@@ -108,7 +103,9 @@ class _LoginPageState extends State<LoginPage> {
           accessToken: _authController.currentUser?.accessToken,
         );
       }
-      final HomeProfileEnum profile = HomeProfileMapper.fromUserTypeId(userTypeId);
+      final HomeProfileEnum profile = HomeProfileMapper.fromUserTypeId(
+        userTypeId,
+      );
 
       Navigator.of(context).pushReplacement(
         MaterialPageRoute<void>(
@@ -131,150 +128,147 @@ class _LoginPageState extends State<LoginPage> {
   Widget build(BuildContext context) {
     return AnimatedBuilder(
       animation: _authController,
-      builder: (context, _) {
-        return Scaffold(
-          backgroundColor: FretColors.white,
-          body: SafeArea(
-            child: AbsorbPointer(
-              absorbing: _authController.isLoading,
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  final bool isCompact = constraints.maxWidth < 520;
-                  final double logoHeight =
-                      constraints.maxWidth < 390 ? 58 : isCompact ? 68 : 96;
-                  final double headerGap = isCompact ? 8 : 14;
-
-                  return SingleChildScrollView(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 12,
+      builder: (context, _) => FretAuthScreen(
+        title: 'Bem-vindo',
+        subtitle: 'Acesse ou cadastre-se para continuar.',
+        child: AbsorbPointer(
+          absorbing: _authController.isLoading,
+          child: Form(
+            key: _formKey,
+            autovalidateMode: _autovalidateMode,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const FretAuthFieldLabel(text: 'Email'),
+                const SizedBox(height: 8),
+                FretAuthTextField(
+                  redesigned: true,
+                  controller: _emailController,
+                  hintText: 'nome@email.com',
+                  prefixIcon: Icons.mail_outline_rounded,
+                  keyboardType: TextInputType.emailAddress,
+                  textInputAction: TextInputAction.next,
+                  validator: _validateEmail,
+                ),
+                const SizedBox(height: 14),
+                const FretAuthFieldLabel(text: 'Senha'),
+                const SizedBox(height: 8),
+                FretAuthTextField(
+                  redesigned: true,
+                  controller: _passwordController,
+                  hintText: '•••••••••',
+                  prefixIcon: Icons.lock_outline_rounded,
+                  obscureText: _obscurePassword,
+                  validator: _validatePassword,
+                  textInputAction: TextInputAction.done,
+                  onFieldSubmitted: (_) => _login(),
+                  suffixIcon: IconButton(
+                    onPressed: _togglePasswordVisibility,
+                    tooltip: _obscurePassword
+                        ? 'Mostrar senha'
+                        : 'Ocultar senha',
+                    constraints: const BoxConstraints(
+                      minWidth: 24,
+                      minHeight: 24,
                     ),
-                    child: ConstrainedBox(
-                      constraints: BoxConstraints(
-                        minHeight: constraints.maxHeight - 24,
+                    padding: EdgeInsets.zero,
+                    icon: Icon(
+                      _obscurePassword
+                          ? Icons.visibility_outlined
+                          : Icons.visibility_off_outlined,
+                      size: 16,
+                      color: FretColors.screenMuted,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton(
+                    onPressed: _openForgotPasswordPage,
+                    style: TextButton.styleFrom(
+                      padding: EdgeInsets.zero,
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                    child: const Text(
+                      'Esqueci minha senha',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: FretColors.screenGold,
                       ),
-                      child: Center(
-                        child: ConstrainedBox(
-                          constraints: const BoxConstraints(maxWidth: 480),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              FretAuthCard(
-                                child: Form(
-                                  key: _formKey,
-                                  autovalidateMode: _autovalidateMode,
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.stretch,
-                                    children: [
-                                Row(
-                                  crossAxisAlignment: CrossAxisAlignment.center,
-                                  children: [
-                                    FretAuthBrandHeader(height: logoHeight),
-                                    SizedBox(width: headerGap),
-                                    const Expanded(
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          FretAuthHeading(text: 'Bem-vindo'),
-                                          SizedBox(height: 6),
-                                          FretAuthSubtitle(
-                                            text:
-                                                'Acesse ou cadastre-se para continuar.',
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 24),
-                                const FretAuthFieldLabel(text: 'Email'),
-                                const SizedBox(height: 8),
-                                FretAuthTextField(
-                                  controller: _emailController,
-                                  hintText: 'nome@email.com',
-                                  keyboardType: TextInputType.emailAddress,
-                                  prefixIcon: Icons.mail_outline_rounded,
-                                  textInputAction: TextInputAction.next,
-                                  validator: _validateEmail,
-                                ),
-                                const SizedBox(height: 16),
-                                const FretAuthFieldLabel(text: 'Senha'),
-                                const SizedBox(height: 8),
-                                FretAuthTextField(
-                                  controller: _passwordController,
-                                  hintText: '•••••••••',
-                                  obscureText: _obscurePassword,
-                                  prefixIcon: Icons.lock_outline_rounded,
-                                  textInputAction: TextInputAction.done,
-                                  onFieldSubmitted: (_) => _login(),
-                                  validator: _validatePassword,
-                                  suffixIcon: IconButton(
-                                    onPressed: _togglePasswordVisibility,
-                                    icon: Icon(
-                                      _obscurePassword
-                                          ? Icons.visibility_outlined
-                                          : Icons.visibility_off_outlined,
-                                      color: FretColors.loginInputIcon,
-                                      size: 22,
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(height: 8),
-                                FretAuthForgotPasswordLink(
-                                  onPressed: _openForgotPasswordPage,
-                                ),
-                                const SizedBox(height: 22),
-                                FretPrimaryGradientButton(
-                                  label: _authController.isLoading
-                                      ? 'Entrando...'
-                                      : 'Entrar',
-                                  onPressed: _login,
-                                ),
-                                const SizedBox(height: 24),
-                                const Divider(
-                                  color: FretColors.loginDivider,
-                                  height: 1,
-                                ),
-                                const SizedBox(height: 24),
-                                FretAuthFooterPrompt(
-                                  onSignUpPressed: _openRegisterPage,
-                                ),
-                                if (_authController.isLoading) ...[
-                                  const SizedBox(height: 12),
-                                  const LinearProgressIndicator(
-                                    color: FretColors.loginButtonStart,
-                                    minHeight: 3,
-                                  ),
-                                ],
-                                    ],
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(height: 10),
-                              const Text(
-                                'V$_appVersion',
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  color: FretColors.neutral500,
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                            ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                FretPrimaryButton(
+                  label: 'Entrar',
+                  onPressed: _login,
+                  loading: _authController.isLoading,
+                  height: 54,
+                  radius: 14,
+                  backgroundColor: FretColors.screenDark,
+                  foregroundColor: FretColors.white,
+                  textStyle: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.56,
+                  ),
+                ),
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 20),
+                  child: Row(
+                    children: [
+                      Expanded(child: Divider(color: FretColors.screenBorder)),
+                      Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 10),
+                        child: Text(
+                          'ou',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: FretColors.screenMuted,
                           ),
                         ),
                       ),
+                      Expanded(child: Divider(color: FretColors.screenBorder)),
+                    ],
+                  ),
+                ),
+                Wrap(
+                  alignment: WrapAlignment.center,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    const Text(
+                      'N?o possui uma conta? ',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: FretColors.screenMuted,
+                      ),
                     ),
-                  );
-                },
-              ),
+                    TextButton(
+                      onPressed: _openRegisterPage,
+                      style: TextButton.styleFrom(
+                        padding: EdgeInsets.zero,
+                        minimumSize: Size.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
+                      child: const Text(
+                        'Cadastre-se',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          color: FretColors.screenDark,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
           ),
-        );
-      },
+        ),
+      ),
     );
   }
 }

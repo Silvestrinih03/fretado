@@ -92,23 +92,14 @@ abstract class Endpoints {
       '$vehicleTypes/$vehicleTypeId';
 
   static const String vehicleCatalog = '/vehicle-catalog';
-  static String vehicleCatalogBrands({
-    required int vehicleTypeId,
-    String? search,
-  }) =>
-      '$vehicleCatalog/brands?vehicle_type_id=$vehicleTypeId${_searchQuery(search)}';
-  static String vehicleCatalogModels({
-    required int vehicleTypeId,
-    required String brandId,
-    String? search,
-  }) =>
-      '$vehicleCatalog/models?vehicle_type_id=$vehicleTypeId&brand_id=$brandId${_searchQuery(search)}';
-  static String vehicleCatalogYears({
-    required int vehicleTypeId,
+  static String vehicleCatalogBrands() => '$vehicleCatalog/brands';
+  static String vehicleCatalogModels({required String brandId}) =>
+      '$vehicleCatalog/models?brand_id=${Uri.encodeQueryComponent(brandId)}';
+  static String vehicleCatalogVersions({
     required String brandId,
     required String modelId,
   }) =>
-      '$vehicleCatalog/years?vehicle_type_id=$vehicleTypeId&brand_id=$brandId&model_id=$modelId';
+      '$vehicleCatalog/versions?brand_id=${Uri.encodeQueryComponent(brandId)}&model_id=${Uri.encodeQueryComponent(modelId)}';
 
   static const String driverLicenseCategories = '/driver-license-categories';
   static String driverLicenseCategoryById(int categoryId) =>
@@ -123,11 +114,4 @@ abstract class Endpoints {
   static String updateDriverDocument(int documentId) =>
       '$driverDocuments/$documentId';
 
-  static String _searchQuery(String? search) {
-    if (search == null || search.trim().isEmpty) {
-      return '';
-    }
-
-    return '&search=${Uri.encodeQueryComponent(search.trim())}';
-  }
 }

@@ -1,399 +1,234 @@
 import 'package:flutter/foundation.dart';
 
 import '../../data/models/register_vehicle_model.dart';
-import '../../data/models/vehicle_fipe_option_model.dart';
+import '../../data/models/vehicle_catalog_option_model.dart';
 import '../../data/models/vehicle_type_model.dart';
 import '../../data/repositories/register_vehicle_repository.dart';
-import '../../data/repositories/vehicle_fipe_repository.dart';
+import '../../data/repositories/vehicle_catalog_repository.dart';
 import '../../data/repositories/vehicle_type_repository.dart';
 import '../../../../core/services/myself/services/myself_service.dart';
 
 class RegisterVehicleStore extends ChangeNotifier {
   final VehicleTypeRepository _vehicleTypeRepository;
-  final VehicleFipeRepository _vehicleFipeRepository;
+  final VehicleCatalogRepository _catalogRepository;
   final RegisterVehicleRepository _registerVehicleRepository;
   final MyselfService _myselfService;
 
   RegisterVehicleStore(
     this._vehicleTypeRepository,
-    this._vehicleFipeRepository,
+    this._catalogRepository,
     this._registerVehicleRepository,
     this._myselfService,
   );
 
-  bool _isLoadingVehicleTypes = false;
-  bool _isLoadingVehicleFipe = false;
-  bool _isRegisteringVehicle = false;
-  String? _vehicleTypesError;
-  String? _vehicleFipeError;
-  String? _registerVehicleError;
-  List<VehicleTypeModel> _vehicleTypes = <VehicleTypeModel>[];
-  List<VehicleFipeOptionModel> _vehicleFipeBrands = <VehicleFipeOptionModel>[];
-  List<VehicleFipeOptionModel> _vehicleFipeModels = <VehicleFipeOptionModel>[];
-  List<VehicleFipeOptionModel> _vehicleFipeYears = <VehicleFipeOptionModel>[];
-  int? _selectedVehicleTypeId;
-  String? _selectedVehicleFipeBrandCode;
-  String? _selectedVehicleFipeModelCode;
-  String? _selectedVehicleFipeYearCode;
-  RegisterVehicleModel? _registeredVehicle;
+  bool _disposed = false;
+  bool isLoadingVehicleTypes = false;
+  bool isRegisteringVehicle = false;
+  String? vehicleTypesError;
+  String? registerVehicleError;
+  List<VehicleTypeModel> vehicleTypes = [];
+  int? selectedVehicleTypeId;
+  String? selectedBrand;
+  String? selectedModel;
+  String? selectedVersion;
+  int? selectedYear;
+  final Map<String, List<VehicleCatalogOptionModel>> _options = {
+    'brands': [],
+    'models': [],
+    'versions': [],
+  };
+  final Map<String, bool> _loading = {};
+  final Map<String, String?> _errors = {};
+  final Map<String, int> _requests = {};
 
-  bool get isLoadingVehicleTypes => _isLoadingVehicleTypes;
-  bool get isLoadingVehicleFipe => _isLoadingVehicleFipe;
-  bool get isRegisteringVehicle => _isRegisteringVehicle;
-  String? get vehicleTypesError => _vehicleTypesError;
-  String? get vehicleFipeError => _vehicleFipeError;
-  String? get registerVehicleError => _registerVehicleError;
-  List<VehicleTypeModel> get vehicleTypes =>
-      List<VehicleTypeModel>.unmodifiable(_vehicleTypes);
-  List<VehicleFipeOptionModel> get vehicleFipeBrands =>
-      List<VehicleFipeOptionModel>.unmodifiable(_vehicleFipeBrands);
-  List<VehicleFipeOptionModel> get vehicleFipeModels =>
-      List<VehicleFipeOptionModel>.unmodifiable(_vehicleFipeModels);
-  List<VehicleFipeOptionModel> get vehicleFipeYears =>
-      List<VehicleFipeOptionModel>.unmodifiable(_vehicleFipeYears);
-  int? get selectedVehicleTypeId => _selectedVehicleTypeId;
-  String? get selectedVehicleFipeBrandCode => _selectedVehicleFipeBrandCode;
-  String? get selectedVehicleFipeModelCode => _selectedVehicleFipeModelCode;
-  String? get selectedVehicleFipeYearCode => _selectedVehicleFipeYearCode;
-  RegisterVehicleModel? get registeredVehicle => _registeredVehicle;
+  List<VehicleCatalogOptionModel> options(String level) =>
+      List.unmodifiable(_options[level]!);
+  bool isLoading(String level) => _loading[level] ?? false;
+  String? error(String level) => _errors[level];
+  List<int> get years {
+    for (final version in _options['versions']!) {
+      if (version.value == selectedVersion) return version.years;
+    }
+    return const [];
+  }
+
+  void _notify() {
+    if (!_disposed) notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    _disposed = true;
+    super.dispose();
+  }
 
   Future<void> loadVehicleTypes() async {
-    _setLoading(true);
-    _vehicleTypesError = null;
-
+    if (isLoadingVehicleTypes) return;
+    isLoadingVehicleTypes = true;
+    vehicleTypesError = null;
+    _notify();
     try {
-      _vehicleTypes = await _vehicleTypeRepository.listVehicleTypes();
+      vehicleTypes = await _vehicleTypeRepository.listVehicleTypes();
     } on VehicleTypeRepositoryException catch (e) {
-      _vehicleTypesError = e.message;
+      vehicleTypesError = e.message;
     } catch (_) {
-      _vehicleTypesError = 'Não foi possível carregar os tipos de veículo.';
+      vehicleTypesError = 'Não foi possível carregar os tipos de veículo.';
     } finally {
-      _setLoading(false);
+      isLoadingVehicleTypes = false;
+      _notify();
     }
   }
 
   void selectVehicleType(int id) {
-    _selectedVehicleTypeId = id;
-    _resetVehicleFipeSelection();
-    notifyListeners();
+    selectedVehicleTypeId = id;
+    _notify();
   }
 
-  Future<void> loadVehicleFipeBrands({String? search}) async {
-    if (_selectedVehicleTypeId == null) {
-      _vehicleFipeError = 'Selecione o tipo de veículo.';
-      notifyListeners();
-      return;
-    }
-
-    _setLoadingVehicleFipe(true);
-    _vehicleFipeError = null;
-
-    try {
-      _vehicleFipeBrands = await _vehicleFipeRepository.listBrands(
-        vehicleTypeId: _selectedVehicleTypeId!,
-        search: search,
-      );
-      _vehicleFipeModels = <VehicleFipeOptionModel>[];
-      _vehicleFipeYears = <VehicleFipeOptionModel>[];
-    } on VehicleFipeRepositoryException catch (e) {
-      _vehicleFipeError = e.message;
-    } catch (_) {
-      _vehicleFipeError = 'Não foi possível carregar as marcas da FIPE.';
-    } finally {
-      _setLoadingVehicleFipe(false);
-    }
+  void _clear(String level) {
+    _requests[level] = (_requests[level] ?? 0) + 1;
+    _options[level] = [];
+    _loading[level] = false;
+    _errors[level] = null;
   }
 
-  Future<void> loadVehicleFipeModels({String? search}) async {
-    if (_selectedVehicleTypeId == null || _selectedVehicleFipeBrandCode == null) {
-      _vehicleFipeError = 'Selecione o tipo e a marca do veículo.';
-      notifyListeners();
-      return;
-    }
-
-    _setLoadingVehicleFipe(true);
-    _vehicleFipeError = null;
-
-    try {
-      _vehicleFipeModels = await _vehicleFipeRepository.listModels(
-        vehicleTypeId: _selectedVehicleTypeId!,
-        brandId: _selectedVehicleFipeBrandCode!,
-        search: search,
-      );
-      _vehicleFipeYears = <VehicleFipeOptionModel>[];
-    } on VehicleFipeRepositoryException catch (e) {
-      _vehicleFipeError = e.message;
-    } catch (_) {
-      _vehicleFipeError = 'Não foi possível carregar os modelos da FIPE.';
-    } finally {
-      _setLoadingVehicleFipe(false);
-    }
+  void selectBrand(String? value) {
+    selectedBrand = value;
+    selectedModel = null;
+    selectedVersion = null;
+    selectedYear = null;
+    _clear('models');
+    _clear('versions');
+    _notify();
+    if (value != null) loadModels();
   }
 
-  Future<void> loadVehicleFipeYears() async {
-    if (_selectedVehicleTypeId == null ||
-        _selectedVehicleFipeBrandCode == null ||
-        _selectedVehicleFipeModelCode == null) {
-      _vehicleFipeError = 'Selecione tipo, marca e modelo do veículo.';
-      notifyListeners();
-      return;
-    }
-
-    _setLoadingVehicleFipe(true);
-    _vehicleFipeError = null;
-
-    try {
-      _vehicleFipeYears = await _vehicleFipeRepository.listYears(
-        vehicleTypeId: _selectedVehicleTypeId!,
-        brandId: _selectedVehicleFipeBrandCode!,
-        modelId: _selectedVehicleFipeModelCode!,
-      );
-    } on VehicleFipeRepositoryException catch (e) {
-      _vehicleFipeError = e.message;
-    } catch (_) {
-      _vehicleFipeError = 'Não foi possível carregar os anos da FIPE.';
-    } finally {
-      _setLoadingVehicleFipe(false);
-    }
+  void selectModel(String? value) {
+    selectedModel = value;
+    selectedVersion = null;
+    selectedYear = null;
+    _clear('versions');
+    _notify();
+    if (value != null) loadVersions();
   }
 
-  void selectVehicleFipeBrand(String? brandCode) {
-    _selectedVehicleFipeBrandCode = brandCode;
-    _selectedVehicleFipeModelCode = null;
-    _selectedVehicleFipeYearCode = null;
-    _vehicleFipeModels = <VehicleFipeOptionModel>[];
-    _vehicleFipeYears = <VehicleFipeOptionModel>[];
-    notifyListeners();
+  void selectVersion(String? value) {
+    selectedVersion = value;
+    selectedYear = null;
+    _notify();
   }
 
-  void selectVehicleFipeModel(String? modelCode) {
-    _selectedVehicleFipeModelCode = modelCode;
-    _selectedVehicleFipeYearCode = null;
-    _vehicleFipeYears = <VehicleFipeOptionModel>[];
-    notifyListeners();
+  void selectYear(int? value) {
+    selectedYear = value;
+    _notify();
   }
 
-  void selectVehicleFipeYear(String? yearCode) {
-    _selectedVehicleFipeYearCode = yearCode;
-    notifyListeners();
+  Future<void> loadBrands() => _load('brands', _catalogRepository.listBrands);
+  Future<void> loadModels() async {
+    final brand = selectedBrand;
+    if (brand == null) return;
+    await _load('models', () => _catalogRepository.listModels(brandId: brand));
   }
 
-  void clearSelection() {
-    _selectedVehicleTypeId = null;
-    _resetVehicleFipeSelection();
-    notifyListeners();
-  }
-
-  Future<bool> registerVehicle({
-    required String registerMode,
-    required String brand,
-    required String model,
-    required String year,
-    required String plate,
-    required String loadCapacityKg,
-    required String? color,
-    required String? widthCm,
-    required String? heightCm,
-    required String? lengthCm,
-    required bool status,
-  }) async {
-    if (_selectedVehicleTypeId == null) {
-      _registerVehicleError = 'Selecione o tipo de veículo.';
-      notifyListeners();
-      return false;
-    }
-
-    final bool isFipeMode = registerMode == 'fipe';
-    final String trimmedBrand = brand.trim();
-    final String trimmedModel = model.trim();
-    final String trimmedYear = year.trim();
-    final String trimmedPlate = plate.trim();
-    final int? parsedLoadCapacity = int.tryParse(loadCapacityKg.trim());
-    final int? parsedWidth = _parseOptionalInt(widthCm);
-    final int? parsedHeight = _parseOptionalInt(heightCm);
-    final int? parsedLength = _parseOptionalInt(lengthCm);
-
-    final String? selectedBrandLabel = _selectedLabel(
-      _vehicleFipeBrands,
-      _selectedVehicleFipeBrandCode,
+  Future<void> loadVersions() async {
+    final brand = selectedBrand;
+    final model = selectedModel;
+    if (brand == null || model == null) return;
+    await _load(
+      'versions',
+      () => _catalogRepository.listVersions(brandId: brand, modelId: model),
     );
-    final String? selectedModelLabel = _selectedLabel(
-      _vehicleFipeModels,
-      _selectedVehicleFipeModelCode,
-    );
-    final String? selectedYearLabel = _selectedLabel(
-      _vehicleFipeYears,
-      _selectedVehicleFipeYearCode,
-    );
+  }
 
-    if (isFipeMode) {
-      if (_selectedVehicleFipeBrandCode == null ||
-          _selectedVehicleFipeModelCode == null ||
-          _selectedVehicleFipeYearCode == null) {
-        _registerVehicleError = 'Selecione marca, modelo e ano pela FIPE.';
-        notifyListeners();
-        return false;
-      }
-    } else {
-      if (trimmedBrand.isEmpty || trimmedModel.isEmpty || trimmedYear.isEmpty) {
-        _registerVehicleError = 'Informe marca, modelo e ano para continuar.';
-        notifyListeners();
-        return false;
+  Future<void> _load(
+    String level,
+    Future<List<VehicleCatalogOptionModel>> Function() request,
+  ) async {
+    final token = (_requests[level] ?? 0) + 1;
+    _requests[level] = token;
+    _loading[level] = true;
+    _errors[level] = null;
+    _notify();
+    try {
+      final result = await request();
+      if (_disposed || _requests[level] != token) return;
+      _options[level] = result;
+      if (result.isEmpty)
+        _errors[level] = 'Nenhuma opção disponível no catálogo.';
+    } catch (e) {
+      if (_disposed || _requests[level] != token) return;
+      _errors[level] = e is VehicleCatalogRepositoryException
+          ? e.message
+          : 'Não foi possível carregar o catálogo. Tente novamente.';
+    } finally {
+      if (!_disposed && _requests[level] == token) {
+        _loading[level] = false;
+        _notify();
       }
     }
-
-    if (trimmedPlate.isEmpty) {
-      _registerVehicleError = 'Informe a placa para continuar.';
-      notifyListeners();
-      return false;
-    }
-
-    if (parsedLoadCapacity == null || parsedLoadCapacity <= 0) {
-      _registerVehicleError = 'Informe uma capacidade de carga válida.';
-      notifyListeners();
-      return false;
-    }
-
-    final int parsedYear = isFipeMode
-        ? _extractYearFromLabel(selectedYearLabel)
-        : int.tryParse(trimmedYear) ?? -1;
-
-    if (!isFipeMode && parsedYear <= 0) {
-      _registerVehicleError = 'Informe um ano válido.';
-      notifyListeners();
-      return false;
-    }
-
-    _setRegistering(true);
-    _registerVehicleError = null;
-
-    final int? userId = _myselfService.currentUserId;
-    if (userId == null) {
-      _setRegistering(false);
-      _registerVehicleError = 'Usuário logado não encontrado.';
-      notifyListeners();
-      return false;
-    }
-
-    try {
-      final RegisterVehicleModel payload = isFipeMode
-          ? RegisterVehicleModel(
-              userId: userId,
-              vehicleTypeId: _selectedVehicleTypeId!,
-              brand: selectedBrandLabel ?? trimmedBrand,
-              brandCode: _selectedVehicleFipeBrandCode,
-              model: selectedModelLabel ?? trimmedModel,
-              modelCode: _selectedVehicleFipeModelCode,
-              year: parsedYear,
-              yearCode: _selectedVehicleFipeYearCode,
-              yearLabel: selectedYearLabel,
-              color: _normalizeOptional(color),
-              plate: trimmedPlate,
-              loadCapacityKg: parsedLoadCapacity,
-              widthCm: parsedWidth,
-              heightCm: parsedHeight,
-              lengthCm: parsedLength,
-              status: status,
-            )
-          : RegisterVehicleModel(
-              userId: userId,
-              vehicleTypeId: _selectedVehicleTypeId!,
-              brand: trimmedBrand,
-              model: trimmedModel,
-              year: parsedYear,
-              yearLabel: trimmedYear,
-              color: _normalizeOptional(color),
-              plate: trimmedPlate,
-              loadCapacityKg: parsedLoadCapacity,
-              widthCm: parsedWidth,
-              heightCm: parsedHeight,
-              lengthCm: parsedLength,
-              status: status,
-            );
-
-      _registeredVehicle = await _registerVehicleRepository.registerVehicle(
-        payload,
-      );
-      return true;
-    } on RegisterVehicleRepositoryException catch (e) {
-      _registerVehicleError = e.message;
-      return false;
-    } catch (_) {
-      _registerVehicleError = 'Não foi possível cadastrar o veículo agora.';
-      return false;
-    } finally {
-      _setRegistering(false);
-    }
   }
 
-  void _setLoading(bool value) {
-    _isLoadingVehicleTypes = value;
-    notifyListeners();
-  }
+  static String normalizePlate(String value) =>
+      value.toUpperCase().replaceAll(RegExp(r'[\s-]'), '');
 
-  void _setLoadingVehicleFipe(bool value) {
-    _isLoadingVehicleFipe = value;
-    notifyListeners();
-  }
-
-  void _setRegistering(bool value) {
-    _isRegisteringVehicle = value;
-    notifyListeners();
-  }
-
-  void _resetVehicleFipeSelection() {
-    _vehicleFipeBrands = <VehicleFipeOptionModel>[];
-    _vehicleFipeModels = <VehicleFipeOptionModel>[];
-    _vehicleFipeYears = <VehicleFipeOptionModel>[];
-    _selectedVehicleFipeBrandCode = null;
-    _selectedVehicleFipeModelCode = null;
-    _selectedVehicleFipeYearCode = null;
-    _vehicleFipeError = null;
-  }
-
-  String? _selectedLabel(
-    List<VehicleFipeOptionModel> options,
-    String? selectedValue,
-  ) {
-    if (selectedValue == null) {
-      return null;
+  static String? validatePlate(String? value) {
+    final plate = normalizePlate(value ?? '');
+    if (plate.isEmpty) return 'Informe a placa.';
+    if (!RegExp(r'^[A-Z]{3}[0-9][A-Z0-9][0-9]{2}$').hasMatch(plate)) {
+      return 'Informe uma placa v?lida, como ABC1234 ou ABC1D23.';
     }
-
-    for (final VehicleFipeOptionModel option in options) {
-      if (option.value == selectedValue) {
-        return option.label;
-      }
-    }
-
     return null;
   }
 
-  int _extractYearFromLabel(String? label) {
-    if (label == null || label.trim().isEmpty) {
-      return -1;
+  Future<bool> registerVehicle({
+    required String plate,
+    required String color,
+  }) async {
+    if (isRegisteringVehicle) return false;
+    registerVehicleError = null;
+    final versionId = int.tryParse(selectedVersion ?? '');
+    final userId = _myselfService.currentUserId;
+    if (selectedVehicleTypeId == null ||
+        selectedBrand == null ||
+        selectedModel == null ||
+        versionId == null ||
+        !years.contains(selectedYear)) {
+      registerVehicleError = 'Selecione tipo, marca, modelo, versão e ano.';
+    } else if (validatePlate(plate) != null) {
+      registerVehicleError = validatePlate(plate);
+    } else if (color.trim().length > 50) {
+      registerVehicleError = 'A cor deve ter no máximo 50 caracteres.';
+    } else if (userId == null) {
+      registerVehicleError = 'Usuário logado não encontrado.';
     }
-
-    final Match? match = RegExp(r'\d{4}').firstMatch(label);
-    if (match == null) {
-      return -1;
+    if (registerVehicleError != null) {
+      _notify();
+      return false;
     }
-
-    return int.tryParse(match.group(0) ?? '') ?? -1;
-  }
-
-  int? _parseOptionalInt(String? value) {
-    final String cleaned = (value ?? '').trim();
-    if (cleaned.isEmpty) {
-      return null;
+    isRegisteringVehicle = true;
+    _notify();
+    try {
+      await _registerVehicleRepository.registerVehicle(
+        RegisterVehicleModel(
+          userId: userId!,
+          vehicleTypeId: selectedVehicleTypeId!,
+          versionId: versionId!,
+          year: selectedYear!,
+          color: color.trim().isEmpty ? null : color.trim(),
+          plate: normalizePlate(plate),
+          status: true,
+        ),
+      );
+      return true;
+    } on RegisterVehicleRepositoryException catch (e) {
+      registerVehicleError = e.message;
+      return false;
+    } catch (_) {
+      registerVehicleError =
+          'N?o foi poss?vel cadastrar o ve?culo. Tente novamente.';
+      return false;
+    } finally {
+      isRegisteringVehicle = false;
+      _notify();
     }
-    return int.tryParse(cleaned);
-  }
-
-  String? _normalizeOptional(String? value) {
-    final String cleaned = (value ?? '').trim();
-    if (cleaned.isEmpty) {
-      return null;
-    }
-    return cleaned;
   }
 }

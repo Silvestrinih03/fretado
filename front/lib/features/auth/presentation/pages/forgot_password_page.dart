@@ -64,7 +64,8 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
 
     showFretErrorPopup(
       context,
-      message: _authController.errorMessage ??
+      message:
+          _authController.errorMessage ??
           'Nao foi possivel enviar o email de recuperacao.',
     );
   }
@@ -77,167 +78,66 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
   Widget build(BuildContext context) {
     return AnimatedBuilder(
       animation: _authController,
-      builder: (context, _) {
-        return Scaffold(
-          backgroundColor: FretColors.white,
-          body: SafeArea(
-            child: AbsorbPointer(
-              absorbing: _authController.isLoading,
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  final bool isCompact = constraints.maxWidth < 520;
-                  final double logoHeight = constraints.maxWidth < 390
-                      ? 58
-                      : isCompact
-                      ? 68
-                      : 96;
-                  final double headerGap = isCompact ? 8 : 14;
-
-                  return SingleChildScrollView(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 12,
-                    ),
-                    child: ConstrainedBox(
-                      constraints: BoxConstraints(
-                        minHeight: constraints.maxHeight - 24,
-                      ),
-                      child: Center(
-                        child: ConstrainedBox(
-                          constraints: const BoxConstraints(maxWidth: 480),
-                          child: FretAuthCard(
-                            child: _emailSent
-                                ? _RecoveryEmailSentContent(
-                                    email: _emailController.text.trim(),
-                                    onBackToLogin: _backToLogin,
-                                  )
-                                : Form(
-                                    key: _formKey,
-                                    autovalidateMode: _autovalidateMode,
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.stretch,
-                                      children: [
-                                        Row(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.center,
-                                          children: [
-                                            FretAuthBrandHeader(
-                                              height: logoHeight,
-                                            ),
-                                            SizedBox(width: headerGap),
-                                            const Expanded(
-                                              child: Column(
-                                                crossAxisAlignment:
-                                                    CrossAxisAlignment.start,
-                                                mainAxisSize: MainAxisSize.min,
-                                                children: [
-                                                  FretAuthHeading(
-                                                    text: 'Recuperar senha',
-                                                  ),
-                                                  SizedBox(height: 6),
-                                                  FretAuthSubtitle(
-                                                    text:
-                                                        'Informe o email cadastrado.',
-                                                  ),
-                                                ],
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                        const SizedBox(height: 24),
-                                        const FretAuthFieldLabel(text: 'Email'),
-                                        const SizedBox(height: 8),
-                                        FretAuthTextField(
-                                          controller: _emailController,
-                                          hintText: 'nome@email.com',
-                                          keyboardType:
-                                              TextInputType.emailAddress,
-                                          prefixIcon:
-                                              Icons.mail_outline_rounded,
-                                          textInputAction: TextInputAction.done,
-                                          onFieldSubmitted: (_) =>
-                                              _sendRecoveryEmail(),
-                                          validator: _validateEmail,
-                                        ),
-                                        const SizedBox(height: 22),
-                                        FretPrimaryGradientButton(
-                                          label: _authController.isLoading
-                                              ? 'Enviando...'
-                                              : 'Enviar email',
-                                          onPressed: _sendRecoveryEmail,
-                                        ),
-                                        const SizedBox(height: 18),
-                                        TextButton(
-                                          onPressed: _backToLogin,
-                                          child: const Text(
-                                            'Voltar para login',
-                                            style: TextStyle(
-                                              color: FretColors.loginFooterLink,
-                                              fontWeight: FontWeight.w700,
-                                            ),
-                                          ),
-                                        ),
-                                        if (_authController.isLoading) ...[
-                                          const SizedBox(height: 12),
-                                          const LinearProgressIndicator(
-                                            color: FretColors.loginButtonStart,
-                                            minHeight: 3,
-                                          ),
-                                        ],
-                                      ],
-                                    ),
-                                  ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  );
-                },
-              ),
+      builder: (context, _) => FretAuthScreen(
+        title: _emailSent ? 'Confira seu email' : 'Recuperar senha',
+        titleSize: 24,
+        subtitle: _emailSent
+            ? 'Se o email estiver cadastrado, você receberá um link para recuperar sua senha.'
+            : 'Informe o email cadastrado.',
+        footer: TextButton.icon(
+          onPressed: _backToLogin,
+          icon: const Icon(Icons.chevron_left_rounded, size: 16),
+          label: const Text('Voltar para login'),
+          style: TextButton.styleFrom(
+            foregroundColor: FretColors.screenMuted,
+            textStyle: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w500,
             ),
           ),
-        );
-      },
-    );
-  }
-}
-
-class _RecoveryEmailSentContent extends StatelessWidget {
-  final String email;
-  final VoidCallback onBackToLogin;
-
-  const _RecoveryEmailSentContent({
-    required this.email,
-    required this.onBackToLogin,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        const FretAuthBrandHeader(height: 72),
-        const SizedBox(height: 20),
-        const FretAuthHeading(text: 'Confira seu email'),
-        const SizedBox(height: 8),
-        Text(
-          email.isEmpty
-              ? 'Enviamos o link de recuperacao.'
-              : 'Enviamos o link de recuperacao para $email.',
-          style: const TextStyle(
-            color: FretColors.loginSubtitle,
-            fontSize: 14,
-            fontWeight: FontWeight.w500,
-            height: 1.35,
+        ),
+        child: AbsorbPointer(
+          absorbing: _authController.isLoading,
+          child: Form(
+            key: _formKey,
+            autovalidateMode: _autovalidateMode,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (!_emailSent) ...[
+                  const FretAuthFieldLabel(text: 'Email'),
+                  const SizedBox(height: 8),
+                  FretAuthTextField(
+                    redesigned: true,
+                    controller: _emailController,
+                    hintText: 'nome@email.com',
+                    prefixIcon: Icons.mail_outline_rounded,
+                    keyboardType: TextInputType.emailAddress,
+                    textInputAction: TextInputAction.done,
+                    onFieldSubmitted: (_) => _sendRecoveryEmail(),
+                    validator: _validateEmail,
+                  ),
+                  const SizedBox(height: 16),
+                  FretPrimaryButton(
+                    label: 'Enviar email',
+                    onPressed: _sendRecoveryEmail,
+                    loading: _authController.isLoading,
+                    height: 54,
+                    radius: 14,
+                    backgroundColor: FretColors.screenDark,
+                    foregroundColor: FretColors.white,
+                    textStyle: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.56,
+                    ),
+                  ),
+                ],
+              ],
+            ),
           ),
         ),
-        const SizedBox(height: 22),
-        FretPrimaryGradientButton(
-          label: 'Voltar para login',
-          onPressed: onBackToLogin,
-        ),
-      ],
+      ),
     );
   }
 }

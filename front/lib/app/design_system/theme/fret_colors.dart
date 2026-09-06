@@ -1,6 +1,13 @@
 import 'package:flutter/material.dart';
 
 class FretColors {
+  // Screen tokens from the approved prototype, adopted incrementally.
+  static const screenBackground = Color(0xFFF7F6F3);
+  static const screenDark = Color(0xFF1A1A1A);
+  static const screenGold = Color(0xFFC9A227);
+  static const screenMuted = Color(0xFF8A8A8A);
+  static const screenBorder = Color(0xFFEBEBEA);
+
   // FretColors._();
 
   // static const primary = Color(0xFF0D47A1);

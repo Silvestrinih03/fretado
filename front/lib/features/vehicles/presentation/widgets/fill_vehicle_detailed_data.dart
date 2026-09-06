@@ -1,162 +1,27 @@
 import 'package:flutter/material.dart';
+import '../../../../app/design_system/design_system.dart';
 
 class FillVehicleDetailedData extends StatelessWidget {
   final TextEditingController colorController;
-  final TextEditingController widthController;
-  final TextEditingController heightController;
-  final TextEditingController lengthController;
+  final bool enabled;
 
   const FillVehicleDetailedData({
     super.key,
     required this.colorController,
-    required this.widthController,
-    required this.heightController,
-    required this.lengthController,
+    this.enabled = true,
   });
 
   @override
   Widget build(BuildContext context) {
-    return _FormCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Row(
-            children: [
-              Text(
-                'Detalhes',
-                style: TextStyle(
-                  color: Color(0xFF0F187C),
-                  fontWeight: FontWeight.w700,
-                  fontSize: 16,
-                ),
-              ),
-              SizedBox(width: 6),
-              Text(
-                '(opcional)',
-                style: TextStyle(
-                  color: Color(0xFFB2B5C4),
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-              Spacer(),
-              Icon(Icons.straighten, color: Color(0xFFB2B5C4)),
-            ],
-          ),
-          const SizedBox(height: 10),
-          Row(
-            children: [
-              Expanded(
-                child: _FilledTextField(
-                  label: 'COR',
-                  hint: 'Ex: Branco',
-                  controller: colorController,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _FilledTextField(
-                  label: 'LARGURA (CM)',
-                  hint: '0',
-                  controller: widthController,
-                  keyboardType: TextInputType.number,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              Expanded(
-                child: _FilledTextField(
-                  label: 'ALTURA (CM)',
-                  hint: '0',
-                  controller: heightController,
-                  keyboardType: TextInputType.number,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _FilledTextField(
-                  label: 'COMP. (CM)',
-                  hint: '0',
-                  controller: lengthController,
-                  keyboardType: TextInputType.number,
-                ),
-              ),
-            ],
-          ),
-        ],
+    return FretSurfaceCard(
+      child: TextFormField(
+        controller: colorController,
+        enabled: enabled,
+        textCapitalization: TextCapitalization.words,
+        decoration: const InputDecoration(labelText: 'Cor', hintText: 'Branco'),
+        validator: (value) => (value ?? '').trim().length > 50
+            ? 'Informe uma cor com at? 50 caracteres.' : null,
       ),
-    );
-  }
-}
-
-class _FormCard extends StatelessWidget {
-  final Widget child;
-
-  const _FormCard({required this.child});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF7F7FA),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFE5E7EF)),
-      ),
-      child: child,
-    );
-  }
-}
-
-class _FilledTextField extends StatelessWidget {
-  final String label;
-  final TextEditingController controller;
-  final String? hint;
-  final TextInputType keyboardType;
-
-  const _FilledTextField({
-    required this.label,
-    required this.controller,
-    this.hint,
-    this.keyboardType = TextInputType.text,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: const TextStyle(
-            color: Color(0xFF878B9B),
-            fontSize: 12,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-        const SizedBox(height: 4),
-        TextFormField(
-          controller: controller,
-          keyboardType: keyboardType,
-          decoration: InputDecoration(
-            hintText: hint,
-            filled: true,
-            fillColor: const Color(0xFFE2E4EA),
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 12,
-              vertical: 10,
-            ),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: BorderSide.none,
-            ),
-            errorStyle: const TextStyle(height: 0.9),
-          ),
-        ),
-      ],
     );
   }
 }

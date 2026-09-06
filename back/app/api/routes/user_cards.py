@@ -10,6 +10,7 @@ from app.services.user_card_service import (
     delete_user_card,
     get_user_card_by_id,
     get_user_cards,
+    set_default_user_card,
 )
 
 router = APIRouter(prefix="/cards", tags=["Cards"])
@@ -47,3 +48,8 @@ def delete_card(
     db: Session = Depends(get_db),
 ):
     return delete_user_card(db, user_id, card_id)
+
+
+@router.patch("/user/{user_id}/{card_id}/default", response_model=UserCardResponse)
+def set_default_card(user_id: int, card_id: int, db: Session = Depends(get_db)):
+    return set_default_user_card(db, user_id, card_id)

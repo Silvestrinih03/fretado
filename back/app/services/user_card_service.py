@@ -146,3 +146,13 @@ def delete_user_card(db: Session, user_id: int, card_id: int):
     db.commit()
 
     return {"message": "Card deleted successfully."}
+
+
+def set_default_user_card(db: Session, user_id: int, card_id: int) -> UserCard:
+    # Scope both the lookup and the update to the card owner.
+    user_card = get_user_card_by_id(db, user_id, card_id)
+    db.query(UserCard).filter(UserCard.user_id == user_id).update({"is_default": False})
+    user_card.is_default = True
+    db.commit()
+    db.refresh(user_card)
+    return user_card

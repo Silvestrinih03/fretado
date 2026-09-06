@@ -22,3 +22,15 @@ CREATE TABLE vehicles (
     CONSTRAINT chk_length CHECK (length_cm IS NULL OR length_cm > 0),
     CONSTRAINT chk_plate_format CHECK (plate ~ '^[A-Z]{3}[0-9]{4}$' OR plate ~ '^[A-Z]{3}[0-9][A-Z][0-9]{2}$')
 );
+
+ALTER TABLE vehicles
+ADD COLUMN vehicle_model_id BIGINT;
+
+ALTER TABLE vehicles
+ADD CONSTRAINT fk_vehicles_vehicle_model
+FOREIGN KEY (vehicle_model_id)
+REFERENCES vehicle_models(id)
+ON DELETE RESTRICT;
+
+CREATE INDEX idx_vehicles_vehicle_model_id
+ON vehicles (vehicle_model_id);

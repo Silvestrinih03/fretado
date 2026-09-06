@@ -1,13 +1,19 @@
+from typing import List
 from pydantic import BaseModel
+
 
 class VehicleBrandResponse(BaseModel):
     id: str
     name: str
 
-class VehicleModelResponse(BaseModel):
+
+class VehicleCatalogModelResponse(BaseModel):
     id: str
     name: str
 
-class VehicleYearResponse(BaseModel):
-    code: str
+
+class VehicleVersionResponse(BaseModel):
+    id: int
     name: str
+    years: List[int]
+    fuels: List[str]

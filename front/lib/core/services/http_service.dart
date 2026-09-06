@@ -171,6 +171,46 @@ class HttpService {
     );
   }
 
+  Future<Map<String, dynamic>> delete(
+    String path, {
+    Map<String, dynamic>? body,
+    Map<String, String>? headers,
+    bool authenticated = true,
+  }) async {
+    final Uri uri = Uri.parse('$baseUrl${_normalizePath(path)}');
+
+    final requestHeaders = await _jsonHeaders(headers, authenticated);
+    final http.Response response;
+    try {
+      response = await _client.delete(
+        uri,
+        headers: requestHeaders,
+        body: jsonEncode(body ?? <String, dynamic>{}),
+      );
+    } catch (e) {
+      throw HttpServiceException(
+        message:
+            'Não foi possível conectar ao servidor em $baseUrl. '
+            'Verifique se a API está rodando e se a URL está correta para o seu dispositivo. '
+            'Detalhe: $e',
+      );
+    }
+
+    final Map<String, dynamic> parsedData = _parseResponseBody(response.body);
+
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      return parsedData;
+    }
+
+    await _handleAuthFailure(response.statusCode, authenticated);
+
+    throw HttpServiceException(
+      message: _extractErrorMessage(parsedData),
+      statusCode: response.statusCode,
+      data: parsedData,
+    );
+  }
+
   static String _normalizePath(String path) {
     if (path.startsWith('/')) {
       return path;

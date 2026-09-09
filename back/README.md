@@ -37,15 +37,67 @@ Após rodar, acesse:
 
 ---
 
-## 🔐 Variáveis de Ambiente
+### 🔐 Variáveis de Ambiente
 
 Para o funcionamento correto do back-end, é necessário criar um arquivo `.env` dentro da pasta `back/`, seguindo o modelo do arquivo `.env.example`.
 
-Exemplo:
+---
 
-```env
-APP_NAME=Fretado API
-APP_ENV=development
-SECRET_KEY=sua_chave_secreta_aqui
-DATABASE_URL=postgresql://usuario:senha@localhost:5432/fretado_db
+## Serviços externos
+
+### ⛽ Atualização de preços de combustíveis — ANP
+
+O Fretado utiliza dados oficiais da **Agência Nacional do Petróleo, Gás Natural e Biocombustíveis (ANP)** como referência para o cálculo do custo de combustível das corridas.
+
+Os dados são obtidos a partir dos arquivos públicos disponibilizados pela ANP com os preços coletados nos postos de combustíveis brasileiros.
+
+### Como funciona
+
+O serviço `AnpFuelPriceService` realiza o seguinte processo:
+
+1. Baixa os arquivos mais recentes disponibilizados pela ANP;
+2. Processa os registros de **gasolina, etanol e diesel**;
+3. Identifica a semana mais recente disponível;
+4. Agrupa os preços por **UF e tipo de combustível**;
+5. Calcula o preço médio de venda por litro;
+6. Armazena os resultados na tabela `fuel_prices`.
+
+A tabela mantém o histórico semanal, permitindo que o cálculo de frete utilize os preços mais recentes disponíveis sem precisar consultar a ANP durante cada solicitação de corrida.
+
+### Execução manual
+
+A atualização pode ser executada manualmente a partir da pasta `back`:
+
+```bash
+python -m scripts.update_fuel_prices
 ```
+
+O script pode ser executado novamente com segurança. Caso os dados referentes à mesma semana já existam, os registros são atualizados em vez de duplicados.
+
+### Atualização automática
+
+Em produção, o script é executado periodicamente através de um **Cron Job no Render**.
+
+A atualização é realizada semanalmente, acompanhando a periodicidade de publicação dos levantamentos da ANP.
+
+```text
+ANP
+ ↓
+Render Cron Job
+ ↓
+scripts/update_fuel_prices.py
+ ↓
+AnpFuelPriceService
+ ↓
+fuel_prices
+ ↓
+Cálculo do frete
+```
+
+Dessa forma, a consulta à fonte externa fica desacoplada do fluxo de cotação, reduzindo o tempo de resposta e mantendo o sistema disponível mesmo quando a fonte da ANP estiver temporariamente indisponível.
+
+### Fonte dos dados
+
+Dados abertos da Agência Nacional do Petróleo, Gás Natural e Biocombustíveis (ANP):
+
+https://www.gov.br/anp/pt-br/centrais-de-conteudo/dados-abertos/serie-historica-de-precos-de-combustiveis

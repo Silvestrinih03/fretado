@@ -17,10 +17,10 @@ class FreightPackageData {
 
   Map<String, dynamic> toQuoteJson() {
     return {
-      'package_width': widthCm,
-      'package_height': heightCm,
-      'package_length': lengthCm,
-      'package_weight': weightKg,
+      'package_width': widthCm.toStringAsFixed(2),
+      'package_height': heightCm.toStringAsFixed(2),
+      'package_length': lengthCm.toStringAsFixed(2),
+      'package_weight': weightKg.toStringAsFixed(2),
     };
   }
 }

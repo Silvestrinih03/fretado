@@ -1,8 +1,8 @@
 import os
 
 from dataclasses import dataclass, field
-from decimal import Decimal, ROUND_HALF_UP
-from math import asin, ceil, cos, radians, sin, sqrt
+from decimal import Decimal
+from math import ceil
 
 import httpx
 
@@ -87,7 +87,12 @@ class MapboxRouteService(RouteService):
                 detail="Mapbox retornou erro ao calcular a rota.",
             )
 
-        data = response.json()
+        try:
+            data = response.json()
+            if not isinstance(data, dict):
+                raise ValueError("Invalid route response")
+        except ValueError:
+            raise HTTPException(status_code=502, detail="Mapbox retornou uma resposta invalida.")
 
         if data.get("code") != "Ok":
             message = data.get(
@@ -110,19 +115,20 @@ class MapboxRouteService(RouteService):
 
         route = routes[0]
 
-        distance_meters = Decimal(str(route["distance"]))
-        duration_seconds = Decimal(str(route["duration"]))
+        try:
+            distance_meters = Decimal(str(route["distance"]))
+            duration_seconds = Decimal(str(route["duration"]))
+            if (not distance_meters.is_finite() or distance_meters <= 0
+                    or not duration_seconds.is_finite() or duration_seconds < 0):
+                raise ValueError("Invalid route metrics")
+        except (KeyError, TypeError, ValueError, ArithmeticError):
+            raise HTTPException(status_code=502, detail="Mapbox retornou metricas invalidas.")
 
-        distance_km = (
-            distance_meters / Decimal("1000")
-        ).quantize(
-            Decimal("0.01"),
-            rounding=ROUND_HALF_UP,
-        )
+        distance_km = distance_meters / Decimal("1000")
 
         estimated_time_minutes = max(
             1,
-            ceil(float(duration_seconds / Decimal("60"))),
+            ceil(duration_seconds / Decimal("60")),
         )
 
         geometry_data = route.get("geometry", {})
@@ -139,82 +145,4 @@ class MapboxRouteService(RouteService):
             distance_km=distance_km,
             estimated_time_minutes=estimated_time_minutes,
             geometry=geometry,
-        )
-
-
-class MockRouteService(RouteService):
-    provider_name = "mock"
-    road_distance_factor = Decimal("1.25")
-    average_speed_kmh = Decimal("35")
-
-    def estimate_route(
-        self,
-        origin_latitude: Decimal,
-        origin_longitude: Decimal,
-        destination_latitude: Decimal,
-        destination_longitude: Decimal,
-    ) -> RouteEstimate:
-        straight_line_distance_km = self._haversine_distance_km(
-            origin_latitude=origin_latitude,
-            origin_longitude=origin_longitude,
-            destination_latitude=destination_latitude,
-            destination_longitude=destination_longitude,
-        )
-
-        route_distance_km = (
-            straight_line_distance_km * self.road_distance_factor
-        ).quantize(
-            Decimal("0.01"),
-            rounding=ROUND_HALF_UP,
-        )
-
-        estimated_time_minutes = max(
-            1,
-            int(
-                (
-                    route_distance_km
-                    / self.average_speed_kmh
-                    * Decimal("60")
-                ).to_integral_value(rounding=ROUND_HALF_UP)
-            ),
-        )
-
-        return RouteEstimate(
-            provider=self.provider_name,
-            distance_km=route_distance_km,
-            estimated_time_minutes=estimated_time_minutes,
-            geometry=[],
-        )
-
-    def _haversine_distance_km(
-        self,
-        origin_latitude: Decimal,
-        origin_longitude: Decimal,
-        destination_latitude: Decimal,
-        destination_longitude: Decimal,
-    ) -> Decimal:
-        earth_radius_km = 6371
-
-        origin_latitude_rad = radians(float(origin_latitude))
-        destination_latitude_rad = radians(float(destination_latitude))
-
-        latitude_delta = radians(
-            float(destination_latitude - origin_latitude)
-        )
-
-        longitude_delta = radians(
-            float(destination_longitude - origin_longitude)
-        )
-
-        haversine_value = (
-            sin(latitude_delta / 2) ** 2
-            + cos(origin_latitude_rad)
-            * cos(destination_latitude_rad)
-            * sin(longitude_delta / 2) ** 2
-        )
-
-        angular_distance = 2 * asin(sqrt(haversine_value))
-
-        return Decimal(
-            str(earth_radius_km * angular_distance)
         )

@@ -623,6 +623,7 @@ class _AddressMapPageState extends State<AddressMapPage> {
     }
 
     final FreightAddressData addressData = FreightAddressData(
+      pickupState: _pickupAddress!.state,
       pickupAddress: _pickupAddress!.label,
       pickupLatitude: _pickupAddress!.point.latitude,
       pickupLongitude: _pickupAddress!.point.longitude,
@@ -1132,6 +1133,7 @@ class _DottedLinePainter extends CustomPainter {
 }
 
 class _AddressResult {
+  final String? state;
   final String label;
   final LatLng point;
   final String? placeId;
@@ -1139,6 +1141,7 @@ class _AddressResult {
   final String? addressLine2;
 
   const _AddressResult({
+    this.state,
     required this.label,
     required this.point,
     this.placeId,
@@ -1165,6 +1168,7 @@ class _AddressResult {
     final LatLng point = LatLng(latitude, longitude);
 
     return _AddressResult(
+      state: json['state']?.toString().trim().toUpperCase(),
       label: label,
       point: point,
       addressLine2:

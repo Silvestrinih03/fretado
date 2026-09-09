@@ -29,6 +29,8 @@ CREATE TABLE rides (
     package_weight DECIMAL(10,2) NOT NULL,
 
     total_price DECIMAL(10,2) NOT NULL,
+    app_fee_value DECIMAL(10,2),
+    CONSTRAINT chk_rides_app_fee CHECK (app_fee_value >= 0 AND app_fee_value <= total_price),
 
     status_id BIGINT NOT NULL,
 

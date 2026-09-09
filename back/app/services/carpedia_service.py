@@ -10,16 +10,14 @@ class CarpediaProvider:
         self.base_url = os.getenv(
             "CARPEDIA_BASE_URL",
             "https://www.carpedia.com.br/api/v1",
-        )
+        ).rstrip("/")
         self.api_key = os.getenv("CARPEDIA_API_KEY")
         self.timeout = float(
             os.getenv("CARPEDIA_TIMEOUT_SECONDS", "10")
         )
 
         if not self.api_key:
-            raise RuntimeError(
-                "CARPEDIA_API_KEY is not configured."
-            )
+            raise HTTPException(status_code=503, detail="Vehicle catalog is not configured.")
 
     @property
     def headers(self) -> dict[str, str]:
@@ -55,7 +53,13 @@ class CarpediaProvider:
 
             response.raise_for_status()
 
-            return response.json()
+            data = response.json()
+            if not isinstance(data, dict):
+                raise ValueError("Invalid catalog response")
+            return data
+
+        except ValueError:
+            raise HTTPException(status_code=502, detail="Invalid vehicle catalog response.")
 
         except HTTPException:
             raise

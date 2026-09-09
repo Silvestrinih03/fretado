@@ -153,7 +153,11 @@ class MapboxGeocodingService:
         if not label:
             return None
 
+        context = properties.get("context") or {}
+        region = context.get("region") or {}
+        state = region.get("region_code") or region.get("region_code_full", "").removeprefix("BR-")
         return {
+            "state": state or None,
             "label": label,
             "latitude": latitude,
             "longitude": longitude,

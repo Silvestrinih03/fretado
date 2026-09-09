@@ -1,4 +1,5 @@
 class FreightAddressData {
+  final String? pickupState;
   final String pickupAddress;
   final String? pickupAddressComplement;
   final String? pickupReferencePoint;
@@ -13,6 +14,7 @@ class FreightAddressData {
   final String? deliveryPlaceId;
 
   const FreightAddressData({
+    this.pickupState,
     required this.pickupAddress,
     this.pickupAddressComplement,
     this.pickupReferencePoint,
@@ -28,6 +30,7 @@ class FreightAddressData {
   });
 
   FreightAddressData copyWith({
+    String? pickupState,
     String? pickupAddress,
     String? pickupAddressComplement,
     String? pickupReferencePoint,
@@ -42,6 +45,10 @@ class FreightAddressData {
     String? deliveryPlaceId,
   }) {
     return FreightAddressData(
+      pickupState: pickupState ??
+          ((pickupLatitude != null && pickupLatitude != this.pickupLatitude) ||
+                  (pickupLongitude != null && pickupLongitude != this.pickupLongitude)
+              ? null : this.pickupState),
       pickupAddress: pickupAddress ?? this.pickupAddress,
       pickupAddressComplement:
           pickupAddressComplement ?? this.pickupAddressComplement,
@@ -70,6 +77,7 @@ class FreightAddressData {
 
   Map<String, dynamic> toRideJson() {
     return {
+      if (pickupState != null) 'origin_state': pickupState,
       'origin_address': pickupAddress,
       'origin_address_complement': _blankToNull(pickupAddressComplement),
       'origin_reference_point': _blankToNull(pickupReferencePoint),

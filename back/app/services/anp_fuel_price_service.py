@@ -1,10 +1,12 @@
 import csv
 import io
 from collections import defaultdict
-from datetime import timedelta
+from datetime import date, datetime, timedelta
 from decimal import Decimal, ROUND_HALF_UP
 
 import httpx
+from sqlalchemy import func
+from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
 
 from app.models.fuel_price import FuelPrice
@@ -66,7 +68,10 @@ class AnpFuelPriceService:
             latest_rows
         )
 
-        inserted = cls._save_prices(
+        if not averages:
+            raise ValueError("ANP import produced no valid prices.")
+
+        saved = cls._save_prices(
             db=db,
             averages=averages,
         )
@@ -76,7 +81,7 @@ class AnpFuelPriceService:
             "normalized_rows": len(normalized_rows),
             "latest_rows": len(latest_rows),
             "calculated_prices": len(averages),
-            "inserted_prices": inserted,
+            "saved_prices": saved,
         }
 
     @staticmethod
@@ -91,15 +96,19 @@ class AnpFuelPriceService:
 
         response.raise_for_status()
 
-        content = response.content.decode(
-            "utf-8-sig"
-        )
+        try:
+            content = response.content.decode("utf-8-sig")
+        except UnicodeDecodeError:
+            content = response.content.decode("latin-1")
 
         reader = csv.DictReader(
             io.StringIO(content),
             delimiter=";",
         )
 
+        required = {"Produto", "Estado - Sigla", "Data da Coleta", "Valor de Venda"}
+        if not required.issubset(reader.fieldnames or []):
+            raise ValueError("Unexpected ANP CSV columns.")
         return list(reader)
 
     @classmethod
@@ -145,8 +154,6 @@ class AnpFuelPriceService:
                 continue
 
             try:
-                from datetime import datetime
-
                 collection_date = datetime.strptime(
                     collection_date_raw,
                     "%d/%m/%Y",
@@ -159,7 +166,7 @@ class AnpFuelPriceService:
             except (ValueError, ArithmeticError):
                 continue
 
-            if price <= 0:
+            if not price.is_finite() or price <= 0 or collection_date > date.today():
                 continue
 
             normalized.append({
@@ -178,36 +185,19 @@ class AnpFuelPriceService:
         if not rows:
             return []
 
-        latest_date = max(
-            row["collection_date"]
-            for row in rows
-        )
-
-        week_start = (
-            latest_date
-            - timedelta(
-                days=latest_date.weekday()
-            )
-        )
-
-        week_end = (
-            week_start
-            + timedelta(days=6)
-        )
-
-        return [
-            {
-                **row,
-                "reference_start_date": week_start,
-                "reference_end_date": week_end,
-            }
-            for row in rows
-            if (
-                week_start
-                <= row["collection_date"]
-                <= week_end
-            )
-        ]
+        # Independent publication dates must not discard another state's/fuel's data.
+        latest_dates = {}
+        for row in rows:
+            key = (row["fuel_type"], row["state"])
+            latest_dates[key] = max(latest_dates.get(key, row["collection_date"]), row["collection_date"])
+        result = []
+        for row in rows:
+            latest_date = latest_dates[(row["fuel_type"], row["state"])]
+            week_start = latest_date - timedelta(days=latest_date.weekday())
+            week_end = week_start + timedelta(days=6)
+            if week_start <= row["collection_date"] <= week_end:
+                result.append({**row, "reference_start_date": week_start, "reference_end_date": week_end})
+        return result
 
     @staticmethod
     def _calculate_state_averages(
@@ -267,63 +257,30 @@ class AnpFuelPriceService:
             )
         }
 
-        inserted = 0
-
-        for item in averages:
-            fuel_type_id = fuel_types.get(
-                item["fuel_type"]
-            )
-
-            if not fuel_type_id:
-                continue
-
-            existing = (
-                db.query(FuelPrice)
-                .filter(
-                    FuelPrice.fuel_type_id
-                    == fuel_type_id,
-
-                    FuelPrice.state
-                    == item["state"],
-
-                    FuelPrice.reference_start_date
-                    == item[
-                        "reference_start_date"
-                    ],
-
-                    FuelPrice.reference_end_date
-                    == item[
-                        "reference_end_date"
-                    ],
-                )
-                .first()
-            )
-
-            if existing:
-                existing.average_price = (
-                    item["average_price"]
-                )
-                existing.source = "ANP"
-                continue
-
-            fuel_price = FuelPrice(
-                fuel_type_id=fuel_type_id,
-                state=item["state"],
-                average_price=item[
-                    "average_price"
-                ],
-                reference_start_date=item[
-                    "reference_start_date"
-                ],
-                reference_end_date=item[
-                    "reference_end_date"
-                ],
-                source="ANP",
-            )
-
-            db.add(fuel_price)
-            inserted += 1
-
+        missing = {item["fuel_type"] for item in averages} - fuel_types.keys()
+        if missing:
+            raise ValueError(f"Missing fuel_types configuration: {sorted(missing)}")
+        values = [
+            {
+                "fuel_type_id": fuel_types[item["fuel_type"]],
+                "state": item["state"],
+                "average_price": item["average_price"],
+                "reference_start_date": item["reference_start_date"],
+                "reference_end_date": item["reference_end_date"],
+                "source": "ANP",
+            }
+            for item in averages
+        ]
+        if not values:
+            return 0
+        statement = insert(FuelPrice).values(values)
+        db.execute(statement.on_conflict_do_update(
+            index_elements=["fuel_type_id", "state", "reference_start_date", "reference_end_date"],
+            set_={
+                "average_price": statement.excluded.average_price,
+                "source": "ANP",
+                "updated_at": func.now(),
+            },
+        ))
         db.commit()
-
-        return inserted
+        return len(values)

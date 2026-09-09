@@ -1,9 +1,11 @@
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 from typing import Optional
 
 from fastapi import HTTPException, status
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from app.enums.user_type import UserTypeEnum
 from app.models.fuel_type import FuelType
 from app.models.user import User
 from app.models.vehicle import Vehicle
@@ -42,11 +44,20 @@ class VehicleService:
         )
 
         if not vehicle_model:
-            vehicle_model = VehicleService._create_vehicle_model(
-                payload=payload,
-                vehicle_type=vehicle_type,
-                db=db,
-            )
+            try:
+                with db.begin_nested():
+                    vehicle_model = VehicleService._create_vehicle_model(
+                        payload=payload,
+                        vehicle_type=vehicle_type,
+                        db=db,
+                    )
+            except IntegrityError:
+                vehicle_model = VehicleService._find_vehicle_model(payload.version_id, payload.year, db)
+                if vehicle_model is None:
+                    raise HTTPException(status_code=409, detail="Could not register vehicle model.")
+
+        if vehicle_model.vehicle_type_id != vehicle_type.id:
+            raise HTTPException(status_code=400, detail="Vehicle model belongs to a different vehicle type.")
 
         vehicle = Vehicle(
             user_id=payload.user_id,
@@ -57,7 +68,11 @@ class VehicleService:
         )
 
         db.add(vehicle)
-        db.commit()
+        try:
+            db.commit()
+        except IntegrityError:
+            db.rollback()
+            raise HTTPException(status_code=409, detail="Vehicle registration conflicts with existing data.")
         db.refresh(vehicle)
 
         return vehicle
@@ -95,6 +110,9 @@ class VehicleService:
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="User not found.",
             )
+
+        if user.user_type_id != int(UserTypeEnum.DRIVER):
+            raise HTTPException(status_code=400, detail="Vehicles must belong to a driver.")
 
     @staticmethod
     def _get_vehicle_type(
@@ -149,9 +167,9 @@ class VehicleService:
             year=payload.year,
         )
 
-        version = technical_data.get("versao", {})
+        version = technical_data.get("versao") or {}
 
-        if not version:
+        if not isinstance(version, dict) or not version.get("marca") or not version.get("modelo"):
             raise HTTPException(
                 status_code=status.HTTP_502_BAD_GATEWAY,
                 detail="Invalid vehicle catalog response.",
@@ -167,6 +185,15 @@ class VehicleService:
                 technical_data
             )
         )
+
+        # Consumption is usable only when its fuel is known.
+        if fuel_type_id is None:
+            average_consumption = None
+        resolved_fuel = fuel_type_id or vehicle_type.default_fuel_type_id
+        if average_consumption is None and resolved_fuel == vehicle_type.default_fuel_type_id:
+            fallback_consumption = vehicle_type.default_consumption_km_l
+        else:
+            fallback_consumption = None
 
         vehicle_model = VehicleModel(
             vehicle_type_id=vehicle_type.id,
@@ -199,20 +226,18 @@ class VehicleService:
 
             average_consumption_km_l=(
                 average_consumption
-                or vehicle_type.default_consumption_km_l
+                or fallback_consumption
             ),
 
             technical_data_source=(
-                VehicleService._extract_technical_source(
-                    technical_data
-                )
-                or "vehicle_type_fallback"
+                (VehicleService._extract_technical_source(technical_data) or "carpedia")
+                if average_consumption is not None else "vehicle_type_fallback"
             ),
 
             technical_data_status=(
-                "verified"
-                if average_consumption is not None
-                else "estimated"
+                "estimated"
+                if average_consumption is not None or fallback_consumption is not None
+                else "missing"
             ),
 
             external_provider="carpedia",
@@ -249,7 +274,10 @@ class VehicleService:
         )
 
         if not internal_type:
-            return None
+            normalized = fuel_name.lower()
+            if "flex" in normalized or ("gasolina" in normalized and ("etanol" in normalized or "lcool" in normalized)):
+                return None
+            raise HTTPException(status_code=422, detail="Vehicle fuel is not supported for freight pricing.")
 
         fuel_type = (
             db.query(FuelType)
@@ -259,36 +287,22 @@ class VehicleService:
             .first()
         )
 
-        return fuel_type.id if fuel_type else None
+        if fuel_type is None:
+            raise HTTPException(status_code=503, detail="Fuel type is not configured.")
+        return fuel_type.id
 
     @staticmethod
     def _extract_fuel(
         technical_data: dict,
     ) -> Optional[str]:
-        for section in technical_data.get(
-            "secoes",
-            [],
-        ):
-            if section.get(
-                "titulo",
-                "",
-            ).lower() != "motor":
+        for section in technical_data.get("secoes") or []:
+            if not isinstance(section, dict) or str(section.get("titulo") or "").lower() != "motor":
                 continue
-
-            for item in section.get(
-                "itens",
-                [],
-            ):
-                label = item.get(
-                    "label",
-                    "",
-                ).lower()
-
-                if "combust" in label:
-                    return str(
-                        item.get("valor", "")
-                    ).strip()
-
+            for item in section.get("itens") or []:
+                if not isinstance(item, dict):
+                    continue
+                if "combust" in str(item.get("label") or "").lower():
+                    return str(item.get("valor") or "").strip() or None
         return None
 
     @staticmethod
@@ -299,7 +313,7 @@ class VehicleService:
             "consumo"
         )
 
-        if not consumption:
+        if not isinstance(consumption, dict):
             return None
 
         city = consumption.get(
@@ -311,28 +325,20 @@ class VehicleService:
         )
 
         values = []
-
-        if city is not None:
-            values.append(
-                Decimal(str(city))
-            )
-
-        if highway is not None:
-            values.append(
-                Decimal(str(highway))
-            )
-
+        for raw in (city, highway):
+            if raw is None:
+                continue
+            try:
+                value = Decimal(str(raw).strip().replace(",", "."))
+            except (InvalidOperation, ValueError):
+                continue
+            if value.is_finite() and value > 0:
+                values.append(value)
         if not values:
             return None
-
-        average = (
-            sum(values)
-            / Decimal(len(values))
-        )
-
-        return average.quantize(
-            Decimal("0.01")
-        )
+        average = sum(values) / Decimal(len(values))
+        average = average.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+        return average if Decimal("0") < average <= Decimal("9999.99") else None
 
     @staticmethod
     def _extract_technical_source(
@@ -342,7 +348,7 @@ class VehicleService:
             "consumo"
         )
 
-        if consumption:
+        if isinstance(consumption, dict):
             source = consumption.get("fonte")
 
             if source:

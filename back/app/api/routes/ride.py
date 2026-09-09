@@ -39,8 +39,8 @@ router = APIRouter(prefix="/rides", tags=["Rides"])
     response_model=RideQuoteResponse,
     status_code=status.HTTP_200_OK,
 )
-def quote(quote_data: RideQuoteRequest):
-    return calculate_ride_price(quote_data)
+def quote(quote_data: RideQuoteRequest, db: Session = Depends(get_db)):
+    return calculate_ride_price(db=db, payload=quote_data)
 
 
 @router.post(

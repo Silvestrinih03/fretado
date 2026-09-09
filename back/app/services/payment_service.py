@@ -16,7 +16,7 @@ from app.services.ride_service import (
 
 def simulate_payment(db: Session, payload: PaymentSimulationRequest) -> PaymentSimulationResponse:
     selected_card = get_selected_card(db, payload.client_user_id, payload.card_id)
-    quote = calculate_ride_price(payload)
+    quote = calculate_ride_price(db=db, payload=payload)
 
     if not is_payment_approved(selected_card, payload):
         return PaymentSimulationResponse(
@@ -27,6 +27,7 @@ def simulate_payment(db: Session, payload: PaymentSimulationRequest) -> PaymentS
         )
 
     ride_payload = RideCreateRequest(
+        origin_state=payload.origin_state,
         client_user_id=payload.client_user_id,
         origin_address=payload.origin_address,
         origin_address_complement=payload.origin_address_complement,

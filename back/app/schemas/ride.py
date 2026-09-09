@@ -2,20 +2,36 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Optional
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from app.enums.delivery_classification import DeliveryClassificationEnum
-from app.enums.vehicle_type import VehicleTypeEnum
 
 class RideGeocodeResult(BaseModel):
     label: str
     latitude: float
     longitude: float
+    state: Optional[str] = None
 
 class RideGeocodeResponse(BaseModel):
     data: list[RideGeocodeResult]
 
 class RideQuoteRequest(BaseModel):
+    origin_state: Optional[str] = None
+
+    @field_validator("origin_state")
+    @classmethod
+    def normalize_state(cls, value: Optional[str]) -> Optional[str]:
+        if value is None:
+            return None
+        value = value.strip().upper()
+        if value not in {
+            "AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA", "MT", "MS",
+            "MG", "PA", "PB", "PR", "PE", "PI", "RJ", "RN", "RS", "RO", "RR", "SC",
+            "SP", "SE", "TO",
+        }:
+            raise ValueError("UF de origem invalida.")
+        return value
+
     origin_address: str = Field(..., max_length=255)
     origin_address_complement: Optional[str] = Field(default=None, max_length=255)
     origin_reference_point: Optional[str] = Field(default=None, max_length=255)
@@ -27,10 +43,10 @@ class RideQuoteRequest(BaseModel):
     destination_latitude: Decimal = Field(..., ge=Decimal("-90"), le=Decimal("90"))
     destination_longitude: Decimal = Field(..., ge=Decimal("-180"), le=Decimal("180"))
 
-    package_width: Decimal = Field(..., gt=Decimal("0"))
-    package_height: Decimal = Field(..., gt=Decimal("0"))
-    package_length: Decimal = Field(..., gt=Decimal("0"))
-    package_weight: Decimal = Field(..., gt=Decimal("0"))
+    package_width: Decimal = Field(..., gt=Decimal("0"), max_digits=10, decimal_places=2)
+    package_height: Decimal = Field(..., gt=Decimal("0"), max_digits=10, decimal_places=2)
+    package_length: Decimal = Field(..., gt=Decimal("0"), max_digits=10, decimal_places=2)
+    package_weight: Decimal = Field(..., gt=Decimal("0"), max_digits=10, decimal_places=2)
 
     @model_validator(mode="after")
     def validate_distinct_route_points(self):
@@ -49,9 +65,21 @@ class RideQuoteRouteResponse(BaseModel):
     geometry: list[list[float]] = Field(default_factory=list)
 
 class RideQuotePricingResponse(BaseModel):
-    base_price: Decimal
-    distance_price: Decimal
-    duration_price: Decimal
+    estimated_liters: Decimal
+
+    fuel_price_per_liter: Decimal
+    fuel_cost: Decimal
+
+    operational_cost: Decimal
+    estimated_driver_cost: Decimal
+
+    driver_margin_percentage: Decimal
+    driver_margin_value: Decimal
+
+    app_fee_percentage: Decimal
+    app_fee_value: Decimal
+    driver_net_value: Decimal
+
     total_price: Decimal
 
 class RideQuoteResponse(BaseModel):
@@ -76,7 +104,7 @@ class RideQuoteResponse(BaseModel):
     package_volume_m3: Decimal
 
     required_vehicle_type_id: int
-    required_vehicle_type: VehicleTypeEnum
+    required_vehicle_type: int
     required_vehicle_type_name: str
     delivery_classification: DeliveryClassificationEnum
 
@@ -88,10 +116,10 @@ class RideQuoteResponse(BaseModel):
     total_price: Decimal
 
 class RideCreate(RideQuoteRequest):
+    expected_total_price: Optional[Decimal] = Field(default=None, ge=0, max_digits=10, decimal_places=2)
     client_user_id: int = Field(..., gt=0)
     driver_user_id: Optional[int] = Field(default=None, gt=0)
 
-    total_price: Decimal = Field(..., gt=Decimal("0"))
     status_id: int = Field(..., gt=0)
 
 class RideCreateRequest(RideQuoteRequest):

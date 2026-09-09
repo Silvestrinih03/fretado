@@ -43,11 +43,14 @@ class _ShippingPaymentPageState extends State<ShippingPaymentPage> {
   UserCardModel? _selectedCard;
   bool _isLoadingCards = true;
   bool _isPaying = false;
+  bool _rideCreated = false;
+  late FreightQuoteModel _quote;
   String? _loadErrorMessage;
 
   @override
   void initState() {
     super.initState();
+    _quote = widget.quote;
     _httpService = HttpService();
     _cardDatasource = UserCardDatasource(_httpService);
     _loadCards();
@@ -119,6 +122,7 @@ class _ShippingPaymentPageState extends State<ShippingPaymentPage> {
   }
 
   Future<void> _confirmShipping() async {
+    if (_isPaying || _rideCreated) return;
     final selectedCard = _selectedCard;
     if (selectedCard == null) {
       _showMessage('Selecione ou cadastre um cartao para continuar.');
@@ -134,11 +138,11 @@ class _ShippingPaymentPageState extends State<ShippingPaymentPage> {
           'driver_user_id': null,
           ...widget.addressData.toRideJson(),
           ...widget.packageData.toQuoteJson(),
-          'total_price': widget.quote.totalPrice,
+          'expected_total_price': _quote.totalPrice.toStringAsFixed(2),
           'status_id': 1,
         },
       );
-      await _runRideDispatchJob();
+      _rideCreated = true;
 
       if (!mounted) {
         return;
@@ -149,12 +153,23 @@ class _ShippingPaymentPageState extends State<ShippingPaymentPage> {
       final bool shouldReturnHome = await _showPaymentSuccessDialog(
         rideId: rideId,
         cardLastFour: selectedCard.lastFour,
+        totalPrice: double.parse(response['total_price'].toString()),
       );
 
       if (shouldReturnHome) {
         _returnToHome();
       }
     } on HttpServiceException catch (e) {
+      final updatedQuote = e.data?['quote'];
+      if (e.statusCode == 409 && updatedQuote is Map && mounted) {
+        try {
+          final quote = FreightQuoteModel.fromJson(Map<String, dynamic>.from(updatedQuote));
+          setState(() => _quote = quote);
+        } on FormatException {
+          _showMessage('Nao foi possivel atualizar a cotacao. Volte e calcule novamente.');
+          return;
+        }
+      }
       _showMessage(e.message);
     } catch (_) {
       _showMessage('Nao foi possivel finalizar o pagamento agora.');
@@ -168,6 +183,7 @@ class _ShippingPaymentPageState extends State<ShippingPaymentPage> {
   Future<bool> _showPaymentSuccessDialog({
     required String? rideId,
     required String cardLastFour,
+    required double totalPrice,
   }) async {
     final result = await showDialog<bool>(
       context: context,
@@ -175,7 +191,7 @@ class _ShippingPaymentPageState extends State<ShippingPaymentPage> {
       builder: (dialogContext) => _PaymentSuccessDialog(
         rideId: rideId,
         cardLastFour: cardLastFour,
-        totalPrice: _formatMoney(widget.quote.totalPrice),
+        totalPrice: _formatMoney(totalPrice),
         onOk: () => Navigator.of(dialogContext).pop(true),
       ),
     );
@@ -195,23 +211,6 @@ class _ShippingPaymentPageState extends State<ShippingPaymentPage> {
       ),
       (route) => false,
     );
-  }
-
-  Future<void> _runRideDispatchJob() async {
-    const jobSecret = String.fromEnvironment('JOB_SECRET');
-    if (jobSecret.isEmpty) {
-      return;
-    }
-
-    try {
-      await _httpService.post(
-        Endpoints.rideDispatchJob,
-        headers: {'X-Job-Secret': jobSecret},
-        authenticated: false,
-      );
-    } catch (_) {
-      // A corrida ja foi criada; o job agendado do backend ainda pode processar.
-    }
   }
 
   void _selectCard(UserCardModel card) {
@@ -279,7 +278,7 @@ class _ShippingPaymentPageState extends State<ShippingPaymentPage> {
                   _FreightSummaryCard(
                     addressData: widget.addressData,
                     packageData: widget.packageData,
-                    quote: widget.quote,
+                    quote: _quote,
                   ),
                   const SizedBox(height: 26),
                   Row(
@@ -309,7 +308,7 @@ class _ShippingPaymentPageState extends State<ShippingPaymentPage> {
                   const SizedBox(height: 24),
                   _ConfirmShippingButton(
                     loading: _isPaying,
-                    enabled: !_isLoadingCards && _selectedCard != null,
+                    enabled: !_isLoadingCards && _selectedCard != null && !_rideCreated,
                     onPressed: _confirmShipping,
                   ),
                 ],
@@ -783,18 +782,13 @@ class _FreightSummaryCard extends StatelessWidget {
             child: Column(
               children: [
                 _PriceBreakdownRow(
-                  label: 'Tarifa base',
-                  value: _formatMoney(quote.basePrice),
+                  label: 'Motorista (custos e margem)',
+                  value: _formatMoney(quote.driverNetValue),
                 ),
                 const SizedBox(height: 8),
                 _PriceBreakdownRow(
-                  label: 'Distância',
-                  value: _formatMoney(quote.distancePrice),
-                ),
-                const SizedBox(height: 8),
-                _PriceBreakdownRow(
-                  label: 'Tempo estimado',
-                  value: _formatMoney(quote.durationPrice),
+                  label: 'Taxa Fretado',
+                  value: _formatMoney(quote.appFeeValue),
                 ),
                 const Padding(
                   padding: EdgeInsets.symmetric(vertical: 10),

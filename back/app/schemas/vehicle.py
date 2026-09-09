@@ -1,4 +1,5 @@
 from datetime import datetime
+import re
 from typing import Optional
 from app.schemas.vehicle_model import VehicleModelResponse
 
@@ -29,9 +30,9 @@ class VehicleListResponse(VehicleResponse):
 
 
 class VehicleCreateRequest(BaseModel):
-    user_id: int
-    vehicle_type_id: int
-    version_id: int
+    user_id: int = Field(..., gt=0)
+    vehicle_type_id: int = Field(..., gt=0)
+    version_id: int = Field(..., gt=0)
 
     year: int = Field(
         ...,
@@ -52,13 +53,18 @@ class VehicleCreateRequest(BaseModel):
 
     status: bool = True
 
-    @field_validator("plate")
+    @field_validator("plate", mode="before")
     @classmethod
     def normalize_plate(
         cls,
         value: str,
     ) -> str:
-        return value.strip().upper()
+        if not isinstance(value, str):
+            raise ValueError("Invalid vehicle plate.")
+        normalized = value.strip().upper().replace("-", "").replace(" ", "")
+        if not re.fullmatch(r"[A-Z]{3}(?:[0-9]{4}|[0-9][A-Z][0-9]{2})", normalized):
+            raise ValueError("Invalid vehicle plate.")
+        return normalized
 
     @field_validator("color", mode="before")
     @classmethod
@@ -97,7 +103,9 @@ class UpdateVehicleRequest(BaseModel):
 
     @model_validator(mode="after")
     def validate_at_least_one_field(self):
-        if self.color is None and self.status is None:
+        if "status" in self.model_fields_set and self.status is None:
+            raise ValueError("Vehicle status cannot be null.")
+        if not self.model_fields_set:
             raise ValueError(
                 "Provide at least one field to update."
             )

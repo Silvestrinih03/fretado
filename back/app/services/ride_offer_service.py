@@ -17,6 +17,7 @@ from app.services.ride_dispatch_service import (
     create_next_offer_for_ride,
     create_pending_offer_for_driver,
     expire_offer_if_needed,
+    ensure_driver_can_receive_ride,
     is_ride_waiting_for_driver,
     lock_ride,
     utc_now,
@@ -139,6 +140,9 @@ def accept_offer(db: Session, offer_id: int) -> RideOffer:
             detail="Essa corrida ja possui motorista.",
         )
 
+    # Serialize concurrent acceptances by this driver, then recheck current availability.
+    db.query(User).filter(User.id == offer.driver_user_id).with_for_update().first()
+    ensure_driver_can_receive_ride(db, ride, offer.driver_user_id)
     offer.status_id = ACCEPTED_OFFER_STATUS_ID
     ride.driver_user_id = offer.driver_user_id
     ride.status_id = int(RideStatusEnum.AGUARDANDO_INICIO)

@@ -6,12 +6,14 @@ from sqlalchemy.orm import Session
 from app.models.driver_wallet import DriverWallet
 
 
-def get_wallet_by_driver_user_id(db: Session, driver_user_id: int) -> DriverWallet:
-    wallet = (
+def get_wallet_by_driver_user_id(db: Session, driver_user_id: int, lock: bool = False) -> DriverWallet:
+    query = (
         db.query(DriverWallet)
         .filter(DriverWallet.driver_user_id == driver_user_id)
-        .first()
     )
+    if lock:
+        query = query.with_for_update().populate_existing()
+    wallet = query.first()
 
     if not wallet:
         raise HTTPException(
@@ -23,7 +25,9 @@ def get_wallet_by_driver_user_id(db: Session, driver_user_id: int) -> DriverWall
 
 
 def add_balance(db: Session, driver_user_id: int, value: Decimal) -> DriverWallet:
-    wallet = get_wallet_by_driver_user_id(db, driver_user_id)
+    if not value.is_finite() or value < 0 or value != value.quantize(Decimal("0.01")):
+        raise HTTPException(status_code=400, detail="Invalid wallet amount.")
+    wallet = get_wallet_by_driver_user_id(db, driver_user_id, lock=True)
 
     wallet.available_balance = wallet.available_balance + value
 
@@ -31,7 +35,9 @@ def add_balance(db: Session, driver_user_id: int, value: Decimal) -> DriverWalle
 
 
 def subtract_balance(db: Session, driver_user_id: int, value: Decimal) -> DriverWallet:
-    wallet = get_wallet_by_driver_user_id(db, driver_user_id)
+    if not value.is_finite() or value < 0 or value != value.quantize(Decimal("0.01")):
+        raise HTTPException(status_code=400, detail="Invalid wallet amount.")
+    wallet = get_wallet_by_driver_user_id(db, driver_user_id, lock=True)
 
     if wallet.available_balance < value:
         raise HTTPException(

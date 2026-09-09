@@ -101,3 +101,24 @@ Dessa forma, a consulta à fonte externa fica desacoplada do fluxo de cotação,
 Dados abertos da Agência Nacional do Petróleo, Gás Natural e Biocombustíveis (ANP):
 
 https://www.gov.br/anp/pt-br/centrais-de-conteudo/dados-abertos/serie-historica-de-precos-de-combustiveis
+
+### Novo fluxo de cotacao
+
+A cotacao e a criacao usam `RideQuoteService` com a sessao do banco. A UF de origem
+pode ser enviada em `origin_state`; se ausente, e resolvida pelo Mapbox. Os precos
+sao lidos exclusivamente de `fuel_prices`. O importador ANP continua separado,
+executado pelo comando `python -m scripts.update_fuel_prices` no cron semanal.
+
+Antes de publicar, aplicar a migration `025_snapshot_ride_app_fee.sql` e garantir
+que `pricing_policies` esteja criada e configurada (migration 024). Corridas antigas
+sem earning ficam sem taxa conhecida e precisam de conciliacao antes da liquidacao;
+a migration recupera apenas taxas ja registradas em `driver_earnings`.
+
+O preco enviado pelo cliente na criacao e ignorado. A resposta `pricing` agora
+contem combustivel, custo operacional, margem, taxa e `driver_net_value`; nao ha
+mais valores de base, distancia ou tempo. O frontend deve usar essa composicao.
+O valor liquido inclui eventual complemento decorrente do preco minimo.
+
+A criacao de earnings recebe apenas `ride_id` e usa os valores persistidos da
+corrida finalizada. Carteiras iniciam com saldo zero; a atualizacao direta de saldo
+via PUT foi removida. Creditos e saques alteram o saldo dentro da mesma transacao.

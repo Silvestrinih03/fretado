@@ -2,7 +2,6 @@ from typing import List
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from app.database.database import get_db
-from app.enums.vehicle_type import VehicleTypeEnum
 from app.models.vehicle_type import VehicleType
 from app.schemas.vehicle_type import VehicleTypeResponse
 
@@ -15,7 +14,7 @@ def list_vehicle_types(db: Session = Depends(get_db)):
     return vehicle_types
 
 @router.get("/{vehicle_type_id}", response_model=VehicleTypeResponse, status_code=status.HTTP_200_OK)
-def get_vehicle_type_by_id(vehicle_type_id: VehicleTypeEnum, db: Session = Depends(get_db)):
+def get_vehicle_type_by_id(vehicle_type_id: int, db: Session = Depends(get_db)):
     vehicle_type = (
         db.query(VehicleType)
         .filter(VehicleType.id == int(vehicle_type_id))

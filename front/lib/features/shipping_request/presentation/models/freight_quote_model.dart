@@ -7,9 +7,11 @@ class FreightQuoteModel {
   final String deliveryClassification;
   final double packageVolumeCm3;
   final double packageVolumeM3;
-  final double basePrice;
-  final double distancePrice;
-  final double durationPrice;
+  final double fuelCost;
+  final double operationalCost;
+  final double driverMarginValue;
+  final double appFeeValue;
+  final double driverNetValue;
   final double totalPrice;
   final List<LatLng> routePoints;
 
@@ -20,9 +22,11 @@ class FreightQuoteModel {
     required this.deliveryClassification,
     required this.packageVolumeCm3,
     required this.packageVolumeM3,
-    required this.basePrice,
-    required this.distancePrice,
-    required this.durationPrice,
+    required this.fuelCost,
+    required this.operationalCost,
+    required this.driverMarginValue,
+    required this.appFeeValue,
+    required this.driverNetValue,
     required this.totalPrice,
     required this.routePoints,
   });
@@ -42,10 +46,12 @@ class FreightQuoteModel {
       deliveryClassification: json['delivery_classification']?.toString() ?? '',
       packageVolumeCm3: _readDouble(json['package_volume_cm3']),
       packageVolumeM3: _readDouble(json['package_volume_m3']),
-      basePrice: _readDouble(pricing['base_price']),
-      distancePrice: _readDouble(pricing['distance_price']),
-      durationPrice: _readDouble(pricing['duration_price']),
-      totalPrice: _readDouble(json['total_price']),
+      fuelCost: _readRequiredAmount(pricing['fuel_cost']),
+      operationalCost: _readRequiredAmount(pricing['operational_cost']),
+      driverMarginValue: _readRequiredAmount(pricing['driver_margin_value']),
+      appFeeValue: _readRequiredAmount(pricing['app_fee_value']),
+      driverNetValue: _readRequiredAmount(pricing['driver_net_value']),
+      totalPrice: _readRequiredAmount(json['total_price']),
       routePoints: _readRoutePoints(route['geometry']),
     );
   }
@@ -56,6 +62,14 @@ class FreightQuoteModel {
     }
 
     return '${vehicleTypeName[0].toUpperCase()}${vehicleTypeName.substring(1)}';
+  }
+
+  static double _readRequiredAmount(dynamic value) {
+    final amount = double.tryParse(value?.toString() ?? '');
+    if (amount == null || !amount.isFinite || amount < 0) {
+      throw const FormatException('A cotacao retornou valores invalidos.');
+    }
+    return amount;
   }
 
   static double _readDouble(dynamic value) {

@@ -23,6 +23,7 @@ class Ride(Base):
     package_length = Column(Numeric(10, 2), nullable=False)
     package_weight = Column(Numeric(10, 2), nullable=False)
     total_price = Column(Numeric(10, 2), nullable=False)
+    app_fee_value = Column(Numeric(10, 2), nullable=True)
     status_id = Column(BigInteger, ForeignKey("ride_status.id"), nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at = Column(

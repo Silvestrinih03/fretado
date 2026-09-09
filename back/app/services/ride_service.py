@@ -1,4 +1,5 @@
-from fastapi import APIRouter, Depends, Query, status, HTTPException
+from fastapi import status, HTTPException
+from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 
 from app.models.ride import Ride
@@ -13,20 +14,22 @@ from app.schemas.ride import (
     RideUpdate,
 )
 from app.services.ride_quote_service import RideQuoteService
-from app.schemas.register import UserTypeEnum
+from app.enums.user_type import UserTypeEnum
 from app.enums.ride_status_enum import RideStatusEnum
 
 from datetime import datetime, timezone
 from app.schemas.driver_earning import DriverEarningCreate
 from app.services.driver_earning_service import create_driver_earning
-from app.services.geocoding_service import MapboxGeocodingService
 
 def utc_now():
     return datetime.now(timezone.utc)
 
 
-def calculate_ride_price(payload: RideQuoteRequest) -> RideQuoteResponse:
-    return RideQuoteService().quote(payload)
+def calculate_ride_price(db: Session, payload: RideQuoteRequest,) -> RideQuoteResponse:
+    return RideQuoteService().quote(
+        db=db,
+        payload=payload,
+    )
 
 
 def create_ride(db: Session, ride_data: RideCreate):
@@ -46,7 +49,17 @@ def create_ride(db: Session, ride_data: RideCreate):
         status_id=ride_data.status_id,
     )
 
-    ride = Ride(**ride_data.model_dump())
+    quote = calculate_ride_price(db, ride_data)
+    if ride_data.expected_total_price is not None and ride_data.expected_total_price != quote.total_price:
+        return JSONResponse(status_code=409, content={
+            "detail": "O valor do frete mudou. Confira a nova cotacao e confirme novamente.",
+            "quote": quote.model_dump(mode="json"),
+        })
+    ride = Ride(
+        **ride_data.model_dump(exclude={"origin_state", "expected_total_price"}),
+        total_price=quote.total_price,
+        app_fee_value=quote.pricing.app_fee_value,
+    )
 
     db.add(ride)
     db.commit()
@@ -67,7 +80,13 @@ def create_ride_after_payment(
         )
 
     validate_user_exists(db, payload.client_user_id, "Cliente")
-    quote = quote or calculate_ride_price(payload)
+    quote = (
+        quote
+        or calculate_ride_price(
+            db=db,
+            payload=payload,
+        )
+    )
     ride_status = get_ride_status_by_id(db, int(RideStatusEnum.AGUARDANDO_ACEITE))
 
     ride = Ride(
@@ -88,6 +107,7 @@ def create_ride_after_payment(
         package_length=payload.package_length,
         package_weight=payload.package_weight,
         total_price=quote.total_price,
+        app_fee_value=quote.pricing.app_fee_value,
         status_id=ride_status.id,
     )
 
@@ -160,7 +180,9 @@ def get_ride_by_id(db: Session, ride_id: int):
 
 
 def update_ride(db: Session, ride_id: int, ride_data: RideUpdate):
-    ride = get_ride_by_id(db, ride_id)
+    ride = db.query(Ride).filter(Ride.id == ride_id).with_for_update().populate_existing().first()
+    if ride is None:
+        raise HTTPException(status_code=404, detail="Corrida nao encontrada")
 
     update_data = ride_data.model_dump(exclude_unset=True)
     if "driver_user_id" in update_data:
@@ -169,16 +191,22 @@ def update_ride(db: Session, ride_id: int, ride_data: RideUpdate):
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Use o aceite de oferta para atribuir motorista a corrida.",
             )
-    if "status_id" in update_data:
-        validate_ride_status_exists(db, update_data["status_id"])
-        if (
-            update_data["status_id"] == int(RideStatusEnum.AGUARDANDO_INICIO)
-            and ride.driver_user_id is None
-        ):
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Corrida sem motorista nao pode aguardar inicio.",
-            )
+    if any(field in update_data for field in ("started_at", "finished_at", "cancelled_at")):
+        raise HTTPException(status_code=400, detail="Datas da corrida sao controladas pelo servidor.")
+    requested_status = update_data.get("status_id", ride.status_id)
+    if requested_status != ride.status_id:
+        transitions = {
+            int(RideStatusEnum.A_CAMINHO_COLETA): start_ride,
+            int(RideStatusEnum.A_CAMINHO_ENTREGA): complete_pickup,
+            int(RideStatusEnum.FINALIZADA): finish_ride,
+        }
+        if requested_status in transitions:
+            return transitions[requested_status](db, ride_id)
+        if (requested_status == int(RideStatusEnum.CANCELADA)
+                and ride.status_id not in (int(RideStatusEnum.FINALIZADA), int(RideStatusEnum.CANCELADA))):
+            ride.cancelled_at = utc_now()
+        else:
+            raise HTTPException(status_code=400, detail="Transicao de status invalida.")
 
     for field, value in update_data.items():
         setattr(ride, field, value)
@@ -307,7 +335,9 @@ def complete_pickup(db: Session, ride_id: int):
 
 
 def finish_ride(db: Session, ride_id: int):
-    ride = get_ride_by_id(db, ride_id)
+    ride = db.query(Ride).filter(Ride.id == ride_id).with_for_update().populate_existing().first()
+    if ride is None:
+        raise HTTPException(status_code=404, detail="Corrida nao encontrada")
 
     if ride.status_id != int(RideStatusEnum.A_CAMINHO_ENTREGA):
         raise HTTPException(
@@ -329,7 +359,6 @@ def finish_ride(db: Session, ride_id: int):
         driver_earning_data=DriverEarningCreate(
             driver_user_id=ride.driver_user_id,
             ride_id=ride.id,
-            gross_value=ride.total_price,
         ),
         commit=False,
     )

@@ -10,9 +10,10 @@ from app.models.ride import Ride
 from app.models.ride_offer import RideOffer
 from app.models.user import User
 from app.models.vehicle import Vehicle
-from app.schemas.ride import RideQuoteRequest
 from app.schemas.ride_offer import RideOfferResponse
-from app.services.ride_service import calculate_ride_price
+from app.models.vehicle_model import VehicleModel
+from app.models.vehicle_type import VehicleType
+from app.services.vehicle_pricing_profile_service import VehiclePricingProfileService
 from app.models.driver_location import DriverLocation
 
 
@@ -252,8 +253,6 @@ def find_next_driver_for_ride(db: Session, ride: Ride) -> int | None:
     now = utc_now()
     location_limit = now - timedelta(minutes=settings.DRIVER_LOCATION_MAX_AGE_MINUTES)
 
-    quote = calculate_ride_price(build_quote_request(ride))
-
     used_driver_ids = (
         db.query(RideOffer.driver_user_id)
         .filter(RideOffer.ride_id == ride.id)
@@ -267,32 +266,33 @@ def find_next_driver_for_ride(db: Session, ride: Ride) -> int | None:
         )
     )
 
-    driver = (
-        db.query(Vehicle.user_id)
+    candidates = (
+        db.query(Vehicle.user_id, VehicleModel, VehicleType)
+        .select_from(Vehicle)
+        .join(VehicleModel, Vehicle.vehicle_model_id == VehicleModel.id)
+        .join(VehicleType, VehicleModel.vehicle_type_id == VehicleType.id)
         .join(User, User.id == Vehicle.user_id)
         .join(DriverLocation, DriverLocation.driver_user_id == User.id)
         .filter(
             User.user_type_id == int(UserTypeEnum.DRIVER),
             Vehicle.status.is_(True),
-            Vehicle.vehicle_type_id >= quote.required_vehicle_type_id,
-            Vehicle.load_capacity_kg >= ride.package_weight,
             Vehicle.user_id.notin_(used_driver_ids),
             Vehicle.user_id.notin_(busy_driver_ids),
             DriverLocation.is_online.is_(True),
             DriverLocation.last_seen_at >= location_limit,
         )
         .order_by(
-            Vehicle.vehicle_type_id.asc(),
+            VehicleType.default_load_capacity_kg.asc(),
             DriverLocation.last_seen_at.desc(),
             Vehicle.id.asc(),
         )
-        .first()
+        .all()
     )
 
-    if not driver:
-        return None
-
-    return int(driver[0])
+    for driver_id, model, vehicle_type in candidates:
+        if VehiclePricingProfileService.vehicle_fits_payload(ride, model, vehicle_type):
+            return int(driver_id)
+    return None
 
 
 def ensure_driver_can_receive_ride(
@@ -316,20 +316,23 @@ def ensure_driver_can_receive_ride(
             detail="Motorista nao encontrado.",
         )
 
-    quote = calculate_ride_price(build_quote_request(ride))
-    has_compatible_vehicle = (
-        db.query(Vehicle.id)
-        .join(User, User.id == Vehicle.user_id)
+    location_limit = utc_now() - timedelta(minutes=settings.DRIVER_LOCATION_MAX_AGE_MINUTES)
+    candidates = (
+        db.query(VehicleModel, VehicleType)
+        .select_from(Vehicle)
+        .join(VehicleModel, Vehicle.vehicle_model_id == VehicleModel.id)
+        .join(VehicleType, VehicleModel.vehicle_type_id == VehicleType.id)
+        .join(DriverLocation, DriverLocation.driver_user_id == Vehicle.user_id)
         .filter(
-            User.id == driver_user_id,
-            User.user_type_id == int(UserTypeEnum.DRIVER),
             Vehicle.user_id == driver_user_id,
             Vehicle.status.is_(True),
-            Vehicle.vehicle_type_id >= quote.required_vehicle_type_id,
-            Vehicle.load_capacity_kg >= ride.package_weight,
-        )
-        .first()
-        is not None
+            DriverLocation.is_online.is_(True),
+            DriverLocation.last_seen_at >= location_limit,
+        ).all()
+    )
+    has_compatible_vehicle = any(
+        VehiclePricingProfileService.vehicle_fits_payload(ride, model, vehicle_type)
+        for model, vehicle_type in candidates
     )
 
     if not has_compatible_vehicle:
@@ -442,25 +445,6 @@ def get_next_attempt_order(db: Session, ride_id: int) -> int:
     )
 
     return int(last_attempt_order or 0) + 1
-
-
-def build_quote_request(ride: Ride) -> RideQuoteRequest:
-    return RideQuoteRequest(
-        origin_address=ride.origin_address,
-        origin_address_complement=ride.origin_address_complement,
-        origin_reference_point=ride.origin_reference_point,
-        origin_latitude=ride.origin_latitude,
-        origin_longitude=ride.origin_longitude,
-        destination_address=ride.destination_address,
-        destination_address_complement=ride.destination_address_complement,
-        destination_reference_point=ride.destination_reference_point,
-        destination_latitude=ride.destination_latitude,
-        destination_longitude=ride.destination_longitude,
-        package_width=ride.package_width,
-        package_height=ride.package_height,
-        package_length=ride.package_length,
-        package_weight=ride.package_weight,
-    )
 
 
 def utc_now() -> datetime:

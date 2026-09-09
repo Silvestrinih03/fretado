@@ -1,15 +1,11 @@
 from datetime import datetime
 from decimal import Decimal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class DriverWalletRequest(BaseModel):
-    available_balance: Decimal = Decimal("0.00")
-
-
-class DriverWalletUpdateRequest(BaseModel):
-    available_balance: Decimal
+    available_balance: Decimal = Field(default=Decimal("0.00"), ge=0, le=0)
 
 
 class DriverWalletResponse(BaseModel):

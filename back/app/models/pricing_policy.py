@@ -29,11 +29,6 @@ class PricingPolicy(Base):
         nullable=False,
     )
 
-    minimum_freight_price = Column(
-        Numeric(10, 2),
-        nullable=False,
-    )
-
     is_active = Column(
         Boolean,
         nullable=False,

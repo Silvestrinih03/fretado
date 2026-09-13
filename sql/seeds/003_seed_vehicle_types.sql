@@ -6,41 +6,42 @@ INSERT INTO vehicle_types (
     default_cargo_width_cm,
     default_cargo_height_cm,
     default_cargo_length_cm,
-    operational_cost_per_km
+    operational_cost_per_km,
+    minimum_freight_price
 )
 VALUES
 (
     'moto',
     (SELECT id FROM fuel_types WHERE type = 'gasoline'),
-    35.00, 20, 45, 45, 45, 0.25
+    35.00, 20, 45, 45, 45, 0.25, 10.00
 ),
 (
     'hatch',
     (SELECT id FROM fuel_types WHERE type = 'gasoline'),
-    11.00, 200, 100, 75, 110, 0.45
+    11.00, 200, 100, 75, 110, 0.45, 12.00
 ),
 (
     'sedan',
     (SELECT id FROM fuel_types WHERE type = 'gasoline'),
-    10.00, 250, 120, 80, 130, 0.50
+    10.00, 250, 120, 80, 130, 0.50, 14.00
 ),
 (
     'pickup',
     (SELECT id FROM fuel_types WHERE type = 'diesel'),
-    9.00, 700, 180, 120, 180, 0.90
+    9.00, 700, 180, 120, 180, 0.90, 18.00
 ),
 (
     'van',
     (SELECT id FROM fuel_types WHERE type = 'diesel'),
-    8.00, 1200, 260, 140, 260, 1.20
+    8.00, 1200, 260, 140, 260, 1.20, 22.00
 ),
 (
     'utilitário',
     (SELECT id FROM fuel_types WHERE type = 'diesel'),
-    7.00, 1500, 320, 170, 320, 1.40
+    7.00, 1500, 320, 170, 320, 1.40, 25.00
 ),
 (
     'caminhão',
     (SELECT id FROM fuel_types WHERE type = 'diesel'),
-    4.00, 5000, 600, 240, 600, 2.50
+    4.00, 5000, 600, 240, 600, 2.50, 30.00
 );

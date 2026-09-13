@@ -13,6 +13,7 @@ CREATE TABLE vehicle_types (
     default_cargo_length_cm INTEGER,
 
     operational_cost_per_km NUMERIC(10,2),
+    minimum_freight_price NUMERIC(10,2),
 
     created_at TIMESTAMP NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
@@ -56,5 +57,11 @@ CREATE TABLE vehicle_types (
         CHECK (
             operational_cost_per_km IS NULL
             OR operational_cost_per_km >= 0
+        ),
+
+    CONSTRAINT chk_vehicle_types_minimum_freight_price
+        CHECK (
+            minimum_freight_price IS NULL
+            OR minimum_freight_price >= 0
         )
 );

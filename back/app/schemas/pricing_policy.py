@@ -9,7 +9,6 @@ class PricingPolicyResponse(BaseModel):
 
     driver_margin_percentage: Decimal
     app_fee_percentage: Decimal
-    minimum_freight_price: Decimal
 
     is_active: bool
 

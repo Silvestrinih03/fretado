@@ -19,6 +19,7 @@ class VehicleTypeResponse(BaseModel):
     default_cargo_length_cm: Optional[int] = None
 
     operational_cost_per_km: Optional[Decimal] = None
+    minimum_freight_price: Optional[Decimal] = None
 
     created_at: datetime
     updated_at: datetime

@@ -55,6 +55,11 @@ class VehicleType(Base):
         nullable=True,
     )
 
+    minimum_freight_price = Column(
+        Numeric(10, 2),
+        nullable=True,
+    )
+
     created_at = Column(
         DateTime(timezone=True),
         server_default=func.now(),

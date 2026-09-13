@@ -6,6 +6,9 @@ from sqlalchemy.orm import Session
 from app.models.pricing_policy import PricingPolicy
 
 
+MONEY = Decimal("0.01")
+
+
 class PricingPolicyService:
 
     @staticmethod
@@ -29,19 +32,35 @@ class PricingPolicyService:
                 detail="Active pricing policy not found.",
             )
 
-        values = [Decimal(str(value)) for value in (
-            policy.driver_margin_percentage,
-            policy.app_fee_percentage,
-            policy.minimum_freight_price,
-        )]
-        if (not all(value.is_finite() for value in values)
-                or not 0 <= values[0] < 1 or not 0 <= values[1] < 1 or values[2] < 0):
+        margin_percentage = Decimal(
+            str(policy.driver_margin_percentage)
+        )
+
+        app_fee_percentage = Decimal(
+            str(policy.app_fee_percentage)
+        )
+
+        if (
+            not margin_percentage.is_finite()
+            or not app_fee_percentage.is_finite()
+            or not Decimal("0") <= margin_percentage < Decimal("1")
+            or not Decimal("0") <= app_fee_percentage < Decimal("1")
+        ):
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                 detail="Invalid active pricing policy.",
             )
+
         return policy
 
     @staticmethod
-    def calculate_app_fee(total: Decimal, percentage: Decimal) -> Decimal:
-        return (total * percentage).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+    def calculate_app_fee(
+        total: Decimal,
+        percentage: Decimal,
+    ) -> Decimal:
+        return (
+            total * percentage
+        ).quantize(
+            MONEY,
+            rounding=ROUND_HALF_UP,
+        )

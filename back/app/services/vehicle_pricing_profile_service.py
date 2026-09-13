@@ -28,6 +28,7 @@ class VehiclePricingProfile:
     fuel_type_name: str
     consumption_km_l: Decimal
     operational_cost_per_km: Decimal
+    minimum_freight_price: Decimal | None
     source: str
     available_vehicle_count: int
 
@@ -141,11 +142,25 @@ class VehiclePricingProfileService:
             fuel_id = vehicle_type.default_fuel_type_id
             consumption = vehicle_type.default_consumption_km_l
         cost = vehicle_type.operational_cost_per_km
+        minimum_freight_price = vehicle_type.minimum_freight_price
         if fuel_id is None or consumption is None or cost is None:
             raise HTTPException(status_code=503, detail="Vehicle type pricing is not fully configured.")
         consumption, cost = Decimal(str(consumption)), Decimal(str(cost))
+        if minimum_freight_price is not None:
+            minimum_freight_price = Decimal(str(minimum_freight_price))
         if not consumption.is_finite() or consumption <= 0 or not cost.is_finite() or cost < 0:
             raise HTTPException(status_code=503, detail="Invalid vehicle type pricing configuration.")
+        if (
+            minimum_freight_price is not None
+            and (
+                not minimum_freight_price.is_finite()
+                or minimum_freight_price < 0
+            )
+        ):
+            raise HTTPException(
+                status_code=503,
+                detail="Invalid vehicle type minimum freight price configuration.",
+            )
         fuel = db.get(FuelType, fuel_id)
         if fuel is None:
             raise HTTPException(status_code=503, detail="Fuel type configuration not found.")
@@ -156,6 +171,7 @@ class VehiclePricingProfileService:
             fuel_type_name=fuel.type,
             consumption_km_l=consumption,
             operational_cost_per_km=cost,
+            minimum_freight_price=minimum_freight_price,
             source="vehicle_type_fallback" if fallback else "available_fleet",
             available_vehicle_count=count,
         )

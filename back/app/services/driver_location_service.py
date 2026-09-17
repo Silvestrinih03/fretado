@@ -8,6 +8,10 @@ from app.schemas.driver_location import DriverLocationUpdateRequest
 from app.services.ride_dispatch_service import utc_now
 from app.core.config import settings
 
+from app.services.ride_offer_service import (
+    process_dispatch_cycle,
+)
+
 def update_driver_location(
     db: Session,
     driver_user_id: int,
@@ -81,6 +85,12 @@ def set_driver_online(
         location.location_recorded_at = now
         location.is_online = True
         location.last_seen_at = now
+
+    db.flush()
+
+    process_dispatch_cycle(
+        db=db,
+    )
 
     db.commit()
     db.refresh(location)

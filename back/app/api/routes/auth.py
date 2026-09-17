@@ -26,6 +26,8 @@ from jose import JWTError
 
 from app.enums.user_type import UserTypeEnum
 
+from app.services.ride_dispatch_service import expire_pending_offers
+
 bearer_scheme = HTTPBearer()
 router = APIRouter(prefix="/auth", tags=["Auth"])
 logger = logging.getLogger(__name__)
@@ -49,6 +51,9 @@ def login(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid email or password.",
         )
+
+    if user.user_type_id == int(UserTypeEnum.DRIVER):
+        expire_pending_offers(db)
 
     access_token = create_access_token(
         user_id=user.id,

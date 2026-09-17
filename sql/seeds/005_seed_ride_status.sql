@@ -1,7 +1,8 @@
 INSERT INTO ride_status (status) VALUES
-('AGUARDANDO_ACEITE'),
-('AGUARDANDO_INICIO'),
-('A_CAMINHO_COLETA'),
-('A_CAMINHO_ENTREGA'),
-('FINALIZADA'),
-('CANCELADA');
+    ('aguardando_aceite'),
+    ('aguardando_inicio'),
+    ('a_caminho_coleta'),
+    ('a_caminho_entrega'),
+    ('finalizada'),
+    ('cancelada'),
+    ('nao_atendida');

@@ -1,207 +1,59 @@
 from datetime import datetime
 from decimal import Decimal
-from typing import Optional
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field
 
-from app.enums.delivery_classification import DeliveryClassificationEnum
-
-class RideGeocodeResult(BaseModel):
-    label: str
-    latitude: float
-    longitude: float
-    state: Optional[str] = None
-
-class RideGeocodeResponse(BaseModel):
-    data: list[RideGeocodeResult]
-
-class RideQuoteRequest(BaseModel):
-    origin_state: Optional[str] = None
-
-    @field_validator("origin_state")
-    @classmethod
-    def normalize_state(cls, value: Optional[str]) -> Optional[str]:
-        if value is None:
-            return None
-        value = value.strip().upper()
-        if value not in {
-            "AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA", "MT", "MS",
-            "MG", "PA", "PB", "PR", "PE", "PI", "RJ", "RN", "RS", "RO", "RR", "SC",
-            "SP", "SE", "TO",
-        }:
-            raise ValueError("UF de origem invalida.")
-        return value
-
-    origin_address: str = Field(..., max_length=255)
-    origin_address_complement: Optional[str] = Field(default=None, max_length=255)
-    origin_reference_point: Optional[str] = Field(default=None, max_length=255)
-    origin_latitude: Decimal = Field(..., ge=Decimal("-90"), le=Decimal("90"))
-    destination_address: str = Field(..., max_length=255)
-    destination_address_complement: Optional[str] = Field(default=None, max_length=255)
-    destination_reference_point: Optional[str] = Field(default=None, max_length=255)
-    origin_longitude: Decimal = Field(..., ge=Decimal("-180"), le=Decimal("180"))
-    destination_latitude: Decimal = Field(..., ge=Decimal("-90"), le=Decimal("90"))
-    destination_longitude: Decimal = Field(..., ge=Decimal("-180"), le=Decimal("180"))
-
-    package_width: Decimal = Field(..., gt=Decimal("0"), max_digits=10, decimal_places=2)
-    package_height: Decimal = Field(..., gt=Decimal("0"), max_digits=10, decimal_places=2)
-    package_length: Decimal = Field(..., gt=Decimal("0"), max_digits=10, decimal_places=2)
-    package_weight: Decimal = Field(..., gt=Decimal("0"), max_digits=10, decimal_places=2)
-
-    @model_validator(mode="after")
-    def validate_distinct_route_points(self):
-        if (
-            self.origin_latitude == self.destination_latitude
-            and self.origin_longitude == self.destination_longitude
-        ):
-            raise ValueError("Origem e destino devem ter coordenadas diferentes.")
-
-        return self
-
-class RideQuoteRouteResponse(BaseModel):
-    provider: str
-    distance_km: Decimal
-    estimated_time_minutes: int
-    geometry: list[list[float]] = Field(default_factory=list)
-
-class RideQuotePricingResponse(BaseModel):
-    estimated_liters: Decimal
-
-    fuel_price_per_liter: Decimal
-    fuel_cost: Decimal
-
-    operational_cost: Decimal
-    estimated_driver_cost: Decimal
-
-    driver_margin_percentage: Decimal
-    driver_margin_value: Decimal
-
-    app_fee_percentage: Decimal
-    app_fee_value: Decimal
-    driver_net_value: Decimal
-
-    total_price: Decimal
-
-class RideQuoteResponse(BaseModel):
-    origin_latitude: Decimal
-    origin_longitude: Decimal
-    destination_latitude: Decimal
-    destination_longitude: Decimal
-
-    origin_address: str
-    origin_address_complement: Optional[str]
-    origin_reference_point: Optional[str]
-
-    destination_address: str
-    destination_address_complement: Optional[str]
-    destination_reference_point: Optional[str]
-
-    package_width: Decimal
-    package_height: Decimal
-    package_length: Decimal
-    package_weight: Decimal
-    package_volume_cm3: Decimal
-    package_volume_m3: Decimal
-
-    required_vehicle_type_id: int
-    required_vehicle_type: int
-    required_vehicle_type_name: str
-    delivery_classification: DeliveryClassificationEnum
-
-    route: RideQuoteRouteResponse
-    pricing: RideQuotePricingResponse
-
-    distance_km: Decimal
-    estimated_time_minutes: int
-    total_price: Decimal
-
-class RideCreate(RideQuoteRequest):
-    expected_total_price: Optional[Decimal] = Field(default=None, ge=0, max_digits=10, decimal_places=2)
-    client_user_id: int = Field(..., gt=0)
-    driver_user_id: Optional[int] = Field(default=None, gt=0)
-
-    status_id: int = Field(..., gt=0)
-
-class RideCreateRequest(RideQuoteRequest):
-    client_user_id: int = Field(..., gt=0)
-    payment_confirmed: bool = Field(
-        default=False,
-        description="Payment must be confirmed before a ride is persisted.",
-    )
-
-class RideUpdate(BaseModel):
-    driver_user_id: Optional[int] = None
-
-    status_id: Optional[int] = None
-
-    started_at: Optional[datetime] = None
-    finished_at: Optional[datetime] = None
-    cancelled_at: Optional[datetime] = None
+from app.schemas.ride_detail import RideDetailResponse
 
 class RideResponse(BaseModel):
     id: int
+
     client_user_id: int
-    driver_user_id: Optional[int]
+    driver_user_id: int | None = None
 
-    origin_latitude: Decimal
-    origin_longitude: Decimal
-    destination_latitude: Decimal
-    destination_longitude: Decimal
-
-    origin_address: str
-    origin_address_complement: Optional[str]
-    origin_reference_point: Optional[str]
-
-    destination_address: str
-    destination_address_complement: Optional[str]
-    destination_reference_point: Optional[str]
-
-    package_width: Decimal
-    package_height: Decimal
-    package_length: Decimal
-    package_weight: Decimal
+    required_vehicle_type_id: int
 
     total_price: Decimal
+    app_fee_value: Decimal | None = None
+
     status_id: int
 
     created_at: datetime
     updated_at: datetime
-    started_at: Optional[datetime]
-    finished_at: Optional[datetime]
-    cancelled_at: Optional[datetime]
 
-    class Config:
-        from_attributes = True
+    started_at: datetime | None = None
+    finished_at: datetime | None = None
+    cancelled_at: datetime | None = None
 
-class RideCreateResponse(BaseModel):
-    id: int
+    model_config = ConfigDict(
+        from_attributes=True
+    )
+
+
+class RideFullResponse(RideResponse):
+    details: RideDetailResponse | None = None
+
+
+class RideCreateRequest(BaseModel):
     client_user_id: int
-    driver_user_id: Optional[int]
+
+    origin_address: str
+    origin_address_complement: str | None = None
+    origin_reference_point: str | None = None
 
     origin_latitude: Decimal
     origin_longitude: Decimal
+
+    destination_address: str
+    destination_address_complement: str | None = None
+    destination_reference_point: str | None = None
+
     destination_latitude: Decimal
     destination_longitude: Decimal
 
-    origin_address: str
-    origin_address_complement: Optional[str]
-    origin_reference_point: Optional[str]
+    package_width: Decimal = Field(..., gt=0)
+    package_height: Decimal = Field(..., gt=0)
+    package_length: Decimal = Field(..., gt=0)
+    package_weight: Decimal = Field(..., gt=0)
 
-    destination_address: str
-    destination_address_complement: Optional[str]
-    destination_reference_point: Optional[str]
-
-    package_width: Decimal
-    package_height: Decimal
-    package_length: Decimal
-    package_weight: Decimal
-
-    total_price: Decimal
-    status_id: int
-    status: str
-
-    created_at: datetime
-    updated_at: datetime
-    quote: Optional[RideQuoteResponse] = None
-
-    model_config = ConfigDict(from_attributes=True)
+    payment_confirmed: bool = False

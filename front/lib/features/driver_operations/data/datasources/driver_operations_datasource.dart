@@ -13,34 +13,15 @@ class DriverOperationsDatasource {
         Endpoints.offersByDriver(driverUserId),
       );
 
-      return _readList(response)
-          .whereType<Map<String, dynamic>>()
-          .map(RideOfferModel.fromJson)
-          .toList();
+      return _readList(
+        response,
+      ).whereType<Map<String, dynamic>>().map(RideOfferModel.fromJson).toList();
     } on HttpServiceException catch (e) {
       throw DriverOperationsDatasourceException(
         e.message,
         statusCode: e.statusCode,
       );
     }
-  }
-
-  Future<PendingRideOfferModel?> getPendingOffer(int driverUserId) async {
-    final offers = await listOffersByDriver(driverUserId);
-    RideOfferModel? pending;
-    for (final offer in offers) {
-      if (offer.driverUserId == driverUserId && offer.isPending && !offer.isExpired) {
-        pending = offer;
-        break;
-      }
-    }
-    if (pending == null) return null;
-
-    final ride = await getRideById(pending.rideId);
-    if (pending.isExpired || ride.statusId != 1 || ride.driverUserId != null) {
-      return null;
-    }
-    return PendingRideOfferModel(offer: pending, ride: ride);
   }
 
   Future<RideOfferModel> acceptOffer(int offerId, int driverUserId) async {
@@ -129,6 +110,38 @@ class DriverOperationsDatasource {
     try {
       final response = await _httpService.get(Endpoints.rideById(rideId));
       return DriverRideModel.fromJson(response);
+    } on HttpServiceException catch (e) {
+      throw DriverOperationsDatasourceException(
+        e.message,
+        statusCode: e.statusCode,
+      );
+    }
+  }
+
+  Future<double> getRouteDistance(DriverRideModel ride) async {
+    final details = ride.details;
+    if (details == null) {
+      throw const DriverOperationsDatasourceException(
+        'A corrida nao possui coordenadas da rota.',
+      );
+    }
+
+    try {
+      final response = await _httpService.get(
+        Endpoints.rideRoutePreview(
+          originLatitude: details.originLatitude,
+          originLongitude: details.originLongitude,
+          destinationLatitude: details.destinationLatitude,
+          destinationLongitude: details.destinationLongitude,
+        ),
+      );
+      final distance = double.tryParse(
+        response['distance_km']?.toString() ?? '',
+      );
+      if (distance == null || !distance.isFinite || distance < 0) {
+        throw const FormatException('Distancia da rota invalida.');
+      }
+      return distance;
     } on HttpServiceException catch (e) {
       throw DriverOperationsDatasourceException(
         e.message,
@@ -265,11 +278,9 @@ class DriverOperationsDatasourceException implements Exception {
   final String message;
   final int? statusCode;
 
-  const DriverOperationsDatasourceException(
-    this.message, {
-    this.statusCode,
-  });
+  const DriverOperationsDatasourceException(this.message, {this.statusCode});
 
   @override
-  String toString() => 'DriverOperationsDatasourceException($statusCode): $message';
+  String toString() =>
+      'DriverOperationsDatasourceException($statusCode): $message';
 }

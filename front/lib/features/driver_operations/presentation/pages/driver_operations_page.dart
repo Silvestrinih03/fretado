@@ -533,55 +533,9 @@ class _StateCard extends StatelessWidget {
   }
 }
 
-Color _offerColor(RideOfferModel offer) {
-  return switch (offer.statusId) {
-    1 => FretColors.attention200,
-    2 => FretColors.success100,
-    3 => FretColors.neutral200,
-    4 => FretColors.destructive100,
-    _ => FretColors.neutral100,
-  };
-}
-
-String? _rideProgressActionLabel(DriverRideModel ride) {
-  return switch (ride.statusId) {
-    2 => 'Iniciar corrida',
-    3 => 'Confirmar coleta',
-    4 => 'Finalizar entrega',
-    _ => null,
-  };
-}
-
-IconData? _rideProgressActionIcon(DriverRideModel ride) {
-  return switch (ride.statusId) {
-    2 => Icons.play_arrow_rounded,
-    3 => Icons.inventory_2_outlined,
-    4 => Icons.flag_outlined,
-    _ => null,
-  };
-}
-
-VoidCallback? _rideProgressActionCallback(
-  DriverRideModel ride, {
-  required VoidCallback onStart,
-  required VoidCallback onCompletePickup,
-  required VoidCallback onFinish,
-}) {
-  return switch (ride.statusId) {
-    2 => onStart,
-    3 => onCompletePickup,
-    4 => onFinish,
-    _ => null,
-  };
-}
-
 String _formatMoney(double value) {
   final fixed = value.toStringAsFixed(2).replaceAll('.', ',');
   return 'R\$ $fixed';
-}
-
-String _formatNumber(double value) {
-  return value.toStringAsFixed(2).replaceAll('.', ',');
 }
 
 String _formatDateTime(DateTime? value) {

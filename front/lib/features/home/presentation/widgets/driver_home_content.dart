@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 
 import '../../../../app/design_system/design_system.dart';
@@ -7,8 +5,6 @@ import '../../../../core/endpoints.dart';
 import '../../../../core/enums/home_profile.dart';
 import '../../../../core/services/http_service.dart';
 import '../../../driver_operations/data/models/driver_operation_models.dart';
-import '../../../driver_operations/data/datasources/driver_operations_datasource.dart';
-import '../../../driver_operations/data/repositories/driver_operations_repository_impl.dart';
 import '../../../driver_operations/presentation/pages/driver_operations_page.dart';
 import '../../../documents/presentation/pages/my_documents.dart';
 import '../../../rides/presentation/pages/ride_history_page.dart';
@@ -66,15 +62,7 @@ class _DriverHomeContentState extends State<DriverHomeContent> {
         const SizedBox(height: 14),
         _DriverRequiredSetupAlert(userId: widget.userId),
         const SizedBox(height: 10),
-        _DriverAvailabilitySummary(
-          controller: widget.availabilityController,
-        ),
-        const SizedBox(height: 14),
-        _DriverPendingOfferSection(
-          userId: widget.userId,
-          refreshVersion: _refreshVersion,
-          onAccepted: _reloadHomeData,
-        ),
+        _DriverAvailabilitySummary(controller: widget.availabilityController),
         const SizedBox(height: 14),
         _BalanceCard(
           userId: widget.userId,
@@ -148,7 +136,6 @@ class _DriverHomeContentState extends State<DriverHomeContent> {
 
     _reloadHomeData();
   }
-
 }
 
 class _DriverRequiredSetupAlert extends StatefulWidget {
@@ -202,6 +189,7 @@ class _DriverRequiredSetupAlertState extends State<_DriverRequiredSetupAlert> {
       return _DriverRequiredSetupStatus(
         hasVehicle: results[0],
         hasDriverLicense: results[1],
+        errorMessage: null,
       );
     } on HttpServiceException catch (e) {
       return _DriverRequiredSetupStatus.error(e.message);
@@ -429,7 +417,7 @@ class _DriverRequiredSetupStatus {
   const _DriverRequiredSetupStatus({
     required this.hasVehicle,
     required this.hasDriverLicense,
-    this.errorMessage,
+    required this.errorMessage,
   });
 
   const _DriverRequiredSetupStatus.error(String message)
@@ -452,234 +440,10 @@ class _DriverRequiredSetupStatus {
   }
 }
 
-class _DriverPendingOfferSection extends StatefulWidget {
-  final int userId;
-  final int refreshVersion;
-  final VoidCallback onAccepted;
-
-  const _DriverPendingOfferSection({
-    required this.userId,
-    required this.refreshVersion,
-    required this.onAccepted,
-  });
-
-  @override
-  State<_DriverPendingOfferSection> createState() =>
-      _DriverPendingOfferSectionState();
-}
-
-class _DriverPendingOfferSectionState
-    extends State<_DriverPendingOfferSection> {
-  late final HttpService _httpService;
-  late final DriverOperationsRepositoryImpl _repository;
-  Timer? _pollTimer;
-  Timer? _countdownTimer;
-  PendingRideOfferModel? _pending;
-  bool _loading = true;
-  bool _acting = false;
-  String? _error;
-
-  @override
-  void initState() {
-    super.initState();
-    _httpService = HttpService();
-    _repository = DriverOperationsRepositoryImpl(
-      DriverOperationsDatasource(_httpService),
-    );
-    _load();
-    _pollTimer = Timer.periodic(
-      const Duration(seconds: 8),
-      (_) => _load(silent: true),
-    );
-    _countdownTimer = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (!mounted || _pending == null) return;
-      if (_pending!.offer.isExpired) {
-        setState(() => _pending = null);
-        _load(silent: true);
-      } else {
-        setState(() {});
-      }
-    });
-  }
-
-  @override
-  void didUpdateWidget(covariant _DriverPendingOfferSection oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.userId != widget.userId ||
-        oldWidget.refreshVersion != widget.refreshVersion) {
-      _load();
-    }
-  }
-
-  @override
-  void dispose() {
-    _pollTimer?.cancel();
-    _countdownTimer?.cancel();
-    _httpService.dispose();
-    super.dispose();
-  }
-
-  Future<void> _load({bool silent = false}) async {
-    if (!silent && mounted) setState(() => _loading = true);
-    try {
-      final pending = await _repository.getPendingOffer(widget.userId);
-      if (!mounted) return;
-      setState(() {
-        _pending = pending;
-        _error = null;
-      });
-    } catch (_) {
-      if (!mounted || silent) return;
-      setState(() => _error = 'Nao foi possivel consultar suas ofertas.');
-    } finally {
-      if (mounted && !silent) setState(() => _loading = false);
-    }
-  }
-
-  Future<void> _respond({required bool accept}) async {
-    final pending = _pending;
-    if (pending == null || _acting) return;
-    setState(() => _acting = true);
-    try {
-      if (accept) {
-        await _repository.acceptOffer(pending.offer.id, widget.userId);
-      } else {
-        await _repository.rejectOffer(pending.offer.id, widget.userId);
-      }
-      if (!mounted) return;
-      setState(() => _pending = null);
-      if (accept) widget.onAccepted();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(accept ? 'Oferta aceita.' : 'Oferta recusada.')),
-      );
-      await _load(silent: true);
-    } catch (error) {
-      if (!mounted) return;
-      showFretErrorPopup(context, message: error.toString());
-      await _load(silent: true);
-    } finally {
-      if (mounted) setState(() => _acting = false);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    if (_loading && _pending == null) {
-      return const _DriverRideStateCard(
-        icon: Icons.notifications_active_outlined,
-        title: 'Verificando novas ofertas',
-        subtitle: 'Aguarde enquanto consultamos o backend.',
-      );
-    }
-    if (_error != null) {
-      return _DriverRideStateCard(
-        icon: Icons.error_outline_rounded,
-        title: 'Ofertas indisponiveis',
-        subtitle: _error!,
-        actionLabel: 'Tentar novamente',
-        onTap: _load,
-      );
-    }
-    final pending = _pending;
-    if (pending == null) {
-      return const _DriverRideStateCard(
-        icon: Icons.notifications_none_rounded,
-        title: 'Aguardando nova oferta',
-        subtitle: 'Quando uma corrida for destinada a voce, ela aparecera aqui.',
-      );
-    }
-
-    final remaining = pending.offer.expiresAt!
-        .difference(DateTime.now().toUtc());
-    final seconds = remaining.inSeconds.clamp(0, 5999);
-    final countdown =
-        '${(seconds ~/ 60).toString().padLeft(2, '0')}:${(seconds % 60).toString().padLeft(2, '0')}';
-    final ride = pending.ride;
-
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: FretColors.brandGraphite,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: FretColors.brandGoldDark),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const Expanded(
-                child: Text('NOVA OFERTA', style: TextStyle(
-                  color: FretColors.brandGold, fontSize: 11,
-                  fontWeight: FontWeight.w900, letterSpacing: 1.2,
-                )),
-              ),
-              Text(countdown, style: const TextStyle(
-                color: FretColors.white, fontSize: 22,
-                fontWeight: FontWeight.w900,
-              )),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Text(ride.originLabel, style: const TextStyle(
-            color: FretColors.white, fontSize: 15, fontWeight: FontWeight.w800,
-          )),
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: 8),
-            child: Icon(Icons.arrow_downward_rounded,
-              color: FretColors.brandGold, size: 18),
-          ),
-          Text(ride.destinationLabel, style: const TextStyle(
-            color: FretColors.white, fontSize: 15, fontWeight: FontWeight.w800,
-          )),
-          const SizedBox(height: 16),
-          Wrap(spacing: 8, runSpacing: 8, children: [
-            _OfferMetric(label: 'R\$ ${ride.totalPrice.toStringAsFixed(2)}'),
-            _OfferMetric(label: '${ride.packageWeight.toStringAsFixed(1)} kg'),
-            _OfferMetric(label: ride.vehicleCategoryLabel),
-          ]),
-          const SizedBox(height: 18),
-          Row(children: [
-            Expanded(child: OutlinedButton(
-              onPressed: _acting ? null : () => _respond(accept: false),
-              style: OutlinedButton.styleFrom(foregroundColor: FretColors.white),
-              child: const Text('Recusar'),
-            )),
-            const SizedBox(width: 10),
-            Expanded(child: ElevatedButton(
-              onPressed: _acting ? null : () => _respond(accept: true),
-              child: Text(_acting ? 'Aguarde...' : 'Aceitar'),
-            )),
-          ]),
-        ],
-      ),
-    );
-  }
-}
-
-class _OfferMetric extends StatelessWidget {
-  final String label;
-  const _OfferMetric({required this.label});
-
-  @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-    decoration: BoxDecoration(
-      color: const Color(0x1FFFFFFF),
-      borderRadius: BorderRadius.circular(8),
-    ),
-    child: Text(label, style: const TextStyle(
-      color: FretColors.white, fontSize: 11, fontWeight: FontWeight.w700,
-    )),
-  );
-}
-
 class _DriverAvailabilitySummary extends StatelessWidget {
   final DriverAvailabilityController controller;
 
-  const _DriverAvailabilitySummary({
-    required this.controller,
-  });
+  const _DriverAvailabilitySummary({required this.controller});
 
   @override
   Widget build(BuildContext context) {
@@ -701,14 +465,15 @@ class _DriverAvailabilitySummary extends StatelessWidget {
             ],
             if (showStatusMessage) ...[
               _DriverAvailabilityMessage(
-                message: statusMessage!,
+                message: statusMessage,
                 isError: !controller.isOnline,
               ),
               const SizedBox(height: 10),
             ],
             if (!showOfflineAlert && !showStatusMessage)
               const _DriverAvailabilityMessage(
-                message: 'Voce esta online. Novas ofertas aparecerao automaticamente.',
+                message:
+                    'Voce esta online. Novas ofertas aparecerao automaticamente.',
                 isError: false,
               ),
           ],
@@ -1044,21 +809,17 @@ class _DriverActiveRideCard extends StatelessWidget {
   final DriverRideModel ride;
   final bool isBusy;
   final VoidCallback onAdvance;
-  final String? customActionLabel;
-  final IconData? customActionIcon;
 
   const _DriverActiveRideCard({
     required this.ride,
     required this.isBusy,
     required this.onAdvance,
-    this.customActionLabel,
-    this.customActionIcon,
   });
 
   @override
   Widget build(BuildContext context) {
-    final actionLabel = customActionLabel ?? _rideProgressActionLabel(ride);
-    final actionIcon = customActionIcon ?? _rideProgressActionIcon(ride);
+    final actionLabel = _rideProgressActionLabel(ride);
+    final actionIcon = _rideProgressActionIcon(ride);
 
     return FretRideSummaryCard(
       rideId: ride.id,

@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 class RideDetailModel {
   final int id;
   final int rideId;
@@ -19,35 +21,54 @@ class RideDetailModel {
   final DateTime? updatedAt;
 
   RideDetailModel.fromJson(Map<String, dynamic> json)
-      : id = _readInt(json['id']),
-        rideId = _readInt(json['ride_id']),
-        originAddress = _readString(json['origin_address']),
-        originAddressComplement = _readNullableString(json['origin_address_complement']),
-        originReferencePoint = _readNullableString(json['origin_reference_point']),
-        originLatitude = _readDouble(json['origin_latitude']),
-        originLongitude = _readDouble(json['origin_longitude']),
-        destinationAddress = _readString(json['destination_address']),
-        destinationAddressComplement = _readNullableString(json['destination_address_complement']),
-        destinationReferencePoint = _readNullableString(json['destination_reference_point']),
-        destinationLatitude = _readDouble(json['destination_latitude']),
-        destinationLongitude = _readDouble(json['destination_longitude']),
-        packageWidth = _readDouble(json['package_width']),
-        packageHeight = _readDouble(json['package_height']),
-        packageLength = _readDouble(json['package_length']),
-        packageWeight = _readDouble(json['package_weight']),
-        createdAt = _readDateTime(json['created_at']),
-        updatedAt = _readDateTime(json['updated_at']);
+    : id = _readInt(json['id']),
+      rideId = _readInt(json['ride_id']),
+      originAddress = _readString(json['origin_address']),
+      originAddressComplement = _readNullableString(
+        json['origin_address_complement'],
+      ),
+      originReferencePoint = _readNullableString(
+        json['origin_reference_point'],
+      ),
+      originLatitude = _readDouble(json['origin_latitude']),
+      originLongitude = _readDouble(json['origin_longitude']),
+      destinationAddress = _readString(json['destination_address']),
+      destinationAddressComplement = _readNullableString(
+        json['destination_address_complement'],
+      ),
+      destinationReferencePoint = _readNullableString(
+        json['destination_reference_point'],
+      ),
+      destinationLatitude = _readDouble(json['destination_latitude']),
+      destinationLongitude = _readDouble(json['destination_longitude']),
+      packageWidth = _readDouble(json['package_width']),
+      packageHeight = _readDouble(json['package_height']),
+      packageLength = _readDouble(json['package_length']),
+      packageWeight = _readDouble(json['package_weight']),
+      createdAt = _readDateTime(json['created_at']),
+      updatedAt = _readDateTime(json['updated_at']);
 
   String get originLabel => _buildAddressLabel(
-    address: originAddress, complement: originAddressComplement,
+    address: originAddress,
+    complement: originAddressComplement,
     referencePoint: originReferencePoint,
-    latitude: originLatitude, longitude: originLongitude,
+    latitude: originLatitude,
+    longitude: originLongitude,
   );
 
   String get destinationLabel => _buildAddressLabel(
-    address: destinationAddress, complement: destinationAddressComplement,
+    address: destinationAddress,
+    complement: destinationAddressComplement,
     referencePoint: destinationReferencePoint,
-    latitude: destinationLatitude, longitude: destinationLongitude,
+    latitude: destinationLatitude,
+    longitude: destinationLongitude,
+  );
+
+  double get approximateDistanceKm => _distanceKm(
+    originLatitude,
+    originLongitude,
+    destinationLatitude,
+    destinationLongitude,
   );
 }
 
@@ -68,29 +89,37 @@ class DriverRideModel {
   final DateTime? cancelledAt;
 
   DriverRideModel.fromJson(Map<String, dynamic> json)
-      : id = _readInt(json['id']),
-        clientUserId = _readInt(json['client_user_id']),
-        driverUserId = _readNullableInt(json['driver_user_id']),
-        requiredVehicleTypeId = _readInt(json['required_vehicle_type_id']),
-        requiredVehicleTypeName = _readNullableString(json['required_vehicle_type_name']),
-        details = json['details'] is Map
-            ? RideDetailModel.fromJson(Map<String, dynamic>.from(json['details'] as Map))
-            : null,
-        totalPrice = _readAmount(json['total_price']),
-        appFeeValue = json['app_fee_value'] == null ? null : _readAmount(json['app_fee_value']),
-        statusId = _readInt(json['status_id']),
-        createdAt = _readDateTime(json['created_at']),
-        updatedAt = _readDateTime(json['updated_at']),
-        startedAt = _readDateTime(json['started_at']),
-        finishedAt = _readDateTime(json['finished_at']),
-        cancelledAt = _readDateTime(json['cancelled_at']);
+    : id = _readInt(json['id']),
+      clientUserId = _readInt(json['client_user_id']),
+      driverUserId = _readNullableInt(json['driver_user_id']),
+      requiredVehicleTypeId = _readInt(json['required_vehicle_type_id']),
+      requiredVehicleTypeName = _readNullableString(
+        json['required_vehicle_type_name'],
+      ),
+      details = json['details'] is Map
+          ? RideDetailModel.fromJson(
+              Map<String, dynamic>.from(json['details'] as Map),
+            )
+          : null,
+      totalPrice = _readAmount(json['total_price']),
+      appFeeValue = json['app_fee_value'] == null
+          ? null
+          : _readAmount(json['app_fee_value']),
+      statusId = _readInt(json['status_id']),
+      createdAt = _readDateTime(json['created_at']),
+      updatedAt = _readDateTime(json['updated_at']),
+      startedAt = _readDateTime(json['started_at']),
+      finishedAt = _readDateTime(json['finished_at']),
+      cancelledAt = _readDateTime(json['cancelled_at']);
 
   bool get isActive => statusId >= 1 && statusId <= 4;
   String get vehicleCategoryLabel =>
       requiredVehicleTypeName ?? 'Categoria #$requiredVehicleTypeId';
   String get originLabel => details?.originLabel ?? 'Coleta não informada';
-  String get destinationLabel => details?.destinationLabel ?? 'Entrega não informada';
+  String get destinationLabel =>
+      details?.destinationLabel ?? 'Entrega não informada';
   double get packageWeight => details?.packageWeight ?? 0;
+  double get driverNetValue => math.max(0.0, totalPrice - (appFeeValue ?? 0.0));
 
   String get statusLabel => switch (statusId) {
     1 => 'AGUARDANDO ACEITE',
@@ -115,29 +144,23 @@ class RideOfferModel {
   final DateTime? updatedAt;
 
   RideOfferModel.fromJson(Map<String, dynamic> json)
-      : id = _readInt(json['id']),
-        rideId = _readInt(json['ride_id']),
-        driverUserId = _readInt(json['driver_user_id']),
-        vehicleId = _readInt(json['vehicle_id']),
-        statusId = _readInt(json['status_id']),
-        expiresAt = _readDateTime(json['expires_at']) ??
-            (throw const FormatException('Oferta sem prazo de expiração válido.')),
-        createdAt = _readDateTime(json['created_at']) ??
-            (throw const FormatException('Oferta sem data de criação válida.')),
-        updatedAt = _readDateTime(json['updated_at']);
+    : id = _readInt(json['id']),
+      rideId = _readInt(json['ride_id']),
+      driverUserId = _readInt(json['driver_user_id']),
+      vehicleId = _readInt(json['vehicle_id']),
+      statusId = _readInt(json['status_id']),
+      expiresAt =
+          _readDateTime(json['expires_at']) ??
+          (throw const FormatException(
+            'Oferta sem prazo de expiração válido.',
+          )),
+      createdAt =
+          _readDateTime(json['created_at']) ??
+          (throw const FormatException('Oferta sem data de criação válida.')),
+      updatedAt = _readDateTime(json['updated_at']);
 
   bool get isPending => statusId == 1;
-  bool get isExpired => !expiresAt.isAfter(DateTime.now().toUtc());
-  int get remainingSeconds {
-    final milliseconds = expiresAt.difference(DateTime.now().toUtc()).inMilliseconds;
-    return milliseconds <= 0 ? 0 : (milliseconds / 1000).ceil();
-  }
-  double get remainingFraction {
-    final duration = expiresAt.difference(createdAt).inMilliseconds;
-    if (duration <= 0) return 0;
-    return (expiresAt.difference(DateTime.now().toUtc()).inMilliseconds / duration)
-        .clamp(0.0, 1.0).toDouble();
-  }
+  bool get isExpired => statusId == 4;
 
   String get statusLabel => switch (statusId) {
     1 => 'PENDENTE',
@@ -246,16 +269,10 @@ class WalletWithdrawRequestModel {
   final double value;
   final String pixKey;
 
-  const WalletWithdrawRequestModel({
-    required this.value,
-    required this.pixKey,
-  });
+  const WalletWithdrawRequestModel({required this.value, required this.pixKey});
 
   Map<String, dynamic> toJson() {
-    return <String, dynamic>{
-      'value': value,
-      'pix_key': pixKey,
-    };
+    return <String, dynamic>{'value': value, 'pix_key': pixKey};
   }
 }
 
@@ -281,14 +298,15 @@ double _readDouble(dynamic value) {
 class PendingRideOfferModel {
   final RideOfferModel offer;
   final DriverRideModel ride;
+  final double distanceKm;
+  final bool distanceIsApproximate;
 
-  const PendingRideOfferModel({required this.offer, required this.ride});
-}
-
-double? _readNullableDouble(dynamic value) {
-  if (value == null) return null;
-  if (value is num) return value.toDouble();
-  return double.tryParse(value.toString());
+  const PendingRideOfferModel({
+    required this.offer,
+    required this.ride,
+    required this.distanceKm,
+    this.distanceIsApproximate = false,
+  });
 }
 
 String _readString(dynamic value) => _readNullableString(value) ?? '';
@@ -326,13 +344,31 @@ String _buildAddressLabel({
 DateTime? _readDateTime(dynamic value) {
   if (value is String && value.trim().isNotEmpty) {
     final text = value.trim();
-    final hasZone = RegExp(r'(Z|[+-]\\d{2}:?\\d{2})
-  }
-  return null;
-}, caseSensitive: false).hasMatch(text);
+    final hasZone = RegExp(
+      r'(Z|[+-]\d{2}:?\d{2})$',
+      caseSensitive: false,
+    ).hasMatch(text);
     return DateTime.tryParse(hasZone ? text : '${text}Z')?.toUtc();
   }
   return null;
+}
+
+double _distanceKm(double lat1, double lon1, double lat2, double lon2) {
+  const earthRadiusKm = 6371.0;
+  final firstLatitude = lat1 * math.pi / 180;
+  final secondLatitude = lat2 * math.pi / 180;
+  final latitudeDelta = (lat2 - lat1) * math.pi / 180;
+  final longitudeDelta = (lon2 - lon1) * math.pi / 180;
+  final value =
+      math.sin(latitudeDelta / 2) * math.sin(latitudeDelta / 2) +
+      math.cos(firstLatitude) *
+          math.cos(secondLatitude) *
+          math.sin(longitudeDelta / 2) *
+          math.sin(longitudeDelta / 2);
+  final normalized = value.clamp(0.0, 1.0);
+  return earthRadiusKm *
+      2 *
+      math.atan2(math.sqrt(normalized), math.sqrt(1 - normalized));
 }
 
 double _readAmount(dynamic value) {

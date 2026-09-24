@@ -3,149 +3,224 @@ import 'package:flutter/material.dart';
 import '../../../../app/design_system/design_system.dart';
 import '../controllers/driver_offer_controller.dart';
 
-class DriverOfferPage extends StatefulWidget {
+class DriverOfferPage extends StatelessWidget {
   final DriverOfferController controller;
-  final int offerId;
+  final ValueChanged<bool>? onResolved;
 
-  const DriverOfferPage({super.key, required this.controller, required this.offerId});
+  const DriverOfferPage({super.key, required this.controller, this.onResolved});
 
-  @override
-  State<DriverOfferPage> createState() => _DriverOfferPageState();
-}
-
-class _DriverOfferPageState extends State<DriverOfferPage> {
-  bool _leaving = false;
-
-  @override
-  void initState() {
-    super.initState();
-    widget.controller.addListener(_onChanged);
-  }
-
-  void _onChanged() {
-    final controller = widget.controller;
-    if (_leaving || !mounted || controller.isActing) return;
-    if (controller.pending?.offer.id != widget.offerId) {
-      _leaving = true;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) {
-          Navigator.of(context).pop(controller.acceptedOfferId == widget.offerId);
-        }
-      });
-    }
-  }
-
-  @override
-  void dispose() {
-    widget.controller.removeListener(_onChanged);
-    super.dispose();
+  Future<void> _respond(bool accept) async {
+    final success = await controller.respond(accept: accept);
+    if (success) onResolved?.call(accept);
   }
 
   @override
   Widget build(BuildContext context) => AnimatedBuilder(
-    animation: widget.controller,
+    animation: controller,
     builder: (context, _) {
-      final controller = widget.controller;
       final pending = controller.pending;
-      if (pending == null || pending.offer.id != widget.offerId) {
-        return const Scaffold(body: Center(child: Text('Oferta encerrada')));
+      if (pending == null) {
+        return const ColoredBox(
+          color: FretColors.appBackground,
+          child: Center(
+            child: CircularProgressIndicator(color: FretColors.brandGold),
+          ),
+        );
       }
-      final offer = pending.offer;
+
       final ride = pending.ride;
-      final seconds = offer.remainingSeconds;
-      final timer = '${seconds ~/ 60}:${(seconds % 60).toString().padLeft(2, '0')}';
-      final disabled = controller.isActing || offer.isExpired;
+      final isActing = controller.isActing;
+
       return PopScope(
-        canPop: !controller.isActing,
+        canPop: false,
         child: Scaffold(
           backgroundColor: FretColors.appBackground,
-          appBar: AppBar(
-            backgroundColor: FretColors.appBackground,
-            title: Text('Corrida #${ride.id}'),
-            actions: [
-              Container(
-                margin: const EdgeInsets.only(right: 20),
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                decoration: BoxDecoration(color: FretColors.brandBlack,
-                  borderRadius: BorderRadius.circular(11)),
-                child: Text(timer, style: const TextStyle(
-                  color: FretColors.white, fontSize: 18, fontWeight: FontWeight.w800)),
-              ),
-            ],
-          ),
-          body: ListView(
-            padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
-            children: [
-              const Text('NOVA OFERTA PARA VOCÊ', style: TextStyle(
-                color: FretColors.brandGoldDark, fontWeight: FontWeight.w800,
-                fontSize: 11, letterSpacing: 1.2)),
-              const SizedBox(height: 12),
-              LinearProgressIndicator(
-                value: offer.remainingFraction, minHeight: 4,
-                color: FretColors.brandGold, backgroundColor: FretColors.neutral200),
-              const SizedBox(height: 18),
-              FretSurfaceCard(
-                color: FretColors.brandBlack, radius: 21,
-                padding: const EdgeInsets.all(20),
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  const Text('Valor do frete', style: TextStyle(color: Colors.white60, fontSize: 12)),
-                  const SizedBox(height: 4),
-                  Text('R\$ ${ride.totalPrice.toStringAsFixed(2).replaceAll('.', ',')}',
-                    style: const TextStyle(color: FretColors.white, fontSize: 31, fontWeight: FontWeight.w800)),
-                  const Divider(color: Colors.white12, height: 30),
-                  Row(children: [
-                    Expanded(child: _Metric('Carga', ride.details == null
-                        ? 'Não informada' : '${ride.packageWeight} kg')),
-                    Expanded(child: _Metric('Veículo', ride.vehicleCategoryLabel)),
-                  ]),
-                ]),
-              ),
-              const SizedBox(height: 12),
-              FretSurfaceCard(
-                radius: 17, padding: const EdgeInsets.all(18),
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  const Text('Rota da entrega', style: TextStyle(fontWeight: FontWeight.w800)),
-                  const SizedBox(height: 18),
-                  _RoutePoint('COLETA', ride.originLabel, FretColors.brandGold),
-                  const SizedBox(height: 20),
-                  _RoutePoint('ENTREGA', ride.destinationLabel, FretColors.brandBlack),
-                  if (ride.details != null) ...[
-                    const Divider(height: 28),
-                    Text('Dimensões: ${ride.details!.packageWidth} × ${ride.details!.packageHeight} × ${ride.details!.packageLength} cm',
-                      style: const TextStyle(fontSize: 12, color: FretColors.textSecondary)),
-                  ],
-                ]),
-              ),
-              const SizedBox(height: 12),
-              FretSurfaceCard(
-                color: FretColors.brandGoldSoft, radius: 14,
-                padding: const EdgeInsets.all(14),
-                child: const Text(
-                  'Esta oferta foi selecionada para você com base na sua localização e no veículo cadastrado.',
-                  style: TextStyle(fontSize: 12, height: 1.5, color: FretColors.brandGoldDark)),
-              ),
-              if (controller.error != null) ...[
-                const SizedBox(height: 12),
-                Text(controller.error!, style: const TextStyle(color: FretColors.destructive700)),
-                TextButton(onPressed: disabled ? null : controller.refresh,
-                  child: const Text('Atualizar oferta')),
+          body: SafeArea(
+            bottom: false,
+            child: Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 22, 24, 0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'NOVA SOLICITAÇÃO',
+                        style: TextStyle(
+                          color: FretColors.brandGoldDark,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 1.1,
+                        ),
+                      ),
+                      const SizedBox(height: 9),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              'Corrida #${ride.id}',
+                              style: const TextStyle(
+                                color: FretColors.brandBlack,
+                                fontSize: 24,
+                                height: 1,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                          ),
+                          Container(
+                            constraints: const BoxConstraints(minWidth: 52),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 10,
+                            ),
+                            decoration: BoxDecoration(
+                              color: FretColors.brandBlack,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              _formatElapsed(controller.elapsed),
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(
+                                color: FretColors.white,
+                                fontSize: 15,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 20),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(4),
+                        child: const LinearProgressIndicator(
+                          minHeight: 5,
+                          color: FretColors.brandGold,
+                          backgroundColor: FretColors.neutral200,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Expanded(
+                  child: ListView(
+                    padding: const EdgeInsets.fromLTRB(24, 18, 24, 24),
+                    children: [
+                      _EarningsCard(
+                        value: ride.driverNetValue,
+                        distanceKm: pending.distanceKm,
+                        approximate: pending.distanceIsApproximate,
+                        weightKg: ride.packageWeight,
+                        vehicle: ride.vehicleCategoryLabel,
+                      ),
+                      const SizedBox(height: 16),
+                      _RouteCard(
+                        origin: ride.originLabel,
+                        destination: ride.destinationLabel,
+                      ),
+                      const SizedBox(height: 16),
+                      const _SelectionNotice(),
+                      if (controller.error != null) ...[
+                        const SizedBox(height: 12),
+                        Container(
+                          padding: const EdgeInsets.all(14),
+                          decoration: BoxDecoration(
+                            color: FretColors.destructive050,
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(
+                              color: FretColors.destructive200,
+                            ),
+                          ),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Icon(
+                                Icons.error_outline_rounded,
+                                color: FretColors.destructive700,
+                                size: 20,
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Text(
+                                  controller.error!,
+                                  style: const TextStyle(
+                                    color: FretColors.destructive700,
+                                    fontSize: 12,
+                                    height: 1.4,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
               ],
-            ],
+            ),
           ),
-          bottomNavigationBar: SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
-              child: Row(children: [
-                Expanded(child: OutlinedButton(
-                  onPressed: disabled ? null : () => controller.respond(accept: false),
-                  child: const Text('Recusar'))),
-                const SizedBox(width: 10),
-                Expanded(flex: 2, child: FilledButton(
-                  style: FilledButton.styleFrom(
-                    backgroundColor: FretColors.brandGold, foregroundColor: FretColors.brandBlack),
-                  onPressed: disabled ? null : () => controller.respond(accept: true),
-                  child: Text(controller.isActing ? 'Confirmando...' : 'Aceitar corrida'))),
-              ]),
+          bottomNavigationBar: Container(
+            decoration: const BoxDecoration(
+              color: FretColors.appBackground,
+              border: Border(top: BorderSide(color: FretColors.neutral200)),
+            ),
+            child: SafeArea(
+              top: false,
+              minimum: const EdgeInsets.fromLTRB(24, 10, 24, 12),
+              child: Row(
+                children: [
+                  Expanded(
+                    flex: 4,
+                    child: SizedBox(
+                      height: 52,
+                      child: OutlinedButton(
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: FretColors.textSecondary,
+                          side: const BorderSide(color: FretColors.neutral200),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(18),
+                          ),
+                        ),
+                        onPressed: isActing ? null : () => _respond(false),
+                        child: const Text(
+                          'Recusar',
+                          style: TextStyle(fontWeight: FontWeight.w800),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    flex: 6,
+                    child: SizedBox(
+                      height: 52,
+                      child: FilledButton(
+                        style: FilledButton.styleFrom(
+                          backgroundColor: FretColors.brandGold,
+                          foregroundColor: FretColors.brandBlack,
+                          disabledBackgroundColor: FretColors.brandGold,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(18),
+                          ),
+                        ),
+                        onPressed: isActing ? null : () => _respond(true),
+                        child: isActing
+                            ? const SizedBox.square(
+                                dimension: 22,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2.4,
+                                  color: FretColors.brandBlack,
+                                ),
+                              )
+                            : const Text(
+                                'Aceitar corrida',
+                                style: TextStyle(fontWeight: FontWeight.w800),
+                              ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -154,34 +229,248 @@ class _DriverOfferPageState extends State<DriverOfferPage> {
   );
 }
 
-class _Metric extends StatelessWidget {
+class _EarningsCard extends StatelessWidget {
+  final double value;
+  final double distanceKm;
+  final bool approximate;
+  final double weightKg;
+  final String vehicle;
+
+  const _EarningsCard({
+    required this.value,
+    required this.distanceKm,
+    required this.approximate,
+    required this.weightKg,
+    required this.vehicle,
+  });
+
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.fromLTRB(20, 18, 20, 19),
+    decoration: BoxDecoration(
+      color: FretColors.brandBlack,
+      borderRadius: BorderRadius.circular(23),
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Você receberá',
+          style: TextStyle(color: Colors.white54, fontSize: 13),
+        ),
+        const SizedBox(height: 7),
+        Text(
+          _formatCurrency(value),
+          style: const TextStyle(
+            color: FretColors.white,
+            fontSize: 31,
+            height: 1,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+        const Padding(
+          padding: EdgeInsets.symmetric(vertical: 20),
+          child: Divider(height: 1, color: Colors.white12),
+        ),
+        Row(
+          children: [
+            Expanded(
+              child: _OfferMetric(
+                label: 'Distância',
+                value:
+                    '${approximate ? '~' : ''}${_formatNumber(distanceKm)} km',
+              ),
+            ),
+            Expanded(
+              child: _OfferMetric(
+                label: 'Carga',
+                value: '${_formatNumber(weightKg)} kg',
+              ),
+            ),
+            Expanded(
+              child: _OfferMetric(label: 'Veículo', value: vehicle),
+            ),
+          ],
+        ),
+      ],
+    ),
+  );
+}
+
+class _OfferMetric extends StatelessWidget {
   final String label;
   final String value;
-  const _Metric(this.label, this.value);
+
+  const _OfferMetric({required this.label, required this.value});
+
   @override
   Widget build(BuildContext context) => Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
-      Text(label, style: const TextStyle(color: Colors.white54, fontSize: 11)),
-      const SizedBox(height: 4),
-      Text(value, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
+      Text(
+        label,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: const TextStyle(color: Colors.white38, fontSize: 11),
+      ),
+      const SizedBox(height: 7),
+      Text(
+        value,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: const TextStyle(
+          color: FretColors.white,
+          fontSize: 14,
+          fontWeight: FontWeight.w800,
+        ),
+      ),
     ],
   );
 }
 
-class _RoutePoint extends StatelessWidget {
-  final String label;
-  final String address;
-  final Color color;
-  const _RoutePoint(this.label, this.address, this.color);
+class _RouteCard extends StatelessWidget {
+  final String origin;
+  final String destination;
+
+  const _RouteCard({required this.origin, required this.destination});
+
   @override
-  Widget build(BuildContext context) => Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-    Icon(Icons.location_on_rounded, color: color, size: 20),
-    const SizedBox(width: 12),
-    Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Text(label, style: const TextStyle(color: FretColors.textSecondary, fontSize: 10)),
-      const SizedBox(height: 4),
-      Text(address, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
-    ])),
-  ]);
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.fromLTRB(18, 18, 18, 19),
+    decoration: BoxDecoration(
+      color: FretColors.white,
+      borderRadius: BorderRadius.circular(20),
+      border: Border.all(color: FretColors.neutral200),
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Rota da entrega',
+          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800),
+        ),
+        const SizedBox(height: 16),
+        IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              SizedBox(
+                width: 12,
+                child: Column(
+                  children: [
+                    const _RouteDot(color: FretColors.brandGold),
+                    Expanded(
+                      child: Container(
+                        width: 1,
+                        margin: const EdgeInsets.symmetric(vertical: 3),
+                        color: FretColors.neutral300,
+                      ),
+                    ),
+                    const _RouteDot(color: FretColors.brandBlack),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 13),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _Address(label: 'COLETA', value: origin),
+                    const SizedBox(height: 18),
+                    _Address(label: 'ENTREGA', value: destination),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+class _RouteDot extends StatelessWidget {
+  final Color color;
+
+  const _RouteDot({required this.color});
+
+  @override
+  Widget build(BuildContext context) => Container(
+    width: 10,
+    height: 10,
+    decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+  );
+}
+
+class _Address extends StatelessWidget {
+  final String label;
+  final String value;
+
+  const _Address({required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Text(
+        label,
+        style: const TextStyle(color: FretColors.textSecondary, fontSize: 11),
+      ),
+      const SizedBox(height: 7),
+      Text(
+        value,
+        style: const TextStyle(
+          color: FretColors.brandBlack,
+          fontSize: 14,
+          height: 1.3,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+    ],
+  );
+}
+
+class _SelectionNotice extends StatelessWidget {
+  const _SelectionNotice();
+
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.all(17),
+    decoration: BoxDecoration(
+      color: FretColors.brandGoldSoft,
+      borderRadius: BorderRadius.circular(18),
+      border: Border.all(color: FretColors.primary200),
+    ),
+    child: const Text(
+      'Esta oferta foi selecionada para você com base na sua localização '
+      'e no veículo cadastrado.',
+      style: TextStyle(
+        color: FretColors.brandGoldDark,
+        fontSize: 12,
+        height: 1.45,
+      ),
+    ),
+  );
+}
+
+String _formatElapsed(Duration duration) {
+  final seconds = duration.inSeconds.remainder(60).toString().padLeft(2, '0');
+  final minutes = duration.inMinutes.remainder(60).toString().padLeft(2, '0');
+  if (duration.inHours > 0) return '${duration.inHours}:$minutes:$seconds';
+  return '$minutes:$seconds';
+}
+
+String _formatCurrency(double value) {
+  final parts = value.toStringAsFixed(2).split('.');
+  final digits = parts.first;
+  final grouped = digits.replaceAllMapped(
+    RegExp(r'\B(?=(\d{3})+(?!\d))'),
+    (_) => '.',
+  );
+  return 'R\$ $grouped,${parts.last}';
+}
+
+String _formatNumber(double value) {
+  if (value == value.roundToDouble()) return value.toStringAsFixed(0);
+  return value.toStringAsFixed(1).replaceAll('.', ',');
 }

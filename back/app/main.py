@@ -16,9 +16,8 @@ from app.api.routes.wallet_transactions import router as wallet_transactions_rou
 from app.api.routes.driver_location import router as driver_location_router
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
-from app.services.ride_dispatch_worker import dispatch_lifespan
 
-app = FastAPI(title=settings.APP_NAME, lifespan=dispatch_lifespan)
+app = FastAPI(title=settings.APP_NAME)
 
 app.add_middleware(
     CORSMiddleware,

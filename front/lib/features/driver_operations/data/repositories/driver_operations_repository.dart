@@ -3,8 +3,6 @@ import '../models/driver_operation_models.dart';
 abstract class DriverOperationsRepository {
   Future<List<RideOfferModel>> listOffersByDriver(int driverUserId);
 
-  Future<PendingRideOfferModel?> getPendingOffer(int driverUserId);
-
   Future<RideOfferModel> acceptOffer(int offerId, int driverUserId);
 
   Future<RideOfferModel> rejectOffer(int offerId, int driverUserId);
@@ -16,6 +14,8 @@ abstract class DriverOperationsRepository {
   Future<List<DriverRideModel>> listRidesInProgressByUser(int userId);
 
   Future<DriverRideModel> getRideById(int rideId);
+
+  Future<double> getRouteDistance(DriverRideModel ride);
 
   Future<DriverRideModel> startRide(int rideId);
 

@@ -1,4 +1,4 @@
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone
 
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
@@ -7,9 +7,9 @@ from app.models.driver_location import DriverLocation
 from app.schemas.driver_location import DriverLocationUpdateRequest
 from app.core.config import settings
 
-from app.services.ride_offer_service import (
-    utc_now,
-)
+
+def utc_now() -> datetime:
+    return datetime.now(timezone.utc)
 
 def update_driver_location(
     db: Session,

@@ -47,7 +47,7 @@ class DriverOperationsStore extends ChangeNotifier {
       List<DriverEarningModel>.unmodifiable(_earnings);
 
   List<RideOfferModel> get pendingOffers =>
-      _offers.where((offer) => offer.isPending && !offer.isExpired).toList(growable: false);
+      _offers.where((offer) => offer.isPending).toList(growable: false);
 
   double get availableBalance => _wallet?.availableBalance ?? 0;
 

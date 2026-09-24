@@ -1,6 +1,7 @@
 import 'package:latlong2/latlong.dart';
 
 class FreightQuoteModel {
+  final int requiredVehicleTypeId;
   final double distanceKm;
   final int estimatedTimeMinutes;
   final String vehicleTypeName;
@@ -16,6 +17,7 @@ class FreightQuoteModel {
   final List<LatLng> routePoints;
 
   const FreightQuoteModel({
+    required this.requiredVehicleTypeId,
     required this.distanceKm,
     required this.estimatedTimeMinutes,
     required this.vehicleTypeName,
@@ -40,6 +42,9 @@ class FreightQuoteModel {
         : <String, dynamic>{};
 
     return FreightQuoteModel(
+      requiredVehicleTypeId: _readRequiredPositiveInt(
+        json['required_vehicle_type_id'],
+      ),
       distanceKm: _readDouble(json['distance_km']),
       estimatedTimeMinutes: _readInt(json['estimated_time_minutes']),
       vehicleTypeName: json['required_vehicle_type_name']?.toString() ?? '',
@@ -87,6 +92,16 @@ class FreightQuoteModel {
       return value.toInt();
     }
     return int.tryParse(value?.toString() ?? '') ?? 0;
+  }
+
+  static int _readRequiredPositiveInt(dynamic value) {
+    final parsed = _readInt(value);
+    if (parsed <= 0) {
+      throw const FormatException(
+        'A cotação não informou um tipo de veículo válido.',
+      );
+    }
+    return parsed;
   }
 
   static List<LatLng> _readRoutePoints(dynamic geometry) {

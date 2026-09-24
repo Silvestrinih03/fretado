@@ -14,7 +14,7 @@ from app.models.vehicle_type import VehicleType
 from app.schemas.driver_earning import DriverEarningCreate
 from app.schemas.ride import RideCreate, RideFullResponse, RideQuoteRequest, RideQuoteResponse, RideUpdate
 from app.services.driver_earning_service import create_driver_earning
-from app.services.ride_offer_service import create_next_offer
+from app.services.ride_offer_service import create_offer, find_nearest_candidate
 from app.services.ride_quote_service import RideQuoteService
 
 
@@ -45,6 +45,17 @@ def create_ride(db: Session, ride_data: RideCreate) -> RideFullResponse:
             },
         )
 
+    candidate = find_nearest_candidate(
+        db=db,
+        payload=ride_data,
+        required_vehicle_type_id=quote.required_vehicle_type_id,
+    )
+    if candidate is None:
+        raise HTTPException(
+            status_code=409,
+            detail="Nenhum motorista disponivel para esta corrida.",
+        )
+
     ride = Ride(
         client_user_id=client.id,
         driver_user_id=None,
@@ -64,7 +75,7 @@ def create_ride(db: Session, ride_data: RideCreate) -> RideFullResponse:
             **ride_data.model_dump(include=detail_fields),
         ))
         db.flush()
-        create_next_offer(db, ride.id)
+        create_offer(db, ride.id, candidate)
         db.commit()
         db.refresh(ride)
     except Exception:
@@ -86,10 +97,6 @@ def build_full_response(db: Session, ride: Ride) -> RideFullResponse:
 
 def get_rides_by_client_user_id(db: Session, client_user_id: int):
     rides = db.query(Ride).filter(Ride.client_user_id == client_user_id).order_by(Ride.created_at.desc()).all()
-    for ride in rides:
-        if ride.status_id == int(RideStatusEnum.AGUARDANDO_ACEITE):
-            create_next_offer(db, ride.id)
-    db.commit()
     return [build_full_response(db, ride) for ride in rides]
 
 
@@ -100,10 +107,6 @@ def get_rides_by_driver_user_id(db: Session, driver_user_id: int):
 
 def get_ride_by_id(db: Session, ride_id: int):
     ride = _get_ride(db, ride_id)
-    if ride.status_id == int(RideStatusEnum.AGUARDANDO_ACEITE):
-        create_next_offer(db, ride.id)
-        db.commit()
-        db.refresh(ride)
     return build_full_response(db, ride)
 
 

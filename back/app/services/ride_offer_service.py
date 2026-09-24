@@ -1,267 +1,302 @@
+from datetime import datetime, timedelta, timezone
+from math import asin, cos, radians, sin, sqrt
+
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
+from app.core.config import settings
 from app.enums.ride_offer_status import RideOfferStatusEnum
 from app.enums.ride_status_enum import RideStatusEnum
+from app.enums.user_type import UserTypeEnum
+from app.models.driver_location import DriverLocation
 from app.models.ride import Ride
+from app.models.ride_detail import RideDetail
 from app.models.ride_offer import RideOffer
-from app.models.ride_offer_status import RideOfferStatus
 from app.models.user import User
-from app.schemas.ride_offer import RideOfferCreate, RideOfferUpdate
-from app.services.ride_dispatch_service import (
-    ACCEPTED_OFFER_STATUS_ID,
-    EXPIRED_OFFER_STATUS_ID,
-    PENDING_OFFER_STATUS_ID,
-    REJECTED_OFFER_STATUS_ID,
-    WAITING_ACCEPTANCE_STATUS_ID,
-    create_next_offer_for_ride,
-    create_pending_offer_for_driver,
-    expire_offer_if_needed,
-    ensure_driver_can_receive_ride,
-    is_ride_waiting_for_driver,
-    lock_ride,
-    utc_now,
-)
+from app.models.vehicle import Vehicle
+from app.models.vehicle_model import VehicleModel
+from app.models.vehicle_type import VehicleType
+from app.services.vehicle_pricing_profile_service import VehiclePricingProfileService
+
+PENDING = int(RideOfferStatusEnum.PENDENTE)
+ACCEPTED = int(RideOfferStatusEnum.ACEITA)
+REJECTED = int(RideOfferStatusEnum.RECUSADA)
+EXPIRED = int(RideOfferStatusEnum.EXPIRADA)
+WAITING = int(RideStatusEnum.AGUARDANDO_ACEITE)
+WAITING_START = int(RideStatusEnum.AGUARDANDO_INICIO)
+UNATTENDED = int(RideStatusEnum.NAO_ATENDIDA)
+# The rule is strictly "more than six": a seventh offer may be attempted.
+OFFER_FAILURE_THRESHOLD = 6
+BUSY_STATUSES = [WAITING_START, int(RideStatusEnum.A_CAMINHO_COLETA), int(RideStatusEnum.A_CAMINHO_ENTREGA)]
 
 
-def create_offer(db: Session, offer_data: RideOfferCreate) -> RideOffer:
-    validate_offer_status_exists(db, offer_data.status_id)
-    if int(offer_data.status_id) != PENDING_OFFER_STATUS_ID:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Crie ofertas apenas como pendentes. Use os endpoints de aceite ou recusa para mudar status.",
-        )
+def utc_now() -> datetime:
+    return datetime.now(timezone.utc)
 
-    ride = lock_ride(db, offer_data.ride_id)
+
+def create_next_offer(db: Session, ride_id: int) -> RideOffer | None:
+    ride = _lock_ride(db, ride_id)
     if not ride:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Corrida nao encontrada.",
-        )
+        raise HTTPException(status_code=404, detail="Corrida nao encontrada.")
+    if not _is_waiting(ride):
+        return None
 
-    offer = create_pending_offer_for_driver(
-        db=db,
-        ride=ride,
-        driver_user_id=offer_data.driver_user_id,
-    )
-    db.commit()
-    db.refresh(offer)
-
-    return offer
-
-
-def get_offers_by_driver_user_id(db: Session, driver_user_id: int):
-    return (
-        db.query(RideOffer)
-        .filter(RideOffer.driver_user_id == driver_user_id)
-        .order_by(RideOffer.created_at.desc())
-        .all()
-    )
-
-
-def get_offer_by_id(
-    db: Session,
-    offer_id: int,
-    lock: bool = False,
-) -> RideOffer:
-    query = db.query(RideOffer).filter(RideOffer.id == offer_id)
-    if lock:
-        query = query.with_for_update()
-
-    offer = query.first()
-    if not offer:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Oferta nao encontrada.",
-        )
-
-    return offer
-
-
-def update_offer(
-    db: Session,
-    offer_id: int,
-    offer_data: RideOfferUpdate,
-) -> RideOffer:
-    update_data = offer_data.model_dump(exclude_unset=True)
-    if "status_id" not in update_data:
-        return get_offer_by_id(db, offer_id)
-
-    status_id = int(update_data["status_id"])
-    validate_offer_status_exists(db, status_id)
-    offer = get_offer_by_id(db, offer_id)
-    if offer.status_id == status_id:
-        return offer
-
-    if status_id == ACCEPTED_OFFER_STATUS_ID:
-        return accept_offer(db, offer_id)
-
-    if status_id == REJECTED_OFFER_STATUS_ID:
-        return reject_offer(db, offer_id)
-
-    if status_id == EXPIRED_OFFER_STATUS_ID:
-        return expire_offer(db, offer_id)
-
-    raise HTTPException(
-        status_code=status.HTTP_400_BAD_REQUEST,
-        detail="Status de oferta nao pode ser atualizado diretamente para este valor.",
-    )
-
-
-def accept_offer(db: Session, offer_id: int) -> RideOffer:
-    now = utc_now()
-    offer, ride = get_offer_and_ride_locked(db, offer_id)
-
-    if offer.status_id != PENDING_OFFER_STATUS_ID:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Apenas ofertas pendentes podem ser aceitas.",
-        )
-
-    if expire_offer_if_needed(offer, now):
+    pending = get_pending_offer_for_ride(db, ride.id, lock=True)
+    if pending:
+        if not is_offer_expired(pending):
+            return pending
+        pending.status_id = EXPIRED
         db.flush()
-        if is_ride_waiting_for_driver(ride):
-            create_next_offer_for_ride(db, ride, now)
+
+    if get_offer_count(db, ride.id) > OFFER_FAILURE_THRESHOLD:
+        ride.status_id = UNATTENDED
+        db.flush()
+        return None
+
+    candidate = _find_nearest_candidate(db, ride)
+    if candidate is None:
+        return None
+
+    driver_id, vehicle_id = candidate
+    now = utc_now()
+    offer = RideOffer(
+        ride_id=ride.id,
+        driver_user_id=driver_id,
+        vehicle_id=vehicle_id,
+        status_id=PENDING,
+        created_at=now,
+        expires_at=now + timedelta(minutes=max(1, settings.OFFER_EXPIRATION_MINUTES)),
+    )
+    db.add(offer)
+    db.flush()
+    return offer
+
+
+def get_offers_by_driver_user_id(db: Session, driver_user_id: int) -> list[RideOffer]:
+    ride_ids = db.query(RideOffer.ride_id).filter(
+        RideOffer.driver_user_id == driver_user_id,
+        RideOffer.status_id == PENDING,
+    ).all()
+    for (ride_id,) in ride_ids:
+        process_expired_offer_for_ride(db, ride_id)
+    offers = db.query(RideOffer).filter(
+        RideOffer.driver_user_id == driver_user_id,
+        RideOffer.status_id == PENDING,
+        RideOffer.expires_at > utc_now(),
+    ).order_by(RideOffer.created_at.desc()).all()
+    db.commit()
+    return offers
+
+
+def accept_offer(db: Session, offer_id: int, driver_user_id: int) -> RideOffer:
+    offer, ride = _get_offer_and_ride_locked(db, offer_id)
+    if offer.driver_user_id == driver_user_id and offer.status_id == ACCEPTED:
+        return offer
+    _validate_action(offer, driver_user_id)
+    if is_offer_expired(offer):
+        _expire_and_continue(db, offer, ride)
         db.commit()
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Oferta expirada.",
-        )
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Oferta expirada.")
+    if not _is_waiting(ride):
+        raise HTTPException(status_code=409, detail="Corrida nao esta aguardando motorista.")
+    # Use the same driver lock as dispatch, so two rides cannot reserve/assign
+    # the same driver concurrently.
+    db.query(User).filter(User.id == driver_user_id).with_for_update().first()
+    if _driver_has_active_ride(db, driver_user_id):
+        raise HTTPException(status_code=409, detail="Motorista ja possui corrida em andamento.")
+    vehicle = db.query(Vehicle).join(
+        VehicleModel, Vehicle.vehicle_model_id == VehicleModel.id,
+    ).filter(
+        Vehicle.id == offer.vehicle_id,
+        Vehicle.user_id == driver_user_id,
+        Vehicle.status.is_(True),
+        VehicleModel.vehicle_type_id == ride.required_vehicle_type_id,
+    ).first()
+    if vehicle is None:
+        raise HTTPException(status_code=409, detail="Veiculo da oferta nao esta mais disponivel.")
 
-    if ride.status_id != WAITING_ACCEPTANCE_STATUS_ID:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Essa corrida nao esta aguardando aceite.",
-        )
-
-    if ride.driver_user_id is not None:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Essa corrida ja possui motorista.",
-        )
-
-    # Serialize concurrent acceptances by this driver, then recheck current availability.
-    db.query(User).filter(User.id == offer.driver_user_id).with_for_update().first()
-    ensure_driver_can_receive_ride(db, ride, offer.driver_user_id)
-    offer.status_id = ACCEPTED_OFFER_STATUS_ID
-    ride.driver_user_id = offer.driver_user_id
-    ride.status_id = int(RideStatusEnum.AGUARDANDO_INICIO)
-
+    offer.status_id = ACCEPTED
+    ride.driver_user_id = driver_user_id
+    ride.status_id = WAITING_START
     db.commit()
     db.refresh(offer)
-
     return offer
 
 
-def reject_offer(db: Session, offer_id: int) -> RideOffer:
-    now = utc_now()
-    offer, ride = get_offer_and_ride_locked(db, offer_id)
-
-    if offer.status_id != PENDING_OFFER_STATUS_ID:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Apenas ofertas pendentes podem ser recusadas.",
-        )
-
-    if expire_offer_if_needed(offer, now):
-        next_status_id = EXPIRED_OFFER_STATUS_ID
+def reject_offer(db: Session, offer_id: int, driver_user_id: int) -> RideOffer:
+    offer, ride = _get_offer_and_ride_locked(db, offer_id)
+    if offer.driver_user_id == driver_user_id and offer.status_id in (REJECTED, EXPIRED):
+        return offer
+    _validate_action(offer, driver_user_id)
+    if is_offer_expired(offer):
+        _expire_and_continue(db, offer, ride)
     else:
-        offer.status_id = REJECTED_OFFER_STATUS_ID
-        next_status_id = REJECTED_OFFER_STATUS_ID
-
-    db.flush()
-    if is_ride_waiting_for_driver(ride):
-        create_next_offer_for_ride(db, ride, now)
-
+        offer.status_id = REJECTED
+        db.flush()
+        _continue_flow(db, ride)
     db.commit()
     db.refresh(offer)
-
-    offer.status_id = next_status_id
     return offer
 
 
-def expire_offer(db: Session, offer_id: int) -> RideOffer:
-    now = utc_now()
-    offer, ride = get_offer_and_ride_locked(db, offer_id)
+def process_expired_offer_for_ride(db: Session, ride_id: int) -> None:
+    create_next_offer(db, ride_id)
 
-    if offer.status_id != PENDING_OFFER_STATUS_ID:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Apenas ofertas pendentes podem expirar.",
+
+def process_expired_offers(db: Session, limit: int = 100) -> None:
+    ids = db.query(RideOffer.id).filter(
+        RideOffer.status_id == PENDING,
+        RideOffer.expires_at <= utc_now(),
+    ).order_by(RideOffer.expires_at.asc()).limit(limit).all()
+    for (offer_id,) in ids:
+        offer, ride = _get_offer_and_ride_locked(db, offer_id)
+        if offer.status_id == PENDING and is_offer_expired(offer):
+            _expire_and_continue(db, offer, ride)
+
+
+def process_waiting_rides(db: Session, limit: int = 50) -> None:
+    ids = db.query(Ride.id).filter(
+        Ride.status_id == WAITING,
+        Ride.driver_user_id.is_(None),
+    ).order_by(Ride.created_at.asc()).limit(limit).all()
+    for (ride_id,) in ids:
+        if get_pending_offer_for_ride(db, ride_id) is None:
+            create_next_offer(db, ride_id)
+
+
+def process_dispatch_cycle(db: Session) -> None:
+    process_expired_offers(db)
+    process_waiting_rides(db)
+
+
+def get_pending_offer_for_ride(db: Session, ride_id: int, lock: bool = False) -> RideOffer | None:
+    query = db.query(RideOffer).filter(RideOffer.ride_id == ride_id, RideOffer.status_id == PENDING)
+    return query.with_for_update().populate_existing().first() if lock else query.first()
+
+
+def get_offer_count(db: Session, ride_id: int) -> int:
+    return db.query(RideOffer.id).filter(RideOffer.ride_id == ride_id).count()
+
+
+def is_offer_expired(offer: RideOffer, now: datetime | None = None) -> bool:
+    expires_at = offer.expires_at
+    if expires_at.tzinfo is None:
+        expires_at = expires_at.replace(tzinfo=timezone.utc)
+    return expires_at <= (now or utc_now())
+
+
+def _continue_flow(db: Session, ride: Ride) -> None:
+    if not _is_waiting(ride):
+        return
+    if get_offer_count(db, ride.id) > OFFER_FAILURE_THRESHOLD:
+        ride.status_id = UNATTENDED
+        db.flush()
+    else:
+        create_next_offer(db, ride.id)
+
+
+def _expire_and_continue(db: Session, offer: RideOffer, ride: Ride) -> None:
+    if offer.status_id != PENDING:
+        return
+    offer.status_id = EXPIRED
+    db.flush()
+    _continue_flow(db, ride)
+
+
+def _find_nearest_candidate(db: Session, ride: Ride) -> tuple[int, int] | None:
+    detail = db.query(RideDetail).filter(RideDetail.ride_id == ride.id).first()
+    if not detail:
+        raise HTTPException(status_code=409, detail="Corrida nao possui detalhes de origem.")
+    fresh_after = utc_now() - timedelta(minutes=settings.DRIVER_LOCATION_MAX_AGE_MINUTES)
+    used = db.query(RideOffer.driver_user_id).filter(RideOffer.ride_id == ride.id)
+    busy = db.query(Ride.driver_user_id).filter(Ride.driver_user_id.isnot(None), Ride.status_id.in_(BUSY_STATUSES))
+    with_pending = db.query(RideOffer.driver_user_id).filter(RideOffer.status_id == PENDING)
+    category = db.query(VehicleType).filter(VehicleType.id == ride.required_vehicle_type_id).first()
+    if category is None:
+        raise HTTPException(status_code=409, detail="Categoria da corrida nao encontrada.")
+    candidates = db.query(
+        Vehicle, VehicleModel, DriverLocation,
+    ).select_from(Vehicle).join(
+        VehicleModel, Vehicle.vehicle_model_id == VehicleModel.id,
+    ).join(User, User.id == Vehicle.user_id).join(
+        DriverLocation, DriverLocation.driver_user_id == Vehicle.user_id,
+    ).filter(
+        User.user_type_id == int(UserTypeEnum.DRIVER),
+        Vehicle.status.is_(True),
+        VehicleModel.vehicle_type_id == ride.required_vehicle_type_id,
+        DriverLocation.is_online.is_(True),
+        DriverLocation.last_seen_at >= fresh_after,
+        DriverLocation.location_recorded_at >= fresh_after,
+        Vehicle.user_id.notin_(used),
+        Vehicle.user_id.notin_(busy),
+        Vehicle.user_id.notin_(with_pending),
+    ).all()
+    candidates.sort(key=lambda row: (
+        _distance(detail.origin_latitude, detail.origin_longitude, row[2].latitude, row[2].longitude),
+        row[0].id,
+    ))
+    for vehicle, model, location in candidates:
+        distance = _distance(
+            detail.origin_latitude, detail.origin_longitude, location.latitude, location.longitude,
         )
+        if distance > settings.DRIVER_SEARCH_RADIUS_KM:
+            continue
+        if not VehiclePricingProfileService.vehicle_fits_payload(detail, model, category):
+            continue
+        driver = db.query(User).filter(User.id == vehicle.user_id).with_for_update(
+            skip_locked=True,
+        ).first()
+        if driver is None:
+            continue
+        # Recheck after locking: another transaction may have assigned an offer
+        # after the candidate query, before we acquired the driver lock.
+        if _driver_has_active_ride(db, driver.id) or db.query(RideOffer.id).filter(
+            RideOffer.driver_user_id == driver.id, RideOffer.status_id == PENDING,
+        ).first():
+            continue
+        return int(driver.id), int(vehicle.id)
+    # No candidate yet: retain status 1 and retry when drivers become available.
+    return None
 
-    offer.status_id = EXPIRED_OFFER_STATUS_ID
-    db.flush()
 
-    if is_ride_waiting_for_driver(ride):
-        create_next_offer_for_ride(db, ride, now)
-
-    db.commit()
-    db.refresh(offer)
-
-    return offer
+def _distance(lat1, lon1, lat2, lon2) -> float:
+    lat1, lon1, lat2, lon2 = map(radians, map(float, (lat1, lon1, lat2, lon2)))
+    dlat, dlon = lat2 - lat1, lon2 - lon1
+    value = sin(dlat / 2) ** 2 + cos(lat1) * cos(lat2) * sin(dlon / 2) ** 2
+    return 6371 * 2 * asin(sqrt(max(0.0, min(1.0, value))))
 
 
-def get_offer_and_ride_locked(
-    db: Session,
-    offer_id: int,
-) -> tuple[RideOffer, Ride]:
-    offer_ref = get_offer_by_id(db, offer_id)
-    ride = lock_ride(db, offer_ref.ride_id)
+def _get_offer_and_ride_locked(db: Session, offer_id: int) -> tuple[RideOffer, Ride]:
+    ref = db.query(RideOffer.ride_id).filter(RideOffer.id == offer_id).first()
+    if ref is None:
+        raise HTTPException(status_code=404, detail="Oferta nao encontrada.")
+    # Always lock ride before offer, matching create_next_offer.
+    ride = _lock_ride(db, ref.ride_id)
     if not ride:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Corrida nao encontrada.",
-        )
-
-    offer = get_offer_by_id(db, offer_id, lock=True)
+        raise HTTPException(status_code=404, detail="Corrida nao encontrada.")
+    offer = db.query(RideOffer).filter(RideOffer.id == offer_id).with_for_update().populate_existing().first()
+    if offer is None:
+        raise HTTPException(status_code=404, detail="Oferta nao encontrada.")
     return offer, ride
 
 
-def validate_offer_payload_references(
-    db: Session,
-    ride_id: int,
-    driver_user_id: int,
-    status_id: int,
-) -> None:
-    validate_ride_exists(db, ride_id)
-    validate_driver_exists(db, driver_user_id)
-    validate_offer_status_exists(db, status_id)
+def _lock_ride(db: Session, ride_id: int) -> Ride | None:
+    return db.query(Ride).filter(Ride.id == ride_id).with_for_update().populate_existing().first()
 
 
-def validate_ride_exists(db: Session, ride_id: int) -> None:
-    ride = db.query(Ride).filter(Ride.id == ride_id).first()
-    if not ride:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Corrida nao encontrada.",
-        )
+def _validate_action(offer: RideOffer, driver_user_id: int) -> None:
+    if offer.driver_user_id != driver_user_id:
+        raise HTTPException(status_code=403, detail="Esta oferta pertence a outro motorista.")
+    if offer.status_id != PENDING:
+        raise HTTPException(status_code=409, detail="A oferta nao esta pendente.")
 
 
-def validate_driver_exists(db: Session, driver_user_id: int) -> None:
-    driver = db.query(User).filter(User.id == driver_user_id).first()
-    if not driver:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Motorista nao encontrado.",
-        )
+def _is_waiting(ride: Ride) -> bool:
+    return ride.status_id == WAITING and ride.driver_user_id is None
 
 
-def validate_offer_status_exists(db: Session, status_id: int) -> None:
-    valid_status_ids = [int(status_item) for status_item in RideOfferStatusEnum]
-    if int(status_id) not in valid_status_ids:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Status invalido. Use um dos valores: {valid_status_ids}",
-        )
-
-    offer_status = (
-        db.query(RideOfferStatus)
-        .filter(RideOfferStatus.id == int(status_id))
-        .first()
-    )
-    if not offer_status:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Status informado nao existe na tabela ride_offer_status.",
-        )
+def _driver_has_active_ride(db: Session, driver_user_id: int) -> bool:
+    return db.query(Ride.id).filter(
+        Ride.driver_user_id == driver_user_id,
+        Ride.status_id.in_(BUSY_STATUSES),
+    ).first() is not None

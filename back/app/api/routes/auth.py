@@ -26,7 +26,7 @@ from jose import JWTError
 
 from app.enums.user_type import UserTypeEnum
 
-from app.services.ride_dispatch_service import expire_pending_offers
+from app.services.ride_offer_service import process_expired_offers 
 
 bearer_scheme = HTTPBearer()
 router = APIRouter(prefix="/auth", tags=["Auth"])
@@ -53,7 +53,8 @@ def login(
         )
 
     if user.user_type_id == int(UserTypeEnum.DRIVER):
-        expire_pending_offers(db)
+        process_expired_offers(db)
+        db.commit()
 
     access_token = create_access_token(
         user_id=user.id,

@@ -5,11 +5,10 @@ from sqlalchemy.orm import Session
 
 from app.models.driver_location import DriverLocation
 from app.schemas.driver_location import DriverLocationUpdateRequest
-from app.services.ride_dispatch_service import utc_now
 from app.core.config import settings
 
 from app.services.ride_offer_service import (
-    process_dispatch_cycle,
+    utc_now,
 )
 
 def update_driver_location(
@@ -87,10 +86,6 @@ def set_driver_online(
         location.last_seen_at = now
 
     db.flush()
-
-    process_dispatch_cycle(
-        db=db,
-    )
 
     db.commit()
     db.refresh(location)

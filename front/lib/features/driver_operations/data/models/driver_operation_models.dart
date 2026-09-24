@@ -1,7 +1,6 @@
-class DriverRideModel {
+class RideDetailModel {
   final int id;
-  final int clientUserId;
-  final int? driverUserId;
+  final int rideId;
   final String originAddress;
   final String? originAddressComplement;
   final String? originReferencePoint;
@@ -16,7 +15,51 @@ class DriverRideModel {
   final double packageHeight;
   final double packageLength;
   final double packageWeight;
+  final DateTime? createdAt;
+  final DateTime? updatedAt;
+
+  RideDetailModel.fromJson(Map<String, dynamic> json)
+      : id = _readInt(json['id']),
+        rideId = _readInt(json['ride_id']),
+        originAddress = _readString(json['origin_address']),
+        originAddressComplement = _readNullableString(json['origin_address_complement']),
+        originReferencePoint = _readNullableString(json['origin_reference_point']),
+        originLatitude = _readDouble(json['origin_latitude']),
+        originLongitude = _readDouble(json['origin_longitude']),
+        destinationAddress = _readString(json['destination_address']),
+        destinationAddressComplement = _readNullableString(json['destination_address_complement']),
+        destinationReferencePoint = _readNullableString(json['destination_reference_point']),
+        destinationLatitude = _readDouble(json['destination_latitude']),
+        destinationLongitude = _readDouble(json['destination_longitude']),
+        packageWidth = _readDouble(json['package_width']),
+        packageHeight = _readDouble(json['package_height']),
+        packageLength = _readDouble(json['package_length']),
+        packageWeight = _readDouble(json['package_weight']),
+        createdAt = _readDateTime(json['created_at']),
+        updatedAt = _readDateTime(json['updated_at']);
+
+  String get originLabel => _buildAddressLabel(
+    address: originAddress, complement: originAddressComplement,
+    referencePoint: originReferencePoint,
+    latitude: originLatitude, longitude: originLongitude,
+  );
+
+  String get destinationLabel => _buildAddressLabel(
+    address: destinationAddress, complement: destinationAddressComplement,
+    referencePoint: destinationReferencePoint,
+    latitude: destinationLatitude, longitude: destinationLongitude,
+  );
+}
+
+class DriverRideModel {
+  final int id;
+  final int clientUserId;
+  final int? driverUserId;
+  final int requiredVehicleTypeId;
+  final String? requiredVehicleTypeName;
+  final RideDetailModel? details;
   final double totalPrice;
+  final double? appFeeValue;
   final int statusId;
   final DateTime? createdAt;
   final DateTime? updatedAt;
@@ -24,143 +67,85 @@ class DriverRideModel {
   final DateTime? finishedAt;
   final DateTime? cancelledAt;
 
-  const DriverRideModel({
-    required this.id,
-    required this.clientUserId,
-    required this.driverUserId,
-    required this.originAddress,
-    required this.originAddressComplement,
-    required this.originReferencePoint,
-    required this.originLatitude,
-    required this.originLongitude,
-    required this.destinationAddress,
-    required this.destinationAddressComplement,
-    required this.destinationReferencePoint,
-    required this.destinationLatitude,
-    required this.destinationLongitude,
-    required this.packageWidth,
-    required this.packageHeight,
-    required this.packageLength,
-    required this.packageWeight,
-    required this.totalPrice,
-    required this.statusId,
-    this.createdAt,
-    this.updatedAt,
-    this.startedAt,
-    this.finishedAt,
-    this.cancelledAt,
-  });
+  DriverRideModel.fromJson(Map<String, dynamic> json)
+      : id = _readInt(json['id']),
+        clientUserId = _readInt(json['client_user_id']),
+        driverUserId = _readNullableInt(json['driver_user_id']),
+        requiredVehicleTypeId = _readInt(json['required_vehicle_type_id']),
+        requiredVehicleTypeName = _readNullableString(json['required_vehicle_type_name']),
+        details = json['details'] is Map
+            ? RideDetailModel.fromJson(Map<String, dynamic>.from(json['details'] as Map))
+            : null,
+        totalPrice = _readAmount(json['total_price']),
+        appFeeValue = json['app_fee_value'] == null ? null : _readAmount(json['app_fee_value']),
+        statusId = _readInt(json['status_id']),
+        createdAt = _readDateTime(json['created_at']),
+        updatedAt = _readDateTime(json['updated_at']),
+        startedAt = _readDateTime(json['started_at']),
+        finishedAt = _readDateTime(json['finished_at']),
+        cancelledAt = _readDateTime(json['cancelled_at']);
 
-  factory DriverRideModel.fromJson(Map<String, dynamic> json) {
-    return DriverRideModel(
-      id: _readInt(json['id']),
-      clientUserId: _readInt(json['client_user_id']),
-      driverUserId: _readNullableInt(json['driver_user_id']),
-      originAddress: _readString(json['origin_address']),
-      originAddressComplement:
-          _readNullableString(json['origin_address_complement']),
-      originReferencePoint: _readNullableString(json['origin_reference_point']),
-      originLatitude: _readDouble(json['origin_latitude']),
-      originLongitude: _readDouble(json['origin_longitude']),
-      destinationAddress: _readString(json['destination_address']),
-      destinationAddressComplement:
-          _readNullableString(json['destination_address_complement']),
-      destinationReferencePoint:
-          _readNullableString(json['destination_reference_point']),
-      destinationLatitude: _readDouble(json['destination_latitude']),
-      destinationLongitude: _readDouble(json['destination_longitude']),
-      packageWidth: _readDouble(json['package_width']),
-      packageHeight: _readDouble(json['package_height']),
-      packageLength: _readDouble(json['package_length']),
-      packageWeight: _readDouble(json['package_weight']),
-      totalPrice: _readDouble(json['total_price']),
-      statusId: _readInt(json['status_id']),
-      createdAt: _readDateTime(json['created_at']),
-      updatedAt: _readDateTime(json['updated_at']),
-      startedAt: _readDateTime(json['started_at']),
-      finishedAt: _readDateTime(json['finished_at']),
-      cancelledAt: _readDateTime(json['cancelled_at']),
-    );
-  }
+  bool get isActive => statusId >= 1 && statusId <= 4;
+  String get vehicleCategoryLabel =>
+      requiredVehicleTypeName ?? 'Categoria #$requiredVehicleTypeId';
+  String get originLabel => details?.originLabel ?? 'Coleta não informada';
+  String get destinationLabel => details?.destinationLabel ?? 'Entrega não informada';
+  double get packageWeight => details?.packageWeight ?? 0;
 
-  String get statusLabel {
-    return switch (statusId) {
-      1 => 'AGUARDANDO ACEITE',
-      2 => 'AGUARDANDO INICIO',
-      3 => 'A CAMINHO DA COLETA',
-      4 => 'A CAMINHO DA ENTREGA',
-      5 => 'FINALIZADA',
-      6 => 'CANCELADA',
-      _ => 'STATUS $statusId',
-    };
-  }
-
-  String get originLabel {
-    return _buildAddressLabel(
-      address: originAddress,
-      complement: originAddressComplement,
-      referencePoint: originReferencePoint,
-      latitude: originLatitude,
-      longitude: originLongitude,
-    );
-  }
-
-  String get destinationLabel {
-    return _buildAddressLabel(
-      address: destinationAddress,
-      complement: destinationAddressComplement,
-      referencePoint: destinationReferencePoint,
-      latitude: destinationLatitude,
-      longitude: destinationLongitude,
-    );
-  }
+  String get statusLabel => switch (statusId) {
+    1 => 'AGUARDANDO ACEITE',
+    2 => 'AGUARDANDO INÍCIO',
+    3 => 'A CAMINHO DA COLETA',
+    4 => 'A CAMINHO DA ENTREGA',
+    5 => 'FINALIZADA',
+    6 => 'CANCELADA',
+    7 => 'NÃO ATENDIDA',
+    _ => 'STATUS $statusId',
+  };
 }
 
 class RideOfferModel {
   final int id;
   final int rideId;
   final int driverUserId;
+  final int vehicleId;
   final int statusId;
-  final DateTime? expiresAt;
-  final int attemptOrder;
-  final DateTime? createdAt;
+  final DateTime expiresAt;
+  final DateTime createdAt;
   final DateTime? updatedAt;
 
-  const RideOfferModel({
-    required this.id,
-    required this.rideId,
-    required this.driverUserId,
-    required this.statusId,
-    required this.expiresAt,
-    required this.attemptOrder,
-    this.createdAt,
-    this.updatedAt,
-  });
-
-  factory RideOfferModel.fromJson(Map<String, dynamic> json) {
-    return RideOfferModel(
-      id: _readInt(json['id']),
-      rideId: _readInt(json['ride_id']),
-      driverUserId: _readInt(json['driver_user_id']),
-      statusId: _readInt(json['status_id']),
-      expiresAt: _readDateTime(json['expires_at']),
-      attemptOrder: _readInt(json['attempt_order']),
-      createdAt: _readDateTime(json['created_at']),
-      updatedAt: _readDateTime(json['updated_at']),
-    );
-  }
+  RideOfferModel.fromJson(Map<String, dynamic> json)
+      : id = _readInt(json['id']),
+        rideId = _readInt(json['ride_id']),
+        driverUserId = _readInt(json['driver_user_id']),
+        vehicleId = _readInt(json['vehicle_id']),
+        statusId = _readInt(json['status_id']),
+        expiresAt = _readDateTime(json['expires_at']) ??
+            (throw const FormatException('Oferta sem prazo de expiração válido.')),
+        createdAt = _readDateTime(json['created_at']) ??
+            (throw const FormatException('Oferta sem data de criação válida.')),
+        updatedAt = _readDateTime(json['updated_at']);
 
   bool get isPending => statusId == 1;
-
-  String get statusLabel {
-    return switch (statusId) {
-      1 => 'PENDENTE',
-      2 => 'ACEITA',
-      3 => 'RECUSADA',
-      4 => 'EXPIRADA',
-      _ => 'STATUS $statusId',
-    };
+  bool get isExpired => !expiresAt.isAfter(DateTime.now().toUtc());
+  int get remainingSeconds {
+    final milliseconds = expiresAt.difference(DateTime.now().toUtc()).inMilliseconds;
+    return milliseconds <= 0 ? 0 : (milliseconds / 1000).ceil();
   }
+  double get remainingFraction {
+    final duration = expiresAt.difference(createdAt).inMilliseconds;
+    if (duration <= 0) return 0;
+    return (expiresAt.difference(DateTime.now().toUtc()).inMilliseconds / duration)
+        .clamp(0.0, 1.0).toDouble();
+  }
+
+  String get statusLabel => switch (statusId) {
+    1 => 'PENDENTE',
+    2 => 'ACEITA',
+    3 => 'RECUSADA',
+    4 => 'EXPIRADA',
+    _ => 'STATUS $statusId',
+  };
 }
 
 class DriverWalletModel {
@@ -293,6 +278,19 @@ double _readDouble(dynamic value) {
   return double.tryParse(value?.toString() ?? '') ?? 0;
 }
 
+class PendingRideOfferModel {
+  final RideOfferModel offer;
+  final DriverRideModel ride;
+
+  const PendingRideOfferModel({required this.offer, required this.ride});
+}
+
+double? _readNullableDouble(dynamic value) {
+  if (value == null) return null;
+  if (value is num) return value.toDouble();
+  return double.tryParse(value.toString());
+}
+
 String _readString(dynamic value) => _readNullableString(value) ?? '';
 
 String? _readNullableString(dynamic value) {
@@ -327,7 +325,20 @@ String _buildAddressLabel({
 
 DateTime? _readDateTime(dynamic value) {
   if (value is String && value.trim().isNotEmpty) {
-    return DateTime.tryParse(value);
+    final text = value.trim();
+    final hasZone = RegExp(r'(Z|[+-]\\d{2}:?\\d{2})
   }
   return null;
+}, caseSensitive: false).hasMatch(text);
+    return DateTime.tryParse(hasZone ? text : '${text}Z')?.toUtc();
+  }
+  return null;
+}
+
+double _readAmount(dynamic value) {
+  final amount = double.tryParse(value?.toString() ?? '');
+  if (amount == null || !amount.isFinite || amount < 0) {
+    throw const FormatException('Valor da corrida inválido.');
+  }
+  return amount;
 }

@@ -42,7 +42,6 @@ abstract class Endpoints {
       '$rides/route?origin_latitude=${Uri.encodeQueryComponent(originLatitude.toString())}&origin_longitude=${Uri.encodeQueryComponent(originLongitude.toString())}&destination_latitude=${Uri.encodeQueryComponent(destinationLatitude.toString())}&destination_longitude=${Uri.encodeQueryComponent(destinationLongitude.toString())}';
   static const String rideQuote = '$rides/quote';
   static const String createRide = '$rides/create';
-  static const String availableRides = '$rides/available';
   static String startRide(int rideId) => '$rides/$rideId/start';
   static String completeRidePickup(int rideId) =>
       '$rides/$rideId/pickup-completed';
@@ -51,8 +50,10 @@ abstract class Endpoints {
   static const String rideOffers = '/offers';
   static String offersByDriver(int driverUserId) =>
       '$rideOffers/driver/$driverUserId';
-  static String acceptOffer(int offerId) => '$rideOffers/$offerId/accept';
-  static String rejectOffer(int offerId) => '$rideOffers/$offerId/reject';
+  static String acceptOffer(int offerId, int driverUserId) =>
+      '$rideOffers/$offerId/accept?driver_user_id=$driverUserId';
+  static String rejectOffer(int offerId, int driverUserId) =>
+      '$rideOffers/$offerId/reject?driver_user_id=$driverUserId';
 
   static const String driverLocations = '/driver-locations';
   static const String driverLocationMe = '$driverLocations/me';
@@ -64,7 +65,6 @@ abstract class Endpoints {
   static String driverLocationOffline(int driverUserId) =>
       '$driverLocations/$driverUserId/offline';
 
-  static const String rideDispatchJob = '/jobs/ride-dispatch';
 
   static const String driverEarnings = '/driver_earnings';
   static String driverEarningsByDriver(int driverUserId) =>

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../../../app/design_system/design_system.dart';
@@ -187,12 +189,17 @@ class _ClientRideInProgressSectionState
     extends State<_ClientRideInProgressSection> {
   late final HttpService _httpService;
   late Future<List<DriverRideModel>> _ridesFuture;
+  Timer? _refreshTimer;
 
   @override
   void initState() {
     super.initState();
     _httpService = HttpService();
     _ridesFuture = _loadRides();
+    _refreshTimer = Timer.periodic(
+      const Duration(seconds: 8),
+      (_) => _reload(),
+    );
   }
 
   @override
@@ -205,6 +212,7 @@ class _ClientRideInProgressSectionState
 
   @override
   void dispose() {
+    _refreshTimer?.cancel();
     _httpService.dispose();
     super.dispose();
   }

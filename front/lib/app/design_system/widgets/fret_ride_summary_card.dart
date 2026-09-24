@@ -228,6 +228,14 @@ class _FretRideStatusVisualStyle {
         dotColor: Color(0xFF777777),
         icon: Icons.close_rounded,
       ),
+      7 => const _FretRideStatusVisualStyle(
+        label: 'Nao atendida',
+        backgroundColor: Color(0xFFF0F0F0),
+        borderColor: Color(0xFFD0D0D0),
+        foregroundColor: Color(0xFF777777),
+        dotColor: Color(0xFF777777),
+        icon: Icons.search_off_rounded,
+      ),
       _ => const _FretRideStatusVisualStyle(
         label: 'Status',
         backgroundColor: FretColors.neutral100,

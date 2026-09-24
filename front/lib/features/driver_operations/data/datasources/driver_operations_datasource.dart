@@ -25,9 +25,29 @@ class DriverOperationsDatasource {
     }
   }
 
-  Future<RideOfferModel> acceptOffer(int offerId) async {
+  Future<PendingRideOfferModel?> getPendingOffer(int driverUserId) async {
+    final offers = await listOffersByDriver(driverUserId);
+    RideOfferModel? pending;
+    for (final offer in offers) {
+      if (offer.driverUserId == driverUserId && offer.isPending && !offer.isExpired) {
+        pending = offer;
+        break;
+      }
+    }
+    if (pending == null) return null;
+
+    final ride = await getRideById(pending.rideId);
+    if (pending.isExpired || ride.statusId != 1 || ride.driverUserId != null) {
+      return null;
+    }
+    return PendingRideOfferModel(offer: pending, ride: ride);
+  }
+
+  Future<RideOfferModel> acceptOffer(int offerId, int driverUserId) async {
     try {
-      final response = await _httpService.put(Endpoints.acceptOffer(offerId));
+      final response = await _httpService.put(
+        Endpoints.acceptOffer(offerId, driverUserId),
+      );
       return RideOfferModel.fromJson(response);
     } on HttpServiceException catch (e) {
       throw DriverOperationsDatasourceException(
@@ -37,9 +57,11 @@ class DriverOperationsDatasource {
     }
   }
 
-  Future<RideOfferModel> rejectOffer(int offerId) async {
+  Future<RideOfferModel> rejectOffer(int offerId, int driverUserId) async {
     try {
-      final response = await _httpService.put(Endpoints.rejectOffer(offerId));
+      final response = await _httpService.put(
+        Endpoints.rejectOffer(offerId, driverUserId),
+      );
       return RideOfferModel.fromJson(response);
     } on HttpServiceException catch (e) {
       throw DriverOperationsDatasourceException(

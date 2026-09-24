@@ -243,7 +243,7 @@ class HttpService {
     int statusCode,
     bool authenticated,
   ) async {
-    if (!authenticated || (statusCode != 401 && statusCode != 403)) {
+    if (!authenticated || statusCode != 401) {
       return;
     }
 
@@ -272,6 +272,9 @@ class HttpService {
 
   static String _extractErrorMessage(Map<String, dynamic> data) {
     final dynamic detail = data['detail'];
+    if (detail is Map && detail['message'] is String) {
+      return detail['message'] as String;
+    }
     if (detail is String && detail.isNotEmpty) {
       return detail;
     }

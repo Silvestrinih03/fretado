@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../../../app/design_system/design_system.dart';
@@ -5,6 +7,8 @@ import '../../../../core/endpoints.dart';
 import '../../../../core/enums/home_profile.dart';
 import '../../../../core/services/http_service.dart';
 import '../../../driver_operations/data/models/driver_operation_models.dart';
+import '../../../driver_operations/data/datasources/driver_operations_datasource.dart';
+import '../../../driver_operations/data/repositories/driver_operations_repository_impl.dart';
 import '../../../driver_operations/presentation/pages/driver_operations_page.dart';
 import '../../../documents/presentation/pages/my_documents.dart';
 import '../../../rides/presentation/pages/ride_history_page.dart';
@@ -64,7 +68,12 @@ class _DriverHomeContentState extends State<DriverHomeContent> {
         const SizedBox(height: 10),
         _DriverAvailabilitySummary(
           controller: widget.availabilityController,
-          onFindRequests: () => _openAvailableRequests(context),
+        ),
+        const SizedBox(height: 14),
+        _DriverPendingOfferSection(
+          userId: widget.userId,
+          refreshVersion: _refreshVersion,
+          onAccepted: _reloadHomeData,
         ),
         const SizedBox(height: 14),
         _BalanceCard(
@@ -140,242 +149,6 @@ class _DriverHomeContentState extends State<DriverHomeContent> {
     _reloadHomeData();
   }
 
-  Future<void> _openAvailableRequests(BuildContext context) async {
-    await Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (_) => _AvailableRideRequestsPage(userId: widget.userId),
-      ),
-    );
-
-    _reloadHomeData();
-  }
-}
-
-class _AvailableRideRequestsPage extends StatefulWidget {
-  final int userId;
-
-  const _AvailableRideRequestsPage({required this.userId});
-
-  @override
-  State<_AvailableRideRequestsPage> createState() =>
-      _AvailableRideRequestsPageState();
-}
-
-class _AvailableRideRequestsPageState
-    extends State<_AvailableRideRequestsPage> {
-  late final HttpService _httpService;
-  late Future<List<DriverRideModel>> _ridesFuture;
-  int? _rideInActionId;
-
-  @override
-  void initState() {
-    super.initState();
-    _httpService = HttpService();
-    _ridesFuture = _loadRides();
-  }
-
-  @override
-  void dispose() {
-    _httpService.dispose();
-    super.dispose();
-  }
-
-  Future<List<DriverRideModel>> _loadRides() async {
-    final response = await _httpService.get(Endpoints.availableRides);
-    final dynamic data = response['data'];
-
-    if (data is! List<dynamic>) {
-      return <DriverRideModel>[];
-    }
-
-    final rides = data
-        .whereType<Map<String, dynamic>>()
-        .map(DriverRideModel.fromJson)
-        .toList();
-
-    rides.sort((a, b) {
-      final DateTime aDate =
-          a.createdAt ?? DateTime.fromMillisecondsSinceEpoch(0);
-      final DateTime bDate =
-          b.createdAt ?? DateTime.fromMillisecondsSinceEpoch(0);
-      return bDate.compareTo(aDate);
-    });
-
-    return rides;
-  }
-
-  void _reload() {
-    setState(() {
-      _ridesFuture = _loadRides();
-    });
-  }
-
-  Future<void> _acceptRide(DriverRideModel ride) async {
-    setState(() => _rideInActionId = ride.id);
-
-    try {
-      final offer = await _httpService.post(
-        Endpoints.rideOffers,
-        body: {
-          'ride_id': ride.id,
-          'driver_user_id': widget.userId,
-          'status_id': 1,
-        },
-      );
-
-      final offerId = int.tryParse(offer['id']?.toString() ?? '');
-      if (offerId == null) {
-        throw const HttpServiceException(
-          message: 'Oferta criada sem identificador.',
-        );
-      }
-
-      await _httpService.put(Endpoints.acceptOffer(offerId));
-
-      if (!mounted) return;
-
-      _showMessage('Corrida aceita.', isError: false);
-      _reload();
-    } on HttpServiceException catch (e) {
-      _showMessage(e.message);
-    } catch (_) {
-      _showMessage('Nao foi possivel aceitar a corrida.');
-    } finally {
-      if (mounted) {
-        setState(() => _rideInActionId = null);
-      }
-    }
-  }
-
-  void _showMessage(String message, {bool isError = true}) {
-    if (!mounted) return;
-
-    if (isError) {
-      showFretErrorPopup(context, message: message);
-      return;
-    }
-
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(message)));
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF3F4F8),
-      body: SafeArea(
-        child: Column(
-          children: [
-            _AvailableRequestsHeader(onRefresh: _reload),
-            Expanded(
-              child: FutureBuilder<List<DriverRideModel>>(
-                future: _ridesFuture,
-                builder: (context, snapshot) {
-                  final bool isLoading =
-                      snapshot.connectionState != ConnectionState.done;
-                  final rides = snapshot.data ?? <DriverRideModel>[];
-
-                  if (isLoading) {
-                    return const Center(child: CircularProgressIndicator());
-                  }
-
-                  if (snapshot.hasError) {
-                    return Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: _DriverRideStateCard(
-                        icon: Icons.error_outline_rounded,
-                        title: 'Nao foi possivel carregar',
-                        subtitle: 'Verifique sua conexao e tente novamente.',
-                        actionLabel: 'Tentar novamente',
-                        onTap: _reload,
-                      ),
-                    );
-                  }
-
-                  if (rides.isEmpty) {
-                    return const Padding(
-                      padding: EdgeInsets.all(16),
-                      child: _DriverRideStateCard(
-                        icon: Icons.search_off_rounded,
-                        title: 'Nenhuma solicitacao encontrada',
-                        subtitle: 'Corridas sem motorista aparecerao aqui.',
-                      ),
-                    );
-                  }
-
-                  return ListView.separated(
-                    padding: const EdgeInsets.fromLTRB(16, 14, 16, 18),
-                    itemCount: rides.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 10),
-                    itemBuilder: (context, index) {
-                      final ride = rides[index];
-                      return _DriverActiveRideCard(
-                        ride: ride,
-                        isBusy: _rideInActionId == ride.id,
-                        customActionLabel: 'Aceitar corrida',
-                        customActionIcon: Icons.check_rounded,
-                        onAdvance: () => _acceptRide(ride),
-                      );
-                    },
-                  );
-                },
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _AvailableRequestsHeader extends StatelessWidget {
-  final VoidCallback onRefresh;
-
-  const _AvailableRequestsHeader({required this.onRefresh});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: 62,
-      width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(10, 8, 12, 8),
-      color: const Color(0xFFF3F4F8),
-      child: Row(
-        children: [
-          IconButton(
-            onPressed: () => Navigator.of(context).maybePop(),
-            icon: const Icon(
-              Icons.arrow_back_ios_new_rounded,
-              color: FretColors.loginFooterLink,
-              size: 20,
-            ),
-          ),
-          const SizedBox(width: 4),
-          const Expanded(
-            child: Text(
-              'Solicitacoes disponiveis',
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                color: FretColors.loginFooterLink,
-                fontSize: 21,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-          ),
-          IconButton(
-            tooltip: 'Atualizar',
-            onPressed: onRefresh,
-            icon: const Icon(
-              Icons.refresh_rounded,
-              color: FretColors.loginFooterLink,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 }
 
 class _DriverRequiredSetupAlert extends StatefulWidget {
@@ -679,13 +452,233 @@ class _DriverRequiredSetupStatus {
   }
 }
 
+class _DriverPendingOfferSection extends StatefulWidget {
+  final int userId;
+  final int refreshVersion;
+  final VoidCallback onAccepted;
+
+  const _DriverPendingOfferSection({
+    required this.userId,
+    required this.refreshVersion,
+    required this.onAccepted,
+  });
+
+  @override
+  State<_DriverPendingOfferSection> createState() =>
+      _DriverPendingOfferSectionState();
+}
+
+class _DriverPendingOfferSectionState
+    extends State<_DriverPendingOfferSection> {
+  late final HttpService _httpService;
+  late final DriverOperationsRepositoryImpl _repository;
+  Timer? _pollTimer;
+  Timer? _countdownTimer;
+  PendingRideOfferModel? _pending;
+  bool _loading = true;
+  bool _acting = false;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _httpService = HttpService();
+    _repository = DriverOperationsRepositoryImpl(
+      DriverOperationsDatasource(_httpService),
+    );
+    _load();
+    _pollTimer = Timer.periodic(
+      const Duration(seconds: 8),
+      (_) => _load(silent: true),
+    );
+    _countdownTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (!mounted || _pending == null) return;
+      if (_pending!.offer.isExpired) {
+        setState(() => _pending = null);
+        _load(silent: true);
+      } else {
+        setState(() {});
+      }
+    });
+  }
+
+  @override
+  void didUpdateWidget(covariant _DriverPendingOfferSection oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.userId != widget.userId ||
+        oldWidget.refreshVersion != widget.refreshVersion) {
+      _load();
+    }
+  }
+
+  @override
+  void dispose() {
+    _pollTimer?.cancel();
+    _countdownTimer?.cancel();
+    _httpService.dispose();
+    super.dispose();
+  }
+
+  Future<void> _load({bool silent = false}) async {
+    if (!silent && mounted) setState(() => _loading = true);
+    try {
+      final pending = await _repository.getPendingOffer(widget.userId);
+      if (!mounted) return;
+      setState(() {
+        _pending = pending;
+        _error = null;
+      });
+    } catch (_) {
+      if (!mounted || silent) return;
+      setState(() => _error = 'Nao foi possivel consultar suas ofertas.');
+    } finally {
+      if (mounted && !silent) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _respond({required bool accept}) async {
+    final pending = _pending;
+    if (pending == null || _acting) return;
+    setState(() => _acting = true);
+    try {
+      if (accept) {
+        await _repository.acceptOffer(pending.offer.id, widget.userId);
+      } else {
+        await _repository.rejectOffer(pending.offer.id, widget.userId);
+      }
+      if (!mounted) return;
+      setState(() => _pending = null);
+      if (accept) widget.onAccepted();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(accept ? 'Oferta aceita.' : 'Oferta recusada.')),
+      );
+      await _load(silent: true);
+    } catch (error) {
+      if (!mounted) return;
+      showFretErrorPopup(context, message: error.toString());
+      await _load(silent: true);
+    } finally {
+      if (mounted) setState(() => _acting = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_loading && _pending == null) {
+      return const _DriverRideStateCard(
+        icon: Icons.notifications_active_outlined,
+        title: 'Verificando novas ofertas',
+        subtitle: 'Aguarde enquanto consultamos o backend.',
+      );
+    }
+    if (_error != null) {
+      return _DriverRideStateCard(
+        icon: Icons.error_outline_rounded,
+        title: 'Ofertas indisponiveis',
+        subtitle: _error!,
+        actionLabel: 'Tentar novamente',
+        onTap: _load,
+      );
+    }
+    final pending = _pending;
+    if (pending == null) {
+      return const _DriverRideStateCard(
+        icon: Icons.notifications_none_rounded,
+        title: 'Aguardando nova oferta',
+        subtitle: 'Quando uma corrida for destinada a voce, ela aparecera aqui.',
+      );
+    }
+
+    final remaining = pending.offer.expiresAt!
+        .difference(DateTime.now().toUtc());
+    final seconds = remaining.inSeconds.clamp(0, 5999);
+    final countdown =
+        '${(seconds ~/ 60).toString().padLeft(2, '0')}:${(seconds % 60).toString().padLeft(2, '0')}';
+    final ride = pending.ride;
+
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: FretColors.brandGraphite,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: FretColors.brandGoldDark),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Expanded(
+                child: Text('NOVA OFERTA', style: TextStyle(
+                  color: FretColors.brandGold, fontSize: 11,
+                  fontWeight: FontWeight.w900, letterSpacing: 1.2,
+                )),
+              ),
+              Text(countdown, style: const TextStyle(
+                color: FretColors.white, fontSize: 22,
+                fontWeight: FontWeight.w900,
+              )),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Text(ride.originLabel, style: const TextStyle(
+            color: FretColors.white, fontSize: 15, fontWeight: FontWeight.w800,
+          )),
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 8),
+            child: Icon(Icons.arrow_downward_rounded,
+              color: FretColors.brandGold, size: 18),
+          ),
+          Text(ride.destinationLabel, style: const TextStyle(
+            color: FretColors.white, fontSize: 15, fontWeight: FontWeight.w800,
+          )),
+          const SizedBox(height: 16),
+          Wrap(spacing: 8, runSpacing: 8, children: [
+            _OfferMetric(label: 'R\$ ${ride.totalPrice.toStringAsFixed(2)}'),
+            _OfferMetric(label: '${ride.packageWeight.toStringAsFixed(1)} kg'),
+            _OfferMetric(label: ride.vehicleCategoryLabel),
+          ]),
+          const SizedBox(height: 18),
+          Row(children: [
+            Expanded(child: OutlinedButton(
+              onPressed: _acting ? null : () => _respond(accept: false),
+              style: OutlinedButton.styleFrom(foregroundColor: FretColors.white),
+              child: const Text('Recusar'),
+            )),
+            const SizedBox(width: 10),
+            Expanded(child: ElevatedButton(
+              onPressed: _acting ? null : () => _respond(accept: true),
+              child: Text(_acting ? 'Aguarde...' : 'Aceitar'),
+            )),
+          ]),
+        ],
+      ),
+    );
+  }
+}
+
+class _OfferMetric extends StatelessWidget {
+  final String label;
+  const _OfferMetric({required this.label});
+
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+    decoration: BoxDecoration(
+      color: const Color(0x1FFFFFFF),
+      borderRadius: BorderRadius.circular(8),
+    ),
+    child: Text(label, style: const TextStyle(
+      color: FretColors.white, fontSize: 11, fontWeight: FontWeight.w700,
+    )),
+  );
+}
+
 class _DriverAvailabilitySummary extends StatelessWidget {
   final DriverAvailabilityController controller;
-  final VoidCallback onFindRequests;
 
   const _DriverAvailabilitySummary({
     required this.controller,
-    required this.onFindRequests,
   });
 
   @override
@@ -713,14 +706,11 @@ class _DriverAvailabilitySummary extends StatelessWidget {
               ),
               const SizedBox(height: 10),
             ],
-            SizedBox(
-              height: 46,
-              child: ElevatedButton.icon(
-                onPressed: onFindRequests,
-                icon: const Icon(Icons.search_rounded),
-                label: const Text('Encontrar solicitacoes'),
+            if (!showOfflineAlert && !showStatusMessage)
+              const _DriverAvailabilityMessage(
+                message: 'Voce esta online. Novas ofertas aparecerao automaticamente.',
+                isError: false,
               ),
-            ),
           ],
         );
       },

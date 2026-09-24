@@ -5,6 +5,7 @@ import '../../../../core/endpoints.dart';
 import '../../../../core/enums/home_profile.dart';
 import '../../../../core/services/http_service.dart';
 import '../../../home/presentation/pages/home_page.dart';
+import '../../../rides/presentation/pages/ride_tracking_page.dart';
 import '../../../payments/data/datasources/user_card_datasource.dart';
 import '../../../payments/data/models/user_card_model.dart';
 import '../../../payments/presentation/pages/edit_card_data_page.dart';
@@ -135,11 +136,9 @@ class _ShippingPaymentPageState extends State<ShippingPaymentPage> {
         Endpoints.createRide,
         body: {
           'client_user_id': widget.userId,
-          'driver_user_id': null,
           ...widget.addressData.toRideJson(),
           ...widget.packageData.toQuoteJson(),
           'expected_total_price': _quote.totalPrice.toStringAsFixed(2),
-          'status_id': 1,
         },
       );
       _rideCreated = true;
@@ -148,16 +147,20 @@ class _ShippingPaymentPageState extends State<ShippingPaymentPage> {
         return;
       }
 
-      final rideId = response['id']?.toString();
+      final rideId = int.tryParse(response['id']?.toString() ?? '');
 
       final bool shouldReturnHome = await _showPaymentSuccessDialog(
-        rideId: rideId,
+        rideId: rideId?.toString(),
         cardLastFour: selectedCard.lastFour,
         totalPrice: double.parse(response['total_price'].toString()),
       );
 
       if (shouldReturnHome) {
-        _returnToHome();
+        if (rideId == null) {
+          _returnToHome();
+        } else {
+          _openTracking(rideId);
+        }
       }
     } on HttpServiceException catch (e) {
       final updatedQuote = e.data?['quote'];
@@ -172,7 +175,7 @@ class _ShippingPaymentPageState extends State<ShippingPaymentPage> {
       }
       _showMessage(e.message);
     } catch (_) {
-      _showMessage('Nao foi possivel finalizar o pagamento agora.');
+      _showMessage('Nao foi possivel criar a corrida agora.');
     } finally {
       if (mounted) {
         setState(() => _isPaying = false);
@@ -208,6 +211,19 @@ class _ShippingPaymentPageState extends State<ShippingPaymentPage> {
       MaterialPageRoute<void>(
         builder: (_) =>
             HomePage(profile: HomeProfileEnum.client, userId: widget.userId),
+      ),
+      (route) => false,
+    );
+  }
+
+  void _openTracking(int rideId) {
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute<void>(
+        builder: (_) => RideTrackingPage(
+          rideId: rideId,
+          userId: widget.userId,
+          vehicleCategory: _quote.vehicleLabel,
+        ),
       ),
       (route) => false,
     );
@@ -258,7 +274,7 @@ class _ShippingPaymentPageState extends State<ShippingPaymentPage> {
                   ),
                   const SizedBox(height: 18),
                   const Text(
-                    'Pagamento',
+                    'Cartão cadastrado',
                     style: TextStyle(
                       color: FretColors.neutral900,
                       fontSize: 23,
@@ -267,7 +283,7 @@ class _ShippingPaymentPageState extends State<ShippingPaymentPage> {
                   ),
                   const SizedBox(height: 8),
                   const Text(
-                    'Selecione o método de pagamento para prosseguir.',
+                    'Para solicitar o frete, confirme que você possui um cartão cadastrado.',
                     style: TextStyle(
                       color: _mutedText,
                       fontSize: 13,
@@ -285,7 +301,7 @@ class _ShippingPaymentPageState extends State<ShippingPaymentPage> {
                     children: [
                       const Expanded(
                         child: Text(
-                          'Forma de Pagamento',
+                          'Cartão para verificação',
                           style: TextStyle(
                             color: FretColors.neutral900,
                             fontSize: 15,
@@ -393,7 +409,7 @@ class _PaymentHeader extends StatelessWidget {
           ),
           const SizedBox(width: 4),
           const Text(
-            'Pagamento',
+            'Verificar cartão',
             style: TextStyle(
               color: _ShippingPaymentPageState._primaryBlue,
               fontSize: 14,
@@ -478,7 +494,7 @@ class _PaymentSuccessDialog extends StatelessWidget {
                           ),
                           SizedBox(height: 6),
                           Text(
-                            'Pagamento confirmado.\nEstamos buscando motoristas disponiveis para sua corrida.',
+                            'Cartão cadastrado verificado.\nEstamos buscando motoristas disponíveis para sua corrida.',
                             style: TextStyle(
                               color: FretColors.neutral700,
                               fontSize: 14,
@@ -510,7 +526,7 @@ class _PaymentSuccessDialog extends StatelessWidget {
                       if (rideId != null) const SizedBox(height: 10),
                       _PaymentSuccessInfoRow(
                         icon: Icons.credit_card_rounded,
-                        label: 'Pagamento',
+                        label: 'Cartão verificado',
                         value: 'Cartao final $cardLastFour',
                       ),
                       const SizedBox(height: 10),

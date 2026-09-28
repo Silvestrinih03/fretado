@@ -125,3 +125,9 @@ class RideResponse(BaseModel):
 class RideFullResponse(RideResponse):
     details: RideDetailResponse | None = None
     required_vehicle_type_name: str | None = None
+
+
+class RideHistoryPageResponse(BaseModel):
+    items: list[RideFullResponse]
+    next_cursor: str | None = None
+    has_more: bool

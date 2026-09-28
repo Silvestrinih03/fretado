@@ -2,20 +2,16 @@ import 'package:flutter/material.dart';
 
 import '../../../../app/design_system/design_system.dart';
 import '../../../../core/endpoints.dart';
-import '../../../../core/enums/home_profile.dart';
 import '../../../../core/services/http_service.dart';
 import '../../../driver_operations/data/models/driver_operation_models.dart';
+import '../../data/models/ride_history_page_model.dart';
 
 class RideHistoryPage extends StatefulWidget {
-  final int userId;
-  final HomeProfileEnum profile;
   final bool showBackButton;
   final int refreshVersion;
 
   const RideHistoryPage({
     super.key,
-    required this.userId,
-    required this.profile,
     this.showBackButton = true,
     this.refreshVersion = 0,
   });
@@ -25,67 +21,135 @@ class RideHistoryPage extends StatefulWidget {
 }
 
 class _RideHistoryPageState extends State<RideHistoryPage> {
-  late final HttpService _httpService;
-  late Future<List<DriverRideModel>> _ridesFuture;
-  int _selectedFilterIndex = 0;
+  static const int _pageSize = 20;
 
-  bool get _isDriver => widget.profile == HomeProfileEnum.driver;
+  late final HttpService _httpService;
+  late final ScrollController _scrollController;
+  final List<DriverRideModel> _rides = <DriverRideModel>[];
+
+  int _selectedFilterIndex = 0;
+  int _requestVersion = 0;
+  bool _isInitialLoading = true;
+  bool _isLoadingMore = false;
+  bool _hasMore = true;
+  String? _nextCursor;
+  String? _initialError;
+  String? _loadMoreError;
 
   @override
   void initState() {
     super.initState();
     _httpService = HttpService();
-    _ridesFuture = _loadRides();
+    _scrollController = ScrollController()..addListener(_onScroll);
+    _loadFirstPage();
   }
 
   @override
   void didUpdateWidget(covariant RideHistoryPage oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.userId != widget.userId ||
-        oldWidget.profile != widget.profile ||
-        oldWidget.refreshVersion != widget.refreshVersion) {
-      _ridesFuture = _loadRides();
+    if (oldWidget.refreshVersion != widget.refreshVersion) {
+      _loadFirstPage();
     }
   }
 
   @override
   void dispose() {
+    _requestVersion++;
+    _scrollController
+      ..removeListener(_onScroll)
+      ..dispose();
     _httpService.dispose();
     super.dispose();
   }
 
-  Future<List<DriverRideModel>> _loadRides() async {
+  RideHistoryStatusGroup get _selectedStatusGroup =>
+      RideHistoryStatusGroup.values[_selectedFilterIndex];
+
+  Future<RideHistoryPageModel> _loadPage(String? cursor) async {
     final response = await _httpService.get(
-      _isDriver
-          ? Endpoints.ridesByDriver(widget.userId)
-          : Endpoints.ridesByClient(widget.userId),
+      Endpoints.ridesMe(
+        statusGroup: _selectedStatusGroup.apiValue,
+        limit: _pageSize,
+        cursor: cursor,
+      ),
     );
-    final dynamic data = response['data'];
-
-    if (data is! List<dynamic>) {
-      return <DriverRideModel>[];
-    }
-
-    final rides = data
-        .whereType<Map<String, dynamic>>()
-        .map(DriverRideModel.fromJson)
-        .toList();
-
-    rides.sort((a, b) {
-      final DateTime aDate =
-          a.createdAt ?? DateTime.fromMillisecondsSinceEpoch(0);
-      final DateTime bDate =
-          b.createdAt ?? DateTime.fromMillisecondsSinceEpoch(0);
-      return bDate.compareTo(aDate);
-    });
-
-    return rides;
+    return RideHistoryPageModel.fromJson(response);
   }
 
-  void _reload() {
+  Future<void> _loadFirstPage() async {
+    final int requestVersion = ++_requestVersion;
+    if (_scrollController.hasClients) {
+      _scrollController.jumpTo(0);
+    }
     setState(() {
-      _ridesFuture = _loadRides();
+      _rides.clear();
+      _nextCursor = null;
+      _hasMore = true;
+      _isInitialLoading = true;
+      _isLoadingMore = false;
+      _initialError = null;
+      _loadMoreError = null;
     });
+
+    try {
+      final page = await _loadPage(null);
+      if (!mounted || requestVersion != _requestVersion) return;
+
+      setState(() {
+        _rides.addAll(page.items);
+        _nextCursor = page.nextCursor;
+        _hasMore = page.hasMore;
+        _isInitialLoading = false;
+      });
+    } catch (_) {
+      if (!mounted || requestVersion != _requestVersion) return;
+      setState(() {
+        _initialError = 'Não foi possível carregar';
+        _isInitialLoading = false;
+      });
+    }
+  }
+
+  Future<void> _loadMore() async {
+    if (_isInitialLoading || _isLoadingMore || !_hasMore) return;
+
+    final int requestVersion = _requestVersion;
+    final String? cursor = _nextCursor;
+    setState(() {
+      _isLoadingMore = true;
+      _loadMoreError = null;
+    });
+
+    try {
+      final page = await _loadPage(cursor);
+      if (!mounted || requestVersion != _requestVersion) return;
+
+      setState(() {
+        _rides.addAll(page.items);
+        _nextCursor = page.nextCursor;
+        _hasMore = page.hasMore;
+        _isLoadingMore = false;
+      });
+    } catch (_) {
+      if (!mounted || requestVersion != _requestVersion) return;
+      setState(() {
+        _loadMoreError = 'Não foi possível carregar mais corridas.';
+        _isLoadingMore = false;
+      });
+    }
+  }
+
+  void _onScroll() {
+    if (!_scrollController.hasClients) return;
+    if (_scrollController.position.extentAfter < 300) {
+      _loadMore();
+    }
+  }
+
+  void _selectFilter(int index) {
+    if (_selectedFilterIndex == index) return;
+    _selectedFilterIndex = index;
+    _loadFirstPage();
   }
 
   @override
@@ -96,74 +160,87 @@ class _RideHistoryPageState extends State<RideHistoryPage> {
         child: Column(
           children: [
             _HistoryHeader(
-              onRefresh: _reload,
+              onRefresh: _loadFirstPage,
               showBackButton: widget.showBackButton,
             ),
             _HistoryFilters(
               selectedIndex: _selectedFilterIndex,
-              onSelected: (index) {
-                setState(() => _selectedFilterIndex = index);
-              },
+              onSelected: _selectFilter,
             ),
-            Expanded(
-              child: FutureBuilder<List<DriverRideModel>>(
-                future: _ridesFuture,
-                builder: (context, snapshot) {
-                  final bool isLoading =
-                      snapshot.connectionState != ConnectionState.done;
-                  final List<DriverRideModel> rides =
-                      (snapshot.data ?? <DriverRideModel>[]).where((ride) {
-                        return switch (_selectedFilterIndex) {
-                          1 => ride.statusId >= 1 && ride.statusId <= 4,
-                          2 => ride.statusId == 5,
-                          3 => ride.statusId == 6 || ride.statusId == 7,
-                          _ => true,
-                        };
-                      }).toList();
+            Expanded(child: _buildHistoryContent()),
+          ],
+        ),
+      ),
+    );
+  }
 
-                  if (isLoading) {
-                    return const Center(child: CircularProgressIndicator());
-                  }
+  Widget _buildHistoryContent() {
+    if (_isInitialLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
 
-                  if (snapshot.hasError) {
-                    return Padding(
-                      padding: const EdgeInsets.all(FretSpacements.spacement06),
-                      child: _HistoryStateCard(
-                        icon: Icons.error_outline_rounded,
-                        title: 'N?o foi poss?vel carregar',
-                        subtitle: 'Verifique sua conex?o e tente novamente.',
-                        actionLabel: 'Tentar novamente',
-                        onTap: _reload,
-                      ),
-                    );
-                  }
+    if (_initialError != null) {
+      return Padding(
+        padding: const EdgeInsets.all(FretSpacements.spacement06),
+        child: _HistoryStateCard(
+          icon: Icons.error_outline_rounded,
+          title: _initialError!,
+          subtitle: 'Verifique sua conexão e tente novamente.',
+          actionLabel: 'Tentar novamente',
+          onTap: _loadFirstPage,
+        ),
+      );
+    }
 
-                  if (rides.isEmpty) {
-                    return SingleChildScrollView(
-                      padding: const EdgeInsets.symmetric(horizontal: 20),
-                      child: _HistoryStateCard(
-                        icon: Icons.route_outlined,
-                        title: 'Nenhum resultado',
-                        subtitle: 'Não há corridas com o\nfiltro selecionado.',
-                        actionLabel: 'Ver todas',
-                        onTap: () => setState(() => _selectedFilterIndex = 0),
-                      ),
-                    );
-                  }
-
-                  return ListView.separated(
-                    padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
-                    itemCount: rides.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 12),
-                    itemBuilder: (context, index) {
-                      return _HistoryRideCard(ride: rides[index]);
-                    },
-                  );
-                },
-              ),
+    if (_rides.isEmpty) {
+      final bool isShowingAll = _selectedFilterIndex == 0;
+      return RefreshIndicator(
+        onRefresh: _loadFirstPage,
+        child: ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          children: [
+            _HistoryStateCard(
+              icon: Icons.route_outlined,
+              title: 'Nenhum resultado',
+              subtitle: 'Não há corridas com o\nfiltro selecionado.',
+              onTap: isShowingAll ? _loadFirstPage : () => _selectFilter(0),
             ),
           ],
         ),
+      );
+    }
+
+    final bool showFooter = _isLoadingMore || _loadMoreError != null;
+    return RefreshIndicator(
+      onRefresh: _loadFirstPage,
+      child: ListView.separated(
+        controller: _scrollController,
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+        itemCount: _rides.length + (showFooter ? 1 : 0),
+        separatorBuilder: (_, __) => const SizedBox(height: 12),
+        itemBuilder: (context, index) {
+          if (index < _rides.length) {
+            return _HistoryRideCard(ride: _rides[index]);
+          }
+          if (_isLoadingMore) {
+            return const Padding(
+              padding: EdgeInsets.symmetric(vertical: 16),
+              child: Center(child: CircularProgressIndicator()),
+            );
+          }
+          return Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            child: Center(
+              child: TextButton.icon(
+                onPressed: _loadMore,
+                icon: const Icon(Icons.refresh_rounded),
+                label: Text(_loadMoreError!),
+              ),
+            ),
+          );
+        },
       ),
     );
   }
@@ -238,9 +315,9 @@ class _HistoryFilters extends StatelessWidget {
 
   static const List<String> _filters = [
     'Todas',
-    'Em andamento',
-    'Finalizadas',
-    'Encerradas',
+    'Pendentes',
+    'Concluídas',
+    'Interrompidas',
   ];
 
   @override

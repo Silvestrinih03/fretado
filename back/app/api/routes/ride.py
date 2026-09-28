@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.database.database import get_db
 from app.api.routes.auth import get_current_user
+from app.enums.ride_history_status_group import RideHistoryStatusGroup
 from app.models.user import User
 from app.enums.user_type import UserTypeEnum
 
@@ -22,6 +23,7 @@ from app.services.ride_service import (
     get_ride_by_id,
     get_rides_by_client_user_id,
     get_rides_by_driver_user_id,
+    get_rides_for_user,
     get_rides_in_progress_by_user_id,
     start_ride,
     update_ride,
@@ -30,7 +32,7 @@ from app.services.ride_service import (
 from app.services.route_service import (
     MapboxRouteService,
 )
-from app.schemas.ride import RideCreate, RideFullResponse, RideGeocodeResponse, RideQuoteRequest, RideQuoteResponse, RideQuoteRouteResponse, RideResponse, RideUpdate
+from app.schemas.ride import RideCreate, RideFullResponse, RideGeocodeResponse, RideHistoryPageResponse, RideQuoteRequest, RideQuoteResponse, RideQuoteRouteResponse, RideUpdate
 
 router = APIRouter(
     prefix="/rides",
@@ -74,8 +76,29 @@ def create_from_quote(
 
 
 @router.get(
+    "/me",
+    response_model=RideHistoryPageResponse,
+)
+def get_my_rides(
+    status_group: RideHistoryStatusGroup = Query(RideHistoryStatusGroup.ALL),
+    limit: int = Query(20, ge=1, le=50),
+    cursor: str | None = Query(None, min_length=1),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    return get_rides_for_user(
+        db=db,
+        user=current_user,
+        status_group=status_group,
+        limit=limit,
+        cursor=cursor,
+    )
+
+
+@router.get(
     "/client/{client_user_id}",
     response_model=List[RideFullResponse],
+    deprecated=True,
 )
 def get_by_client(
     client_user_id: int,
@@ -93,6 +116,7 @@ def get_by_client(
 @router.get(
     "/driver/{driver_user_id}",
     response_model=List[RideFullResponse],
+    deprecated=True,
 )
 def get_by_driver(
     driver_user_id: int,

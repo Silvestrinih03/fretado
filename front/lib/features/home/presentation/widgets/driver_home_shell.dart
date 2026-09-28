@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../../../../app/design_system/design_system.dart';
-import '../../../../core/enums/home_profile.dart';
 import '../../../driver_operations/presentation/pages/driver_operations_page.dart';
 import '../../../profile/presentation/pages/driver_profile_page.dart';
 import '../../../rides/presentation/pages/ride_history_page.dart';
@@ -81,8 +80,6 @@ class _DriverHomeShellState extends State<DriverHomeShell> {
           ),
           _visitedTabs[1]
               ? RideHistoryPage(
-                  userId: widget.userId,
-                  profile: HomeProfileEnum.driver,
                   showBackButton: false,
                   refreshVersion: _historyRefreshVersion,
                 )

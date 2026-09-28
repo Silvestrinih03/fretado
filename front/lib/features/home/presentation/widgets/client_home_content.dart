@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 
 import '../../../../app/design_system/design_system.dart';
 import '../../../../core/endpoints.dart';
-import '../../../../core/enums/home_profile.dart';
 import '../../../../core/services/http_service.dart';
 import '../../../driver_operations/data/models/driver_operation_models.dart';
 import '../../../payments/presentation/pages/my_payment_methods_page.dart';
@@ -70,10 +69,7 @@ class ClientHomeContent extends StatelessWidget {
           onTap: onHistoryTap ?? () {
             Navigator.of(context).push(
               MaterialPageRoute<void>(
-                builder: (_) => RideHistoryPage(
-                  userId: userId,
-                  profile: HomeProfileEnum.client,
-                ),
+                builder: (_) => const RideHistoryPage(),
               ),
             );
           },

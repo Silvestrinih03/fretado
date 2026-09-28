@@ -21,9 +21,21 @@ abstract class Endpoints {
 
   static const String rides = '/rides';
   static String rideById(int rideId) => '$rides/$rideId';
-  static String ridesByClient(int clientUserId) =>
-      '$rides/client/$clientUserId';
-  static String ridesByDriver(int driverUserId) => '$rides/driver/$driverUserId';
+  static String ridesMe({
+    String statusGroup = 'all',
+    int limit = 20,
+    String? cursor,
+  }) {
+    final queryParameters = <String, String>{
+      'status_group': statusGroup,
+      'limit': limit.toString(),
+      if (cursor != null && cursor.isNotEmpty) 'cursor': cursor,
+    };
+    return Uri(
+      path: '$rides/me',
+      queryParameters: queryParameters,
+    ).toString();
+  }
   static String ridesInProgressByUser(int userId) =>
       '$rides/in-progress/user/$userId';
   static String rideGeocode(String query) =>

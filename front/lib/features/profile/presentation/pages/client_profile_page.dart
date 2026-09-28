@@ -5,6 +5,7 @@ import '../../../../core/services/myself/models/myself_user_model.dart';
 import '../../../../core/services/myself/services/myself_service.dart';
 import '../widgets/profile_widgets.dart';
 import 'change_password_popup.dart';
+import 'terms_privacy_page.dart';
 import 'user_data_page.dart';
 
 class ClientProfilePage extends StatelessWidget {
@@ -136,8 +137,16 @@ class _UserProfilePageState extends State<UserProfilePage> {
             const _ProfileActionTile(icon: Icons.help_outline_rounded,
               title: 'Ajuda e suporte', subtitle: 'Central de atendimento'),
             const SizedBox(height: 10),
-            const _ProfileActionTile(icon: Icons.description_outlined,
-              title: 'Termos e privacidade', subtitle: 'Políticas do aplicativo'),
+            _ProfileActionTile(
+              icon: Icons.description_outlined,
+              title: 'Termos e privacidade',
+              subtitle: 'Políticas do aplicativo',
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => const TermsPrivacyPage(),
+                ),
+              ),
+            ),
             const SizedBox(height: 14),
             OutlinedButton.icon(
               onPressed: _logout,

@@ -163,19 +163,12 @@ class _CheckingOfferPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => const ColoredBox(
-    color: FretColors.appBackground,
+    color: FretColors.screenBackground,
     child: SafeArea(
       child: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            CircularProgressIndicator(color: FretColors.brandGold),
-            SizedBox(height: 18),
-            Text(
-              'Verificando novas solicitações...',
-              style: TextStyle(fontWeight: FontWeight.w700),
-            ),
-          ],
+        child: CircularProgressIndicator(
+          color: FretColors.screenGold,
+          strokeWidth: 3,
         ),
       ),
     ),

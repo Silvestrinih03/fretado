@@ -10,8 +10,15 @@ import '../stores/driver_operations_store.dart';
 
 class DriverOperationsPage extends StatefulWidget {
   final int? userId;
+  final bool showBackButton;
+  final int refreshVersion;
 
-  const DriverOperationsPage({super.key, this.userId});
+  const DriverOperationsPage({
+    super.key,
+    this.userId,
+    this.showBackButton = true,
+    this.refreshVersion = 0,
+  });
 
   @override
   State<DriverOperationsPage> createState() => _DriverOperationsPageState();
@@ -36,6 +43,14 @@ class _DriverOperationsPageState extends State<DriverOperationsPage> {
       fallbackUserId: widget.userId,
     );
     _store.load();
+  }
+
+  @override
+  void didUpdateWidget(covariant DriverOperationsPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.refreshVersion != widget.refreshVersion) {
+      _store.load();
+    }
   }
 
   @override
@@ -69,11 +84,14 @@ class _DriverOperationsPageState extends State<DriverOperationsPage> {
       animation: _store,
       builder: (context, _) {
         return Scaffold(
-          backgroundColor: const Color(0xFFF3F4F8),
+          backgroundColor: FretColors.screenBackground,
           body: SafeArea(
             child: Column(
               children: [
-                _DriverOperationsHeader(onRefresh: _store.load),
+                _DriverOperationsHeader(
+                  onRefresh: _store.load,
+                  showBackButton: widget.showBackButton,
+                ),
                 Expanded(child: _buildContent()),
               ],
             ),
@@ -109,8 +127,12 @@ class _DriverOperationsPageState extends State<DriverOperationsPage> {
 
 class _DriverOperationsHeader extends StatelessWidget {
   final VoidCallback onRefresh;
+  final bool showBackButton;
 
-  const _DriverOperationsHeader({required this.onRefresh});
+  const _DriverOperationsHeader({
+    required this.onRefresh,
+    required this.showBackButton,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -118,18 +140,21 @@ class _DriverOperationsHeader extends StatelessWidget {
       height: 62,
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(10, 8, 12, 8),
-      color: const Color(0xFFF3F4F8),
+      color: FretColors.screenBackground,
       child: Row(
         children: [
-          IconButton(
-            onPressed: () => Navigator.of(context).maybePop(),
-            icon: const Icon(
-              Icons.arrow_back_ios_new_rounded,
-              color: FretColors.loginFooterLink,
-              size: 20,
+          if (showBackButton) ...[
+            IconButton(
+              onPressed: () => Navigator.of(context).maybePop(),
+              icon: const Icon(
+                Icons.arrow_back_ios_new_rounded,
+                color: FretColors.loginFooterLink,
+                size: 20,
+              ),
             ),
-          ),
-          const SizedBox(width: 4),
+            const SizedBox(width: 4),
+          ] else
+            const SizedBox(width: 8),
           const Expanded(
             child: Text(
               'Carteira',
@@ -223,12 +248,8 @@ class _WalletBalanceCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.fromLTRB(18, 16, 18, 16),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(14),
-        gradient: const LinearGradient(
-          colors: [Color(0xFF1B2397), Color(0xFF151E8C)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+        color: FretColors.screenDark,
+        borderRadius: BorderRadius.circular(20),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -238,12 +259,15 @@ class _WalletBalanceCard extends StatelessWidget {
               Text(
                 'SALDO DISPONIVEL',
                 style: TextStyle(
-                  color: Color(0xFFD1D5FF),
+                  color: Color(0x75FFFFFF),
                   fontWeight: FontWeight.w700,
                 ),
               ),
               Spacer(),
-              Icon(Icons.account_balance_wallet, color: Color(0xFFAFB6F3)),
+              Icon(
+                Icons.account_balance_wallet,
+                color: FretColors.screenGold,
+              ),
             ],
           ),
           const SizedBox(height: 8),
@@ -260,7 +284,7 @@ class _WalletBalanceCard extends StatelessWidget {
           const SizedBox(height: 4),
           Text(
             'Ganhos liquidos: ${_formatMoney(totalNetEarnings)}',
-            style: const TextStyle(color: Color(0xFFD1D5FF), fontSize: 13),
+            style: const TextStyle(color: Color(0x75FFFFFF), fontSize: 13),
           ),
           const SizedBox(height: 12),
           SizedBox(
@@ -270,8 +294,11 @@ class _WalletBalanceCard extends StatelessWidget {
               icon: const Icon(Icons.payments_outlined),
               label: const Text('Solicitar saque'),
               style: ElevatedButton.styleFrom(
-                backgroundColor: FretColors.white,
-                foregroundColor: FretColors.loginFooterLink,
+                backgroundColor: FretColors.screenGold,
+                foregroundColor: FretColors.screenDark,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
             ),
           ),

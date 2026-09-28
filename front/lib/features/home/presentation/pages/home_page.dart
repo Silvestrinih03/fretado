@@ -5,8 +5,7 @@ import '../../../../core/services/myself/models/myself_user_model.dart';
 import '../../../../core/services/myself/services/myself_service.dart';
 import '../controllers/driver_availability_controller.dart';
 import '../widgets/client_home_shell.dart';
-import '../widgets/driver_home_content.dart';
-import '../widgets/home_shell.dart';
+import '../widgets/driver_home_shell.dart';
 
 class HomePage extends StatefulWidget {
   final HomeProfileEnum profile;
@@ -91,15 +90,10 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
           );
         }
 
-        return HomeShell(
-          content: DriverHomeContent(
-            firstName: firstName,
-            userId: resolvedUserId,
-            availabilityController: driverAvailability!,
-          ),
-          userId: widget.userId ?? _myselfService.currentUserId,
-          userTypeId: userTypeId,
-          driverAvailabilityController: driverAvailability,
+        return DriverHomeShell(
+          userName: firstName,
+          userId: resolvedUserId,
+          availabilityController: driverAvailability!,
         );
       },
     );

@@ -10,12 +10,14 @@ class RideHistoryPage extends StatefulWidget {
   final int userId;
   final HomeProfileEnum profile;
   final bool showBackButton;
+  final int refreshVersion;
 
   const RideHistoryPage({
     super.key,
     required this.userId,
     required this.profile,
     this.showBackButton = true,
+    this.refreshVersion = 0,
   });
 
   @override
@@ -40,7 +42,8 @@ class _RideHistoryPageState extends State<RideHistoryPage> {
   void didUpdateWidget(covariant RideHistoryPage oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.userId != widget.userId ||
-        oldWidget.profile != widget.profile) {
+        oldWidget.profile != widget.profile ||
+        oldWidget.refreshVersion != widget.refreshVersion) {
       _ridesFuture = _loadRides();
     }
   }

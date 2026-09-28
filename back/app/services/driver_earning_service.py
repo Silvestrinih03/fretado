@@ -23,7 +23,15 @@ def create_driver_earning(
         raise HTTPException(status_code=400, detail="Earning requires a completed ride assigned to this driver.")
     existing = db.query(DriverEarning).filter(DriverEarning.ride_id == ride.id).first()
     if existing:
-        raise HTTPException(status_code=400, detail="Ride already has a driver earning.")
+        # Settlement is idempotent. This is especially important when a previous
+        # request credited the wallet but the ride status was left stale, or when
+        # the client retries after losing the original response.
+        if existing.driver_user_id != ride.driver_user_id:
+            raise HTTPException(
+                status_code=409,
+                detail="Ride earning belongs to another driver.",
+            )
+        return existing
     if ride.app_fee_value is None:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,

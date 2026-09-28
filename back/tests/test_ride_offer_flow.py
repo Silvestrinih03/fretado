@@ -14,7 +14,9 @@ from app.database.base import Base
 from app.enums.ride_offer_status import RideOfferStatusEnum
 from app.enums.ride_status_enum import RideStatusEnum
 from app.enums.user_type import UserTypeEnum
+from app.models.driver_earning import DriverEarning
 from app.models.driver_location import DriverLocation
+from app.models.driver_wallet import DriverWallet
 from app.models.fuel_type import FuelType  # noqa: F401 - registers referenced table
 from app.models.ride import Ride
 from app.models.ride_detail import RideDetail
@@ -33,7 +35,7 @@ from app.services.ride_offer_service import (
     get_offers_by_driver_user_id,
     reject_offer,
 )
-from app.services.ride_service import create_ride
+from app.services.ride_service import complete_pickup, create_ride, finish_ride, start_ride
 
 
 @compiles(BigInteger, "sqlite")
@@ -204,6 +206,36 @@ class RideOfferFlowTest(unittest.TestCase):
 
         self.assertEqual(raised.exception.status_code, 403)
 
+    def test_finish_ride_reuses_existing_earning_without_crediting_wallet_again(self):
+        self._add_driver(driver_id=10, vehicle_id=100, latitude=-23.551)
+        self.db.commit()
+        ride, offer = self._create_ride()
+        accept_offer(self.db, offer.id, 10)
+        start_ride(self.db, ride.id)
+        complete_pickup(self.db, ride.id)
+
+        wallet = self.db.query(DriverWallet).filter_by(driver_user_id=10).one()
+        wallet.available_balance = Decimal("90.00")
+        self.db.add(DriverEarning(
+            driver_user_id=10,
+            ride_id=ride.id,
+            gross_value=Decimal("100.00"),
+            app_fee_value=Decimal("10.00"),
+            net_value=Decimal("90.00"),
+        ))
+        self.db.commit()
+
+        response = finish_ride(self.db, ride.id)
+        self.db.refresh(wallet)
+
+        self.assertEqual(response.status_id, int(RideStatusEnum.FINALIZADA))
+        self.assertIsNotNone(response.finished_at)
+        self.assertEqual(
+            self.db.query(DriverEarning).filter_by(ride_id=ride.id).count(),
+            1,
+        )
+        self.assertEqual(wallet.available_balance, Decimal("90.00"))
+
     def _create_ride(self) -> tuple[Ride, RideOffer]:
         with patch(
             "app.services.ride_service.calculate_ride_price",
@@ -295,6 +327,11 @@ class RideOfferFlowTest(unittest.TestCase):
                 longitude=Decimal("-46.633"),
                 location_recorded_at=now,
                 last_seen_at=now,
+            ),
+            DriverWallet(
+                id=driver_id,
+                driver_user_id=driver_id,
+                available_balance=Decimal("0.00"),
             ),
         ])
 

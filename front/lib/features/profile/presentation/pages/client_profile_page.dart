@@ -7,15 +7,32 @@ import '../widgets/profile_widgets.dart';
 import 'change_password_popup.dart';
 import 'user_data_page.dart';
 
-class ClientProfilePage extends StatefulWidget {
+class ClientProfilePage extends StatelessWidget {
   final int userId;
+
   const ClientProfilePage({super.key, required this.userId});
 
   @override
-  State<ClientProfilePage> createState() => _ClientProfilePageState();
+  Widget build(BuildContext context) {
+    return UserProfilePage(userId: userId, roleLabel: 'Cliente');
+  }
 }
 
-class _ClientProfilePageState extends State<ClientProfilePage> {
+class UserProfilePage extends StatefulWidget {
+  final int userId;
+  final String roleLabel;
+
+  const UserProfilePage({
+    super.key,
+    required this.userId,
+    required this.roleLabel,
+  });
+
+  @override
+  State<UserProfilePage> createState() => _UserProfilePageState();
+}
+
+class _UserProfilePageState extends State<UserProfilePage> {
   late final MyselfService _myselfService;
   late Future<MyselfUserModel> _myselfFuture;
 
@@ -28,7 +45,7 @@ class _ClientProfilePageState extends State<ClientProfilePage> {
   }
 
   @override
-  void didUpdateWidget(covariant ClientProfilePage oldWidget) {
+  void didUpdateWidget(covariant UserProfilePage oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.userId != widget.userId) {
       _myselfService.currentUserId = widget.userId;
@@ -91,7 +108,7 @@ class _ClientProfilePageState extends State<ClientProfilePage> {
                       Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                         Text(user.fullName, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: FretColors.screenDark)),
                         const SizedBox(height: 2),
-                        const Text('Cliente', style: TextStyle(fontSize: 12, color: FretColors.screenMuted)),
+                        Text(widget.roleLabel, style: const TextStyle(fontSize: 12, color: FretColors.screenMuted)),
                         const SizedBox(height: 6),
                         Text(user.email, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: FretColors.screenGold)),
                       ])),

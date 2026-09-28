@@ -2,28 +2,28 @@ import 'package:flutter/material.dart';
 
 import '../../../../app/design_system/design_system.dart';
 import '../../../../core/endpoints.dart';
-import '../../../../core/enums/home_profile.dart';
 import '../../../../core/services/http_service.dart';
 import '../../../driver_operations/data/models/driver_operation_models.dart';
-import '../../../driver_operations/presentation/pages/driver_operations_page.dart';
 import '../../../documents/presentation/pages/my_documents.dart';
-import '../../../rides/presentation/pages/ride_history_page.dart';
 import '../../../vehicles/presentation/pages/my_vehicles.dart';
 import '../controllers/driver_availability_controller.dart';
-
-const String _driverOfflineMessage =
-    'Você está offline e não receberá corridas. Clique aqui para ficar online.';
 
 class DriverHomeContent extends StatefulWidget {
   final String firstName;
   final int userId;
   final DriverAvailabilityController availabilityController;
+  final int refreshVersion;
+  final VoidCallback onHistoryTap;
+  final VoidCallback onWalletTap;
 
   const DriverHomeContent({
     super.key,
     required this.firstName,
     required this.userId,
     required this.availabilityController,
+    this.refreshVersion = 0,
+    required this.onHistoryTap,
+    required this.onWalletTap,
   });
 
   @override
@@ -32,6 +32,14 @@ class DriverHomeContent extends StatefulWidget {
 
 class _DriverHomeContentState extends State<DriverHomeContent> {
   int _refreshVersion = 0;
+
+  @override
+  void didUpdateWidget(covariant DriverHomeContent oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.refreshVersion != widget.refreshVersion) {
+      _refreshVersion++;
+    }
+  }
 
   void _reloadHomeData() {
     if (!mounted) return;
@@ -44,32 +52,49 @@ class _DriverHomeContentState extends State<DriverHomeContent> {
   @override
   Widget build(BuildContext context) {
     return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 18),
+      padding: const EdgeInsets.fromLTRB(20, 2, 20, 24),
       children: [
-        Text(
-          'Olá, ${widget.firstName}!',
-          style: const TextStyle(
-            fontSize: 30,
-            fontWeight: FontWeight.w800,
-            color: FretColors.loginFooterLink,
+        RichText(
+          text: TextSpan(
+            text: 'Olá, ',
+            style: const TextStyle(
+              fontSize: 28,
+              height: 1.2,
+              fontWeight: FontWeight.w800,
+              letterSpacing: -0.7,
+              color: FretColors.screenDark,
+            ),
+            children: [
+              TextSpan(
+                text: '${widget.firstName}!',
+                style: const TextStyle(color: FretColors.screenGold),
+              ),
+            ],
           ),
         ),
-        const SizedBox(height: 2),
+        const SizedBox(height: 6),
         const Text(
-          'Gerencie suas viagens, veiculos e documentos aqui.',
-          style: TextStyle(fontSize: 15, color: FretColors.neutral700),
+          'Fique online e deixe o FreteJá encontrar corridas compatíveis para você.',
+          style: TextStyle(
+            fontSize: 13,
+            height: 1.55,
+            color: FretColors.screenMuted,
+          ),
         ),
-        const SizedBox(height: 14),
-        _DriverRequiredSetupAlert(userId: widget.userId),
-        const SizedBox(height: 10),
+        const SizedBox(height: 16),
+        _DriverRequiredSetupAlert(
+          userId: widget.userId,
+          refreshVersion: _refreshVersion,
+        ),
+        const SizedBox(height: 12),
         _DriverAvailabilitySummary(controller: widget.availabilityController),
-        const SizedBox(height: 14),
+        const SizedBox(height: 16),
         _BalanceCard(
           userId: widget.userId,
           refreshVersion: _refreshVersion,
-          onTap: () => _openOperations(context),
+          onTap: widget.onWalletTap,
         ),
-        const SizedBox(height: 14),
+        const SizedBox(height: 16),
         _DriverRideInProgressSection(
           userId: widget.userId,
           refreshVersion: _refreshVersion,
@@ -78,26 +103,15 @@ class _DriverHomeContentState extends State<DriverHomeContent> {
         const SizedBox(height: 10),
         _DriverShortcutCard(
           icon: Icons.history_rounded,
-          title: 'Historico de corridas',
+          title: 'Histórico de corridas',
           subtitle: 'Ver corridas anteriores e finalizadas',
-          onTap: () async {
-            await Navigator.of(context).push(
-              MaterialPageRoute<void>(
-                builder: (_) => RideHistoryPage(
-                  userId: widget.userId,
-                  profile: HomeProfileEnum.driver,
-                ),
-              ),
-            );
-
-            _reloadHomeData();
-          },
+          onTap: widget.onHistoryTap,
         ),
         const SizedBox(height: 10),
         _DriverShortcutCard(
           icon: Icons.local_shipping_rounded,
-          title: 'Meus veiculos',
-          subtitle: 'Gerenciar meus veiculos',
+          title: 'Meus veículos',
+          subtitle: 'Gerencie seus veículos cadastrados',
           onTap: () async {
             await Navigator.of(context).push(
               MaterialPageRoute<void>(
@@ -112,7 +126,7 @@ class _DriverHomeContentState extends State<DriverHomeContent> {
         _DriverShortcutCard(
           icon: Icons.description_outlined,
           title: 'Meus documentos',
-          subtitle: 'Acompanhar validade da CNH',
+          subtitle: 'CNH, CRLV e habilitações',
           onTap: () async {
             await Navigator.of(context).push(
               MaterialPageRoute<void>(
@@ -127,21 +141,16 @@ class _DriverHomeContentState extends State<DriverHomeContent> {
     );
   }
 
-  Future<void> _openOperations(BuildContext context) async {
-    await Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (_) => DriverOperationsPage(userId: widget.userId),
-      ),
-    );
-
-    _reloadHomeData();
-  }
 }
 
 class _DriverRequiredSetupAlert extends StatefulWidget {
   final int userId;
+  final int refreshVersion;
 
-  const _DriverRequiredSetupAlert({required this.userId});
+  const _DriverRequiredSetupAlert({
+    required this.userId,
+    required this.refreshVersion,
+  });
 
   @override
   State<_DriverRequiredSetupAlert> createState() =>
@@ -162,7 +171,8 @@ class _DriverRequiredSetupAlertState extends State<_DriverRequiredSetupAlert> {
   @override
   void didUpdateWidget(covariant _DriverRequiredSetupAlert oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.userId != widget.userId) {
+    if (oldWidget.userId != widget.userId ||
+        oldWidget.refreshVersion != widget.refreshVersion) {
       _reload();
     }
   }
@@ -450,32 +460,24 @@ class _DriverAvailabilitySummary extends StatelessWidget {
     return AnimatedBuilder(
       animation: controller,
       builder: (context, _) {
-        final bool showOfflineAlert =
-            controller.hasLoadedStatus && !controller.isOnline;
         final String? statusMessage = controller.message;
-        final bool showStatusMessage =
-            statusMessage != null && statusMessage != _driverOfflineMessage;
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            if (showOfflineAlert) ...[
-              _DriverOfflineAlert(onGoOnline: controller.goOnline),
+            _DriverAvailabilityCard(controller: controller),
+            const SizedBox(height: 12),
+            _DriverSearchStatusCard(
+              isOnline: controller.hasLoadedStatus && controller.isOnline,
+              isLoading: controller.isLoading,
+            ),
+            if (statusMessage != null && statusMessage.isNotEmpty) ...[
               const SizedBox(height: 10),
-            ],
-            if (showStatusMessage) ...[
               _DriverAvailabilityMessage(
                 message: statusMessage,
                 isError: !controller.isOnline,
               ),
-              const SizedBox(height: 10),
             ],
-            if (!showOfflineAlert && !showStatusMessage)
-              const _DriverAvailabilityMessage(
-                message:
-                    'Voce esta online. Novas ofertas aparecerao automaticamente.',
-                isError: false,
-              ),
           ],
         );
       },
@@ -483,59 +485,163 @@ class _DriverAvailabilitySummary extends StatelessWidget {
   }
 }
 
-class _DriverOfflineAlert extends StatelessWidget {
-  final VoidCallback onGoOnline;
+class _DriverAvailabilityCard extends StatelessWidget {
+  final DriverAvailabilityController controller;
 
-  const _DriverOfflineAlert({required this.onGoOnline});
+  const _DriverAvailabilityCard({required this.controller});
+
+  @override
+  Widget build(BuildContext context) {
+    final bool isOnline = controller.hasLoadedStatus && controller.isOnline;
+    final bool isLoading = controller.isLoading;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      decoration: BoxDecoration(
+        color: isOnline ? FretColors.screenDark : FretColors.white,
+        borderRadius: BorderRadius.circular(18),
+        border: isOnline
+            ? null
+            : Border.all(color: FretColors.screenBorder),
+        boxShadow: isOnline
+            ? null
+            : const [
+                BoxShadow(
+                  color: Color(0x0D000000),
+                  blurRadius: 6,
+                  offset: Offset(0, 2),
+                ),
+              ],
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  isLoading
+                      ? 'Verificando disponibilidade'
+                      : isOnline
+                      ? 'Você está online'
+                      : 'Você está offline',
+                  style: TextStyle(
+                    color: isOnline ? FretColors.white : FretColors.screenDark,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  isLoading
+                      ? 'Sincronizando seu status atual'
+                      : isOnline
+                      ? 'Disponível para receber novas ofertas'
+                      : 'Fique online para entrar na busca de motoristas',
+                  style: TextStyle(
+                    color: isOnline
+                        ? const Color(0x75FFFFFF)
+                        : FretColors.screenMuted,
+                    fontSize: 12,
+                    height: 1.4,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          Switch(
+            value: isOnline,
+            onChanged: isLoading
+                ? null
+                : (value) {
+                    if (value) {
+                      controller.goOnline();
+                    } else {
+                      controller.goOffline();
+                    }
+                  },
+            activeColor: FretColors.white,
+            activeTrackColor: FretColors.screenGold,
+            inactiveThumbColor: FretColors.white,
+            inactiveTrackColor: FretColors.neutral300,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DriverSearchStatusCard extends StatelessWidget {
+  final bool isOnline;
+  final bool isLoading;
+
+  const _DriverSearchStatusCard({
+    required this.isOnline,
+    required this.isLoading,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: FretColors.destructive050,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: FretColors.destructive200),
+        color: FretColors.white,
+        borderRadius: BorderRadius.circular(17),
+        border: Border.all(color: FretColors.screenBorder),
       ),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(
-            Icons.location_off_rounded,
-            color: FretColors.destructive700,
-            size: 22,
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: isOnline
+                  ? FretColors.brandGold.withOpacity(0.12)
+                  : FretColors.screenBackground,
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              Icons.search_rounded,
+              size: 21,
+              color: isOnline
+                  ? FretColors.screenGold
+                  : FretColors.screenMuted,
+            ),
           ),
-          const SizedBox(width: 10),
+          const SizedBox(width: 12),
           Expanded(
-            child: RichText(
-              text: TextSpan(
-                style: const TextStyle(
-                  color: FretColors.destructive800,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                  height: 1.25,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  isLoading
+                      ? 'Sincronizando disponibilidade'
+                      : isOnline
+                      ? 'Procurando oportunidades para você'
+                      : 'Busca pausada',
+                  style: const TextStyle(
+                    color: FretColors.screenDark,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
-                children: [
-                  const TextSpan(
-                    text: 'Você está offline e não receberá corridas. ',
+                const SizedBox(height: 3),
+                Text(
+                  isLoading
+                      ? 'Aguarde enquanto carregamos seu status.'
+                      : isOnline
+                      ? 'Quando surgir uma corrida compatível, você receberá uma oferta com tempo para responder.'
+                      : 'Ative seu status para voltar a participar das buscas.',
+                  style: const TextStyle(
+                    color: FretColors.screenMuted,
+                    fontSize: 11,
+                    height: 1.45,
                   ),
-                  WidgetSpan(
-                    child: GestureDetector(
-                      onTap: onGoOnline,
-                      child: const Text(
-                        'Clique aqui para ficar online.',
-                        style: TextStyle(
-                          color: FretColors.destructive800,
-                          fontSize: 13,
-                          fontWeight: FontWeight.w800,
-                          decoration: TextDecoration.underline,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
         ],
@@ -747,21 +853,26 @@ class _DriverRideInProgressSectionState
               children: [
                 const Expanded(
                   child: Text(
-                    'Corridas em andamento',
+                    'Corrida em andamento',
                     style: TextStyle(
-                      color: FretColors.loginFooterLink,
-                      fontSize: 18,
-                      fontWeight: FontWeight.w800,
+                      color: FretColors.screenDark,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
                 ),
-                IconButton(
-                  tooltip: 'Atualizar corridas',
+                TextButton.icon(
                   onPressed: isLoading ? null : _reload,
-                  icon: const Icon(
-                    Icons.refresh_rounded,
-                    color: FretColors.loginFooterLink,
-                    size: 21,
+                  style: TextButton.styleFrom(
+                    foregroundColor: FretColors.screenGold,
+                    padding: EdgeInsets.zero,
+                    minimumSize: const Size(0, 32),
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                  icon: const Icon(Icons.refresh_rounded, size: 14),
+                  label: const Text(
+                    'Atualizar',
+                    style: TextStyle(fontSize: 12),
                   ),
                 ),
               ],
@@ -990,21 +1101,10 @@ class _BalanceCardState extends State<_BalanceCard> {
 
         return Container(
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(14),
-            gradient: const LinearGradient(
-              colors: [Color(0xFF1B2397), Color(0xFF151E8C)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: FretColors.loginFooterLink.withOpacity(0.25),
-                blurRadius: 12,
-                offset: const Offset(0, 6),
-              ),
-            ],
+            color: FretColors.screenDark,
+            borderRadius: BorderRadius.circular(20),
           ),
-          padding: const EdgeInsets.fromLTRB(18, 12, 18, 16),
+          padding: const EdgeInsets.fromLTRB(20, 14, 20, 18),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -1013,8 +1113,9 @@ class _BalanceCardState extends State<_BalanceCard> {
                   const Text(
                     'CARTEIRA DO MOTORISTA',
                     style: TextStyle(
-                      color: Color(0xFFD1D5FF),
-                      letterSpacing: 0,
+                      color: Color(0x61FFFFFF),
+                      fontSize: 10,
+                      letterSpacing: 1,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
@@ -1035,8 +1136,8 @@ class _BalanceCardState extends State<_BalanceCard> {
                           ? Icons.visibility_off_rounded
                           : Icons.visibility_rounded,
                     ),
-                    color: const Color(0xFFAFB6F3),
-                    disabledColor: const Color(0x667C84D6),
+                    color: const Color(0x75FFFFFF),
+                    disabledColor: const Color(0x40FFFFFF),
                   ),
                 ],
               ),
@@ -1047,8 +1148,8 @@ class _BalanceCardState extends State<_BalanceCard> {
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
                   color: FretColors.white,
-                  fontSize: 30,
-                  fontWeight: FontWeight.w700,
+                  fontSize: 28,
+                  fontWeight: FontWeight.w800,
                 ),
               ),
               const SizedBox(height: 10),
@@ -1056,11 +1157,14 @@ class _BalanceCardState extends State<_BalanceCard> {
                 color: Colors.transparent,
                 child: InkWell(
                   onTap: widget.onTap,
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(12),
                   child: Ink(
-                    decoration: const BoxDecoration(
-                      color: Color(0xFF313CA3),
-                      borderRadius: BorderRadius.all(Radius.circular(10)),
+                    decoration: BoxDecoration(
+                      color: FretColors.screenGold.withOpacity(0.13),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: FretColors.screenGold.withOpacity(0.24),
+                      ),
                     ),
                     child: const Padding(
                       padding: EdgeInsets.symmetric(
@@ -1070,17 +1174,18 @@ class _BalanceCardState extends State<_BalanceCard> {
                       child: Row(
                         children: [
                           Text(
-                            'Saldo, historico e saque',
+                            'Saldo, histórico e saque',
                             style: TextStyle(
-                              color: FretColors.white,
-                              fontWeight: FontWeight.w700,
-                              fontSize: 14,
+                              color: FretColors.screenGold,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 13,
                             ),
                           ),
                           Spacer(),
                           Icon(
-                            Icons.arrow_forward_rounded,
-                            color: FretColors.white,
+                            Icons.chevron_right_rounded,
+                            color: FretColors.screenGold,
+                            size: 18,
                           ),
                         ],
                       ),
@@ -1097,16 +1202,16 @@ class _BalanceCardState extends State<_BalanceCard> {
 
   String _balanceLabel(AsyncSnapshot<DriverWalletModel?> snapshot) {
     if (snapshot.connectionState != ConnectionState.done) {
-      return 'Carregando saldo';
+      return 'R\$ ••••••';
     }
 
     final wallet = snapshot.data;
     if (snapshot.hasError || wallet == null) {
-      return 'Saldo indisponivel';
+      return 'Saldo indisponível';
     }
 
     if (!_isBalanceVisible) {
-      return 'R\$ *****';
+      return 'R\$ ••••••';
     }
 
     return _formatMoney(wallet.availableBalance);
@@ -1132,13 +1237,20 @@ class _DriverShortcutCard extends StatelessWidget {
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(16),
         child: Ink(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           decoration: BoxDecoration(
-            color: FretColors.neutral050,
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: FretColors.neutral200),
+            color: FretColors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: FretColors.screenBorder),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x0D000000),
+                blurRadius: 6,
+                offset: Offset(0, 2),
+              ),
+            ],
           ),
           child: Row(
             children: [
@@ -1146,10 +1258,10 @@ class _DriverShortcutCard extends StatelessWidget {
                 width: 40,
                 height: 40,
                 decoration: BoxDecoration(
-                  color: FretColors.neutral100,
+                  color: FretColors.screenDark,
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: Icon(icon, color: FretColors.loginFooterLink),
+                child: Icon(icon, color: FretColors.screenGold, size: 20),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -1159,17 +1271,17 @@ class _DriverShortcutCard extends StatelessWidget {
                     Text(
                       title,
                       style: const TextStyle(
-                        fontSize: 17,
-                        fontWeight: FontWeight.w700,
-                        color: FretColors.loginFooterLink,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: FretColors.screenDark,
                       ),
                     ),
                     const SizedBox(height: 2),
                     Text(
                       subtitle,
                       style: const TextStyle(
-                        fontSize: 13,
-                        color: FretColors.neutral700,
+                        fontSize: 12,
+                        color: FretColors.screenMuted,
                       ),
                     ),
                   ],
@@ -1177,8 +1289,9 @@ class _DriverShortcutCard extends StatelessWidget {
               ),
               const SizedBox(width: 10),
               const Icon(
-                Icons.arrow_forward_rounded,
-                color: FretColors.loginFooterLink,
+                Icons.chevron_right_rounded,
+                color: FretColors.screenGold,
+                size: 18,
               ),
             ],
           ),

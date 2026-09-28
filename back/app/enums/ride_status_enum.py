@@ -7,3 +7,4 @@ class RideStatusEnum(IntEnum):
     A_CAMINHO_ENTREGA = 4
     FINALIZADA = 5
     CANCELADA = 6
+    NAO_ATENDIDA = 7

@@ -104,6 +104,12 @@ class FretRideStatusStyle {
         borderColor: FretColors.destructive300,
         foregroundColor: FretColors.destructive700,
       ),
+      7 => const FretRideStatusStyle(
+        label: 'Nao atendida',
+        backgroundColor: FretColors.neutral100,
+        borderColor: FretColors.neutral300,
+        foregroundColor: FretColors.neutral700,
+      ),
       _ => FretRideStatusStyle(
         label: normalizedFallback.isNotEmpty
             ? normalizedFallback

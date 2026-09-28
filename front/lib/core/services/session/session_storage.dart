@@ -1,8 +1,9 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-class SessionStorage {
+class SessionStorage extends ChangeNotifier {
   static const String sessionUserIdKey = 'fretado_session_user_id';
   static const String sessionUserTypeIdKey = 'fretado_session_user_type_id';
   static const String sessionAccessTokenKey = 'fretado_session_access_token';
@@ -22,11 +23,15 @@ class SessionStorage {
   bool get hasCurrentUserId => _currentUserId != null;
 
   set currentUserId(int? value) {
+    if (_currentUserId == value) return;
     _currentUserId = value;
+    notifyListeners();
   }
 
   set currentUserTypeId(int? value) {
+    if (_currentUserTypeId == value) return;
     _currentUserTypeId = value;
+    notifyListeners();
   }
 
   Future<void> loadSavedSession() async {
@@ -39,6 +44,7 @@ class SessionStorage {
     _currentUserTypeId = preferences.getInt(sessionUserTypeIdKey);
     _currentAccessToken = preferences.getString(sessionAccessTokenKey);
     _hasLoadedSavedSession = true;
+    notifyListeners();
   }
 
   Future<void> saveSession({
@@ -59,6 +65,7 @@ class SessionStorage {
     } else {
       await preferences.remove(sessionAccessTokenKey);
     }
+    notifyListeners();
   }
 
   Future<void> clearSession() async {
@@ -71,6 +78,7 @@ class SessionStorage {
     await preferences.remove(sessionUserIdKey);
     await preferences.remove(sessionUserTypeIdKey);
     await preferences.remove(sessionAccessTokenKey);
+    notifyListeners();
   }
 
   bool get hasValidAccessToken {

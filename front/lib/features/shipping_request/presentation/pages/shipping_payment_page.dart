@@ -5,12 +5,15 @@ import '../../../../core/endpoints.dart';
 import '../../../../core/enums/home_profile.dart';
 import '../../../../core/services/http_service.dart';
 import '../../../home/presentation/pages/home_page.dart';
+import '../../../rides/presentation/pages/ride_tracking_page.dart';
 import '../../../payments/data/datasources/user_card_datasource.dart';
 import '../../../payments/data/models/user_card_model.dart';
 import '../../../payments/presentation/pages/edit_card_data_page.dart';
 import '../models/freight_address_data.dart';
 import '../models/freight_package_data.dart';
 import '../models/freight_quote_model.dart';
+import '../models/ride_creation_conflict.dart';
+import '../models/ride_creation_payload.dart';
 
 class ShippingPaymentPage extends StatefulWidget {
   final int userId;
@@ -44,6 +47,7 @@ class _ShippingPaymentPageState extends State<ShippingPaymentPage> {
   bool _isLoadingCards = true;
   bool _isPaying = false;
   bool _rideCreated = false;
+  bool _noDriverAvailable = false;
   late FreightQuoteModel _quote;
   String? _loadErrorMessage;
 
@@ -133,46 +137,68 @@ class _ShippingPaymentPageState extends State<ShippingPaymentPage> {
     try {
       final response = await _httpService.post(
         Endpoints.createRide,
-        body: {
-          'client_user_id': widget.userId,
-          'driver_user_id': null,
-          ...widget.addressData.toRideJson(),
-          ...widget.packageData.toQuoteJson(),
-          'expected_total_price': _quote.totalPrice.toStringAsFixed(2),
-          'status_id': 1,
-        },
+        body: buildRideCreationPayload(
+          clientUserId: widget.userId,
+          addressData: widget.addressData,
+          packageData: widget.packageData,
+          quote: _quote,
+        ),
       );
       _rideCreated = true;
+      _noDriverAvailable = false;
 
       if (!mounted) {
         return;
       }
 
-      final rideId = response['id']?.toString();
+      final rideId = int.tryParse(response['id']?.toString() ?? '');
 
       final bool shouldReturnHome = await _showPaymentSuccessDialog(
-        rideId: rideId,
+        rideId: rideId?.toString(),
         cardLastFour: selectedCard.lastFour,
         totalPrice: double.parse(response['total_price'].toString()),
       );
 
       if (shouldReturnHome) {
-        _returnToHome();
+        if (rideId == null) {
+          _returnToHome();
+        } else {
+          _openTracking(rideId);
+        }
       }
     } on HttpServiceException catch (e) {
-      final updatedQuote = e.data?['quote'];
-      if (e.statusCode == 409 && updatedQuote is Map && mounted) {
+      final conflict = RideCreationConflict.fromResponse(
+        statusCode: e.statusCode,
+        data: e.data,
+      );
+      if (conflict.type == RideCreationConflictType.quoteChanged && mounted) {
         try {
-          final quote = FreightQuoteModel.fromJson(Map<String, dynamic>.from(updatedQuote));
-          setState(() => _quote = quote);
+          final quote = FreightQuoteModel.fromJson(conflict.quote!);
+          setState(() {
+            _quote = quote;
+            _noDriverAvailable = false;
+          });
+          _showMessage(
+            'A cotação foi atualizada. Confira o novo valor e confirme novamente.',
+          );
+          return;
         } on FormatException {
-          _showMessage('Nao foi possivel atualizar a cotacao. Volte e calcule novamente.');
+          _showMessage(
+            'Nao foi possivel atualizar a cotacao. Volte e calcule novamente.',
+          );
           return;
         }
       }
+      if (conflict.type == RideCreationConflictType.noDriver && mounted) {
+        setState(() => _noDriverAvailable = true);
+        _showMessage(
+          'Não encontramos um motorista disponível agora. Seus dados foram mantidos.',
+        );
+        return;
+      }
       _showMessage(e.message);
     } catch (_) {
-      _showMessage('Nao foi possivel finalizar o pagamento agora.');
+      _showMessage('Nao foi possivel criar a corrida agora.');
     } finally {
       if (mounted) {
         setState(() => _isPaying = false);
@@ -208,6 +234,19 @@ class _ShippingPaymentPageState extends State<ShippingPaymentPage> {
       MaterialPageRoute<void>(
         builder: (_) =>
             HomePage(profile: HomeProfileEnum.client, userId: widget.userId),
+      ),
+      (route) => false,
+    );
+  }
+
+  void _openTracking(int rideId) {
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute<void>(
+        builder: (_) => RideTrackingPage(
+          rideId: rideId,
+          userId: widget.userId,
+          vehicleCategory: _quote.vehicleLabel,
+        ),
       ),
       (route) => false,
     );
@@ -258,7 +297,7 @@ class _ShippingPaymentPageState extends State<ShippingPaymentPage> {
                   ),
                   const SizedBox(height: 18),
                   const Text(
-                    'Pagamento',
+                    'Cartão cadastrado',
                     style: TextStyle(
                       color: FretColors.neutral900,
                       fontSize: 23,
@@ -267,7 +306,7 @@ class _ShippingPaymentPageState extends State<ShippingPaymentPage> {
                   ),
                   const SizedBox(height: 8),
                   const Text(
-                    'Selecione o método de pagamento para prosseguir.',
+                    'Para solicitar o frete, confirme que você possui um cartão cadastrado.',
                     style: TextStyle(
                       color: _mutedText,
                       fontSize: 13,
@@ -285,7 +324,7 @@ class _ShippingPaymentPageState extends State<ShippingPaymentPage> {
                     children: [
                       const Expanded(
                         child: Text(
-                          'Forma de Pagamento',
+                          'Cartão para verificação',
                           style: TextStyle(
                             color: FretColors.neutral900,
                             fontSize: 15,
@@ -306,9 +345,17 @@ class _ShippingPaymentPageState extends State<ShippingPaymentPage> {
                   const SizedBox(height: 12),
                   _buildPaymentMethods(),
                   const SizedBox(height: 24),
+                  if (_noDriverAvailable) ...[
+                    const _NoDriverAvailableNotice(),
+                    const SizedBox(height: 14),
+                  ],
                   _ConfirmShippingButton(
                     loading: _isPaying,
-                    enabled: !_isLoadingCards && _selectedCard != null && !_rideCreated,
+                    enabled:
+                        !_isLoadingCards &&
+                        _selectedCard != null &&
+                        !_rideCreated,
+                    retry: _noDriverAvailable,
                     onPressed: _confirmShipping,
                   ),
                 ],
@@ -393,7 +440,7 @@ class _PaymentHeader extends StatelessWidget {
           ),
           const SizedBox(width: 4),
           const Text(
-            'Pagamento',
+            'Verificar cartão',
             style: TextStyle(
               color: _ShippingPaymentPageState._primaryBlue,
               fontSize: 14,
@@ -478,7 +525,7 @@ class _PaymentSuccessDialog extends StatelessWidget {
                           ),
                           SizedBox(height: 6),
                           Text(
-                            'Pagamento confirmado.\nEstamos buscando motoristas disponiveis para sua corrida.',
+                            'Motorista localizado. A oferta foi enviada e aguarda a resposta dele.',
                             style: TextStyle(
                               color: FretColors.neutral700,
                               fontSize: 14,
@@ -510,7 +557,7 @@ class _PaymentSuccessDialog extends StatelessWidget {
                       if (rideId != null) const SizedBox(height: 10),
                       _PaymentSuccessInfoRow(
                         icon: Icons.credit_card_rounded,
-                        label: 'Pagamento',
+                        label: 'Cartão verificado',
                         value: 'Cartao final $cardLastFour',
                       ),
                       const SizedBox(height: 10),
@@ -990,12 +1037,9 @@ class _PriceBreakdownRow extends StatelessWidget {
 }
 
 String? _addressDetail(String? complement, String? referencePoint) {
-  final values = [
-    complement,
-    referencePoint,
-  ].where((value) => value != null && value.trim().isNotEmpty).map(
-        (value) => value!.trim(),
-      );
+  final values = [complement, referencePoint]
+      .where((value) => value != null && value.trim().isNotEmpty)
+      .map((value) => value!.trim());
   final detail = values.join(' - ');
 
   if (detail.isEmpty) {
@@ -1198,11 +1242,13 @@ class _PaymentStateCard extends StatelessWidget {
 class _ConfirmShippingButton extends StatelessWidget {
   final bool loading;
   final bool enabled;
+  final bool retry;
   final VoidCallback onPressed;
 
   const _ConfirmShippingButton({
     required this.loading,
     required this.enabled,
+    required this.retry,
     required this.onPressed,
   });
 
@@ -1230,21 +1276,64 @@ class _ConfirmShippingButton extends StatelessWidget {
                   color: FretColors.white,
                 ),
               )
-            : const Row(
+            : Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    'Confirmar e Solicitar Frete',
-                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800),
+                    retry ? 'Tentar novamente' : 'Confirmar e Solicitar Frete',
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w800,
+                    ),
                   ),
-                  SizedBox(width: 12),
-                  Icon(Icons.arrow_forward_rounded, size: 22),
+                  const SizedBox(width: 12),
+                  Icon(
+                    retry ? Icons.refresh_rounded : Icons.arrow_forward_rounded,
+                    size: 22,
+                  ),
                 ],
               ),
       ),
     );
   }
+}
+
+class _NoDriverAvailableNotice extends StatelessWidget {
+  const _NoDriverAvailableNotice();
+
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.all(14),
+    decoration: BoxDecoration(
+      color: FretColors.attention050,
+      borderRadius: BorderRadius.circular(10),
+      border: Border.all(color: FretColors.attention200),
+    ),
+    child: const Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(
+          Icons.local_shipping_outlined,
+          color: FretColors.attention700,
+          size: 21,
+        ),
+        SizedBox(width: 10),
+        Expanded(
+          child: Text(
+            'Nenhum motorista compatível está disponível no momento. '
+            'Seu formulário, cartão e cotação foram mantidos.',
+            style: TextStyle(
+              color: FretColors.attention800,
+              fontSize: 12,
+              height: 1.4,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
 }
 
 String _formatMetric(double value) {

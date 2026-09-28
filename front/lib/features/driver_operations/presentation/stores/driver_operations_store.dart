@@ -112,7 +112,7 @@ class DriverOperationsStore extends ChangeNotifier {
     notifyListeners();
 
     try {
-      await _repository.acceptOffer(offerId);
+      await _repository.acceptOffer(offerId, userId);
       _actionMessage = 'Oferta aceita.';
       _offers = await _repository.listOffersByDriver(userId);
       _rides = await _repository.listRidesInProgressByUser(userId);
@@ -145,7 +145,7 @@ class DriverOperationsStore extends ChangeNotifier {
     notifyListeners();
 
     try {
-      await _repository.rejectOffer(offerId);
+      await _repository.rejectOffer(offerId, userId);
       _actionMessage = 'Oferta recusada.';
       _offers = await _repository.listOffersByDriver(userId);
       await _loadOfferRideDetails();

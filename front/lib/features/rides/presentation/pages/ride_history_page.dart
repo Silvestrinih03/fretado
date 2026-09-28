@@ -113,7 +113,7 @@ class _RideHistoryPageState extends State<RideHistoryPage> {
                         return switch (_selectedFilterIndex) {
                           1 => ride.statusId >= 1 && ride.statusId <= 4,
                           2 => ride.statusId == 5,
-                          3 => ride.statusId == 6,
+                          3 => ride.statusId == 6 || ride.statusId == 7,
                           _ => true,
                         };
                       }).toList();
@@ -237,7 +237,7 @@ class _HistoryFilters extends StatelessWidget {
     'Todas',
     'Em andamento',
     'Finalizadas',
-    'Canceladas',
+    'Encerradas',
   ];
 
   @override
@@ -697,6 +697,14 @@ class _HistoryRideStatusVisualStyle {
         foregroundColor: Color(0xFF7A7A7A),
         dotColor: Color(0xFF7A7A7A),
         icon: Icons.close_rounded,
+      ),
+      7 => const _HistoryRideStatusVisualStyle(
+        label: 'Nao atendida',
+        backgroundColor: Color(0x0D000000),
+        borderColor: Color(0x1A000000),
+        foregroundColor: Color(0xFF7A7A7A),
+        dotColor: Color(0xFF7A7A7A),
+        icon: Icons.search_off_rounded,
       ),
       _ => const _HistoryRideStatusVisualStyle(
         label: 'Status',

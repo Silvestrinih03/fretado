@@ -45,12 +45,8 @@ class Settings:
     CORS_ALLOW_ORIGIN_REGEX: str | None = (
         os.getenv("CORS_ALLOW_ORIGIN_REGEX") or DEFAULT_CORS_ALLOW_ORIGIN_REGEX
     )
-    OFFER_EXPIRATION_MINUTES: int = int(os.getenv("OFFER_EXPIRATION_MINUTES", 5))
-    RIDE_EXPIRATION_MINUTES: int = int(os.getenv("RIDE_EXPIRATION_MINUTES", 15))
-    DISPATCH_BATCH_SIZE: int = int(os.getenv("DISPATCH_BATCH_SIZE", 5))
+    DRIVER_SEARCH_RADIUS_KM: float = float(os.getenv("DRIVER_SEARCH_RADIUS_KM", 50))
     DRIVER_LOCATION_MAX_AGE_MINUTES: int = int(os.getenv("DRIVER_LOCATION_MAX_AGE_MINUTES", 5))
-    JOB_SECRET: str = os.getenv("JOB_SECRET", "")
-    JOBS_ENABLED: bool = os.getenv("JOBS_ENABLED", "false").lower() == "true"
     EMAIL_PROVIDER: str = os.getenv("EMAIL_PROVIDER", "smtp").lower()
     EMAIL_HOST: str = os.getenv("EMAIL_HOST", "")
     EMAIL_PORT: int = int(os.getenv("EMAIL_PORT", 587))

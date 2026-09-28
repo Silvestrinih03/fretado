@@ -62,10 +62,7 @@ class _DriverHomeContentState extends State<DriverHomeContent> {
         const SizedBox(height: 14),
         _DriverRequiredSetupAlert(userId: widget.userId),
         const SizedBox(height: 10),
-        _DriverAvailabilitySummary(
-          controller: widget.availabilityController,
-          onFindRequests: () => _openAvailableRequests(context),
-        ),
+        _DriverAvailabilitySummary(controller: widget.availabilityController),
         const SizedBox(height: 14),
         _BalanceCard(
           userId: widget.userId,
@@ -139,243 +136,6 @@ class _DriverHomeContentState extends State<DriverHomeContent> {
 
     _reloadHomeData();
   }
-
-  Future<void> _openAvailableRequests(BuildContext context) async {
-    await Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (_) => _AvailableRideRequestsPage(userId: widget.userId),
-      ),
-    );
-
-    _reloadHomeData();
-  }
-}
-
-class _AvailableRideRequestsPage extends StatefulWidget {
-  final int userId;
-
-  const _AvailableRideRequestsPage({required this.userId});
-
-  @override
-  State<_AvailableRideRequestsPage> createState() =>
-      _AvailableRideRequestsPageState();
-}
-
-class _AvailableRideRequestsPageState
-    extends State<_AvailableRideRequestsPage> {
-  late final HttpService _httpService;
-  late Future<List<DriverRideModel>> _ridesFuture;
-  int? _rideInActionId;
-
-  @override
-  void initState() {
-    super.initState();
-    _httpService = HttpService();
-    _ridesFuture = _loadRides();
-  }
-
-  @override
-  void dispose() {
-    _httpService.dispose();
-    super.dispose();
-  }
-
-  Future<List<DriverRideModel>> _loadRides() async {
-    final response = await _httpService.get(Endpoints.availableRides);
-    final dynamic data = response['data'];
-
-    if (data is! List<dynamic>) {
-      return <DriverRideModel>[];
-    }
-
-    final rides = data
-        .whereType<Map<String, dynamic>>()
-        .map(DriverRideModel.fromJson)
-        .toList();
-
-    rides.sort((a, b) {
-      final DateTime aDate =
-          a.createdAt ?? DateTime.fromMillisecondsSinceEpoch(0);
-      final DateTime bDate =
-          b.createdAt ?? DateTime.fromMillisecondsSinceEpoch(0);
-      return bDate.compareTo(aDate);
-    });
-
-    return rides;
-  }
-
-  void _reload() {
-    setState(() {
-      _ridesFuture = _loadRides();
-    });
-  }
-
-  Future<void> _acceptRide(DriverRideModel ride) async {
-    setState(() => _rideInActionId = ride.id);
-
-    try {
-      final offer = await _httpService.post(
-        Endpoints.rideOffers,
-        body: {
-          'ride_id': ride.id,
-          'driver_user_id': widget.userId,
-          'status_id': 1,
-        },
-      );
-
-      final offerId = int.tryParse(offer['id']?.toString() ?? '');
-      if (offerId == null) {
-        throw const HttpServiceException(
-          message: 'Oferta criada sem identificador.',
-        );
-      }
-
-      await _httpService.put(Endpoints.acceptOffer(offerId));
-
-      if (!mounted) return;
-
-      _showMessage('Corrida aceita.', isError: false);
-      _reload();
-    } on HttpServiceException catch (e) {
-      _showMessage(e.message);
-    } catch (_) {
-      _showMessage('Nao foi possivel aceitar a corrida.');
-    } finally {
-      if (mounted) {
-        setState(() => _rideInActionId = null);
-      }
-    }
-  }
-
-  void _showMessage(String message, {bool isError = true}) {
-    if (!mounted) return;
-
-    if (isError) {
-      showFretErrorPopup(context, message: message);
-      return;
-    }
-
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(message)));
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF3F4F8),
-      body: SafeArea(
-        child: Column(
-          children: [
-            _AvailableRequestsHeader(onRefresh: _reload),
-            Expanded(
-              child: FutureBuilder<List<DriverRideModel>>(
-                future: _ridesFuture,
-                builder: (context, snapshot) {
-                  final bool isLoading =
-                      snapshot.connectionState != ConnectionState.done;
-                  final rides = snapshot.data ?? <DriverRideModel>[];
-
-                  if (isLoading) {
-                    return const Center(child: CircularProgressIndicator());
-                  }
-
-                  if (snapshot.hasError) {
-                    return Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: _DriverRideStateCard(
-                        icon: Icons.error_outline_rounded,
-                        title: 'Nao foi possivel carregar',
-                        subtitle: 'Verifique sua conexao e tente novamente.',
-                        actionLabel: 'Tentar novamente',
-                        onTap: _reload,
-                      ),
-                    );
-                  }
-
-                  if (rides.isEmpty) {
-                    return const Padding(
-                      padding: EdgeInsets.all(16),
-                      child: _DriverRideStateCard(
-                        icon: Icons.search_off_rounded,
-                        title: 'Nenhuma solicitacao encontrada',
-                        subtitle: 'Corridas sem motorista aparecerao aqui.',
-                      ),
-                    );
-                  }
-
-                  return ListView.separated(
-                    padding: const EdgeInsets.fromLTRB(16, 14, 16, 18),
-                    itemCount: rides.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 10),
-                    itemBuilder: (context, index) {
-                      final ride = rides[index];
-                      return _DriverActiveRideCard(
-                        ride: ride,
-                        isBusy: _rideInActionId == ride.id,
-                        customActionLabel: 'Aceitar corrida',
-                        customActionIcon: Icons.check_rounded,
-                        onAdvance: () => _acceptRide(ride),
-                      );
-                    },
-                  );
-                },
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _AvailableRequestsHeader extends StatelessWidget {
-  final VoidCallback onRefresh;
-
-  const _AvailableRequestsHeader({required this.onRefresh});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: 62,
-      width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(10, 8, 12, 8),
-      color: const Color(0xFFF3F4F8),
-      child: Row(
-        children: [
-          IconButton(
-            onPressed: () => Navigator.of(context).maybePop(),
-            icon: const Icon(
-              Icons.arrow_back_ios_new_rounded,
-              color: FretColors.loginFooterLink,
-              size: 20,
-            ),
-          ),
-          const SizedBox(width: 4),
-          const Expanded(
-            child: Text(
-              'Solicitacoes disponiveis',
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                color: FretColors.loginFooterLink,
-                fontSize: 21,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-          ),
-          IconButton(
-            tooltip: 'Atualizar',
-            onPressed: onRefresh,
-            icon: const Icon(
-              Icons.refresh_rounded,
-              color: FretColors.loginFooterLink,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 }
 
 class _DriverRequiredSetupAlert extends StatefulWidget {
@@ -429,6 +189,7 @@ class _DriverRequiredSetupAlertState extends State<_DriverRequiredSetupAlert> {
       return _DriverRequiredSetupStatus(
         hasVehicle: results[0],
         hasDriverLicense: results[1],
+        errorMessage: null,
       );
     } on HttpServiceException catch (e) {
       return _DriverRequiredSetupStatus.error(e.message);
@@ -656,7 +417,7 @@ class _DriverRequiredSetupStatus {
   const _DriverRequiredSetupStatus({
     required this.hasVehicle,
     required this.hasDriverLicense,
-    this.errorMessage,
+    required this.errorMessage,
   });
 
   const _DriverRequiredSetupStatus.error(String message)
@@ -681,12 +442,8 @@ class _DriverRequiredSetupStatus {
 
 class _DriverAvailabilitySummary extends StatelessWidget {
   final DriverAvailabilityController controller;
-  final VoidCallback onFindRequests;
 
-  const _DriverAvailabilitySummary({
-    required this.controller,
-    required this.onFindRequests,
-  });
+  const _DriverAvailabilitySummary({required this.controller});
 
   @override
   Widget build(BuildContext context) {
@@ -708,19 +465,17 @@ class _DriverAvailabilitySummary extends StatelessWidget {
             ],
             if (showStatusMessage) ...[
               _DriverAvailabilityMessage(
-                message: statusMessage!,
+                message: statusMessage,
                 isError: !controller.isOnline,
               ),
               const SizedBox(height: 10),
             ],
-            SizedBox(
-              height: 46,
-              child: ElevatedButton.icon(
-                onPressed: onFindRequests,
-                icon: const Icon(Icons.search_rounded),
-                label: const Text('Encontrar solicitacoes'),
+            if (!showOfflineAlert && !showStatusMessage)
+              const _DriverAvailabilityMessage(
+                message:
+                    'Voce esta online. Novas ofertas aparecerao automaticamente.',
+                isError: false,
               ),
-            ),
           ],
         );
       },
@@ -1054,21 +809,17 @@ class _DriverActiveRideCard extends StatelessWidget {
   final DriverRideModel ride;
   final bool isBusy;
   final VoidCallback onAdvance;
-  final String? customActionLabel;
-  final IconData? customActionIcon;
 
   const _DriverActiveRideCard({
     required this.ride,
     required this.isBusy,
     required this.onAdvance,
-    this.customActionLabel,
-    this.customActionIcon,
   });
 
   @override
   Widget build(BuildContext context) {
-    final actionLabel = customActionLabel ?? _rideProgressActionLabel(ride);
-    final actionIcon = customActionIcon ?? _rideProgressActionIcon(ride);
+    final actionLabel = _rideProgressActionLabel(ride);
+    final actionIcon = _rideProgressActionIcon(ride);
 
     return FretRideSummaryCard(
       rideId: ride.id,

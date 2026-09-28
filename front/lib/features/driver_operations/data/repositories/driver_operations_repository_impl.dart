@@ -17,18 +17,18 @@ class DriverOperationsRepositoryImpl implements DriverOperationsRepository {
   }
 
   @override
-  Future<RideOfferModel> acceptOffer(int offerId) async {
+  Future<RideOfferModel> acceptOffer(int offerId, int driverUserId) async {
     try {
-      return await _datasource.acceptOffer(offerId);
+      return await _datasource.acceptOffer(offerId, driverUserId);
     } on DriverOperationsDatasourceException catch (e) {
       throw DriverOperationsRepositoryException(e.message);
     }
   }
 
   @override
-  Future<RideOfferModel> rejectOffer(int offerId) async {
+  Future<RideOfferModel> rejectOffer(int offerId, int driverUserId) async {
     try {
-      return await _datasource.rejectOffer(offerId);
+      return await _datasource.rejectOffer(offerId, driverUserId);
     } on DriverOperationsDatasourceException catch (e) {
       throw DriverOperationsRepositoryException(e.message);
     }
@@ -65,6 +65,15 @@ class DriverOperationsRepositoryImpl implements DriverOperationsRepository {
   Future<DriverRideModel> getRideById(int rideId) async {
     try {
       return await _datasource.getRideById(rideId);
+    } on DriverOperationsDatasourceException catch (e) {
+      throw DriverOperationsRepositoryException(e.message);
+    }
+  }
+
+  @override
+  Future<double> getRouteDistance(DriverRideModel ride) async {
+    try {
+      return await _datasource.getRouteDistance(ride);
     } on DriverOperationsDatasourceException catch (e) {
       throw DriverOperationsRepositoryException(e.message);
     }

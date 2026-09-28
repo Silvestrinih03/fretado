@@ -7,7 +7,7 @@ import '../../../../core/endpoints.dart';
 import '../../../../core/services/http_service.dart';
 
 class DriverAvailabilityController extends ChangeNotifier {
-  static const Duration heartbeatInterval = Duration(minutes: 10);
+  static const Duration heartbeatInterval = Duration(seconds: 45);
 
   final HttpService _httpService;
   Timer? _heartbeatTimer;
@@ -18,6 +18,7 @@ class DriverAvailabilityController extends ChangeNotifier {
   String? _message;
   DateTime? _lastSeenAt;
   bool _isDisposed = false;
+  bool _refreshing = false;
 
   DriverAvailabilityController({HttpService? httpService})
     : _httpService = httpService ?? HttpService();
@@ -92,7 +93,7 @@ class DriverAvailabilityController extends ChangeNotifier {
         body: _positionBody(position),
       );
 
-      await _runRideDispatchJob();
+
       _isOnline = response['is_online'] == true;
       _lastSeenAt = _readDateTime(response['last_seen_at']);
       // _message = _isOnline ? 'Voce esta online.' : null;
@@ -158,7 +159,9 @@ class DriverAvailabilityController extends ChangeNotifier {
   }
 
   Future<void> refreshCurrentLocation({bool silent = false}) async {
-    if (!_isOnline) return;
+    if (!_isOnline || _refreshing || _isDisposed) return;
+    _refreshing = true;
+    try {
 
     final position = await _getCurrentPosition(
       purpose: _LocationPurpose.refreshOnline,
@@ -175,7 +178,7 @@ class DriverAvailabilityController extends ChangeNotifier {
         body: _positionBody(position),
       );
 
-      await _runRideDispatchJob();
+
       _isOnline = response['is_online'] == true;
       _lastSeenAt = _readDateTime(response['last_seen_at']);
       if (!silent) {
@@ -202,19 +205,9 @@ class DriverAvailabilityController extends ChangeNotifier {
       _message = 'Nao foi possivel atualizar localizacao.';
       _notify();
     }
-  }
-
-  Future<void> _runRideDispatchJob() async {
-    const jobSecret = String.fromEnvironment('JOB_SECRET');
-    if (jobSecret.isEmpty) return;
-
-    try {
-      await _httpService.post(
-        Endpoints.rideDispatchJob,
-        headers: {'X-Job-Secret': jobSecret},
-        authenticated: false,
-      );
-    } catch (_) {}
+      } finally {
+      _refreshing = false;
+    }
   }
 
   Future<Position?> _getCurrentPosition({

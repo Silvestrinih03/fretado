@@ -6,6 +6,7 @@ import 'core/navigation/app_navigator.dart';
 import 'core/services/myself/services/myself_service.dart';
 import 'features/auth/presentation/pages/login_page.dart';
 import 'features/auth/presentation/pages/reset_password_page.dart';
+import 'features/driver_operations/presentation/widgets/driver_offer_gate.dart';
 import 'features/home/presentation/pages/home_page.dart';
 
 void main() {
@@ -26,7 +27,7 @@ class FretadoApp extends StatelessWidget {
 
         return MediaQuery(
           data: mediaQuery.copyWith(textScaler: TextScaler.linear(0.92)),
-          child: child ?? const SizedBox.shrink(),
+          child: DriverOfferGate(child: child ?? const SizedBox.shrink()),
         );
       },
       theme: FretTheme.light(),

@@ -13,10 +13,9 @@ class DriverOperationsDatasource {
         Endpoints.offersByDriver(driverUserId),
       );
 
-      return _readList(response)
-          .whereType<Map<String, dynamic>>()
-          .map(RideOfferModel.fromJson)
-          .toList();
+      return _readList(
+        response,
+      ).whereType<Map<String, dynamic>>().map(RideOfferModel.fromJson).toList();
     } on HttpServiceException catch (e) {
       throw DriverOperationsDatasourceException(
         e.message,
@@ -25,9 +24,11 @@ class DriverOperationsDatasource {
     }
   }
 
-  Future<RideOfferModel> acceptOffer(int offerId) async {
+  Future<RideOfferModel> acceptOffer(int offerId, int driverUserId) async {
     try {
-      final response = await _httpService.put(Endpoints.acceptOffer(offerId));
+      final response = await _httpService.put(
+        Endpoints.acceptOffer(offerId, driverUserId),
+      );
       return RideOfferModel.fromJson(response);
     } on HttpServiceException catch (e) {
       throw DriverOperationsDatasourceException(
@@ -37,9 +38,11 @@ class DriverOperationsDatasource {
     }
   }
 
-  Future<RideOfferModel> rejectOffer(int offerId) async {
+  Future<RideOfferModel> rejectOffer(int offerId, int driverUserId) async {
     try {
-      final response = await _httpService.put(Endpoints.rejectOffer(offerId));
+      final response = await _httpService.put(
+        Endpoints.rejectOffer(offerId, driverUserId),
+      );
       return RideOfferModel.fromJson(response);
     } on HttpServiceException catch (e) {
       throw DriverOperationsDatasourceException(
@@ -107,6 +110,38 @@ class DriverOperationsDatasource {
     try {
       final response = await _httpService.get(Endpoints.rideById(rideId));
       return DriverRideModel.fromJson(response);
+    } on HttpServiceException catch (e) {
+      throw DriverOperationsDatasourceException(
+        e.message,
+        statusCode: e.statusCode,
+      );
+    }
+  }
+
+  Future<double> getRouteDistance(DriverRideModel ride) async {
+    final details = ride.details;
+    if (details == null) {
+      throw const DriverOperationsDatasourceException(
+        'A corrida nao possui coordenadas da rota.',
+      );
+    }
+
+    try {
+      final response = await _httpService.get(
+        Endpoints.rideRoutePreview(
+          originLatitude: details.originLatitude,
+          originLongitude: details.originLongitude,
+          destinationLatitude: details.destinationLatitude,
+          destinationLongitude: details.destinationLongitude,
+        ),
+      );
+      final distance = double.tryParse(
+        response['distance_km']?.toString() ?? '',
+      );
+      if (distance == null || !distance.isFinite || distance < 0) {
+        throw const FormatException('Distancia da rota invalida.');
+      }
+      return distance;
     } on HttpServiceException catch (e) {
       throw DriverOperationsDatasourceException(
         e.message,
@@ -243,11 +278,9 @@ class DriverOperationsDatasourceException implements Exception {
   final String message;
   final int? statusCode;
 
-  const DriverOperationsDatasourceException(
-    this.message, {
-    this.statusCode,
-  });
+  const DriverOperationsDatasourceException(this.message, {this.statusCode});
 
   @override
-  String toString() => 'DriverOperationsDatasourceException($statusCode): $message';
+  String toString() =>
+      'DriverOperationsDatasourceException($statusCode): $message';
 }

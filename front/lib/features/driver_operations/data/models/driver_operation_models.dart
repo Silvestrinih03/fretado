@@ -87,6 +87,8 @@ class DriverRideModel {
   final DateTime? startedAt;
   final DateTime? finishedAt;
   final DateTime? cancelledAt;
+  final String ridePurpose;
+  final int? sourceRideId;
 
   DriverRideModel.fromJson(Map<String, dynamic> json)
     : id = _readInt(json['id']),
@@ -110,9 +112,12 @@ class DriverRideModel {
       updatedAt = _readDateTime(json['updated_at']),
       startedAt = _readDateTime(json['started_at']),
       finishedAt = _readDateTime(json['finished_at']),
-      cancelledAt = _readDateTime(json['cancelled_at']);
+      cancelledAt = _readDateTime(json['cancelled_at']),
+      ridePurpose = _readNullableString(json['ride_purpose']) ?? 'standard',
+      sourceRideId = _readNullableInt(json['source_ride_id']);
 
   bool get isActive => statusId >= 1 && statusId <= 4;
+  bool get isCancellationReturn => ridePurpose == 'cancellation_return';
   String get vehicleCategoryLabel =>
       requiredVehicleTypeName ?? 'Categoria #$requiredVehicleTypeId';
   String get originLabel => details?.originLabel ?? 'Coleta não informada';
@@ -241,6 +246,7 @@ class DriverEarningModel {
   final double appFeeValue;
   final double netValue;
   final DateTime? createdAt;
+  final String earningType;
 
   const DriverEarningModel({
     required this.id,
@@ -250,6 +256,7 @@ class DriverEarningModel {
     required this.appFeeValue,
     required this.netValue,
     this.createdAt,
+    this.earningType = 'ride_completion',
   });
 
   factory DriverEarningModel.fromJson(Map<String, dynamic> json) {
@@ -261,8 +268,12 @@ class DriverEarningModel {
       appFeeValue: _readDouble(json['app_fee_value']),
       netValue: _readDouble(json['net_value']),
       createdAt: _readDateTime(json['created_at']),
+      earningType:
+          _readNullableString(json['earning_type']) ?? 'ride_completion',
     );
   }
+
+  bool get isCancellationFee => earningType == 'cancellation_fee';
 }
 
 class WalletWithdrawRequestModel {

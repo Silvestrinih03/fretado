@@ -23,6 +23,7 @@ CREATE TABLE driver_earnings (
     gross_value DECIMAL(10,2) NOT NULL,
     app_fee_value DECIMAL(10,2) NOT NULL,
     net_value DECIMAL(10,2) NOT NULL,
+    earning_type VARCHAR(30) NOT NULL DEFAULT 'ride_completion',
 
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
@@ -39,5 +40,8 @@ CREATE TABLE driver_earnings (
             gross_value >= 0
             AND app_fee_value >= 0
             AND net_value >= 0
-        )
+        ),
+
+    CONSTRAINT chk_driver_earnings_type
+        CHECK (earning_type IN ('ride_completion', 'cancellation_fee'))
 );

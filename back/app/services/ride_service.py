@@ -11,6 +11,8 @@ from app.enums.ride_history_status_group import RideHistoryStatusGroup
 from app.enums.ride_status_enum import RideStatusEnum
 from app.enums.user_type import UserTypeEnum
 from app.models.ride import Ride
+from app.models.ride_cancellation import RideCancellation
+from app.models.ride_cancellation_event import RideCancellationEvent
 from app.models.ride_detail import RideDetail
 from app.models.ride_offer import RideOffer
 from app.models.user import User
@@ -99,11 +101,18 @@ def create_ride(db: Session, ride_data: RideCreate) -> RideFullResponse:
 def build_full_response(db: Session, ride: Ride) -> RideFullResponse:
     detail = db.query(RideDetail).filter(RideDetail.ride_id == ride.id).first()
     category = db.query(VehicleType).filter(VehicleType.id == ride.required_vehicle_type_id).first()
+    cancellation = db.query(RideCancellation).filter(
+        RideCancellation.return_ride_id == ride.id,
+    ).first()
     return RideFullResponse(
         **{field: getattr(ride, field) for field in RideFullResponse.model_fields
-           if field not in {"details", "required_vehicle_type_name"}},
+           if field not in {
+               "details", "required_vehicle_type_name", "ride_purpose", "source_ride_id",
+           }},
         details=detail,
         required_vehicle_type_name=category.type if category else None,
+        ride_purpose="cancellation_return" if cancellation else "standard",
+        source_ride_id=cancellation.ride_id if cancellation else None,
     )
 
 
@@ -241,6 +250,16 @@ def _advance(db: Session, ride_id: int, expected: RideStatusEnum, target: RideSt
         return build_full_response(db, ride)
     if ride.status_id != int(expected):
         raise HTTPException(status_code=409, detail="A corrida mudou de estado. Atualize a tela.")
+    if target == RideStatusEnum.FINALIZADA:
+        active_cancellation = db.query(RideCancellation.id).filter(
+            RideCancellation.ride_id == ride.id,
+            RideCancellation.resolved_at.is_(None),
+        ).first()
+        if active_cancellation is not None:
+            raise HTTPException(
+                status_code=409,
+                detail="Responda a solicitacao de cancelamento antes de finalizar a entrega.",
+            )
     try:
         ride.status_id = int(target)
         if target == RideStatusEnum.A_CAMINHO_COLETA:
@@ -250,6 +269,18 @@ def _advance(db: Session, ride_id: int, expected: RideStatusEnum, target: RideSt
             create_driver_earning(db, DriverEarningCreate(
                 driver_user_id=ride.driver_user_id, ride_id=ride.id,
             ), commit=False)
+            cancellation = db.query(RideCancellation).filter(
+                RideCancellation.return_ride_id == ride.id,
+            ).first()
+            if cancellation is not None:
+                db.add(RideCancellationEvent(
+                    cancellation_id=cancellation.id,
+                    actor_user_id=ride.driver_user_id,
+                    event_type="return_delivery_completed",
+                    previous_status_id=cancellation.status_id,
+                    new_status_id=cancellation.status_id,
+                    event_metadata={"return_ride_id": ride.id},
+                ))
         db.commit()
         db.refresh(ride)
     except Exception:
@@ -277,10 +308,14 @@ def _build_full_response_from_row(
         **{
             field: getattr(ride, field)
             for field in RideFullResponse.model_fields
-            if field not in {"details", "required_vehicle_type_name"}
+            if field not in {
+                "details", "required_vehicle_type_name", "ride_purpose", "source_ride_id",
+            }
         },
         details=detail,
         required_vehicle_type_name=vehicle_type_name,
+        ride_purpose="standard",
+        source_ride_id=None,
     )
 
 

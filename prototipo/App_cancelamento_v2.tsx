@@ -449,6 +449,46 @@ const IconFlag = ({
   </Svg>
 )
 
+const IconAlert = ({
+  size = 20,
+  color = GOLD,
+}: {
+  size?: number
+  color?: string
+}) => (
+  <Svg size={size} color={color} sw={1.9}>
+    <path d="M10.3 3.6L1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.6a2 2 0 0 0-3.4 0z" />
+    <line x1="12" y1="9" x2="12" y2="13" />
+    <line x1="12" y1="17" x2="12.01" y2="17" />
+  </Svg>
+)
+
+const IconMapPin = ({
+  size = 20,
+  color = GOLD,
+}: {
+  size?: number
+  color?: string
+}) => (
+  <Svg size={size} color={color} sw={1.9}>
+    <path d="M21 10c0 7-9 12-9 12S3 17 3 10a9 9 0 1 1 18 0z" />
+    <circle cx="12" cy="10" r="3" />
+  </Svg>
+)
+
+const IconUndo = ({
+  size = 20,
+  color = GOLD,
+}: {
+  size?: number
+  color?: string
+}) => (
+  <Svg size={size} color={color} sw={1.9}>
+    <polyline points="9 14 4 9 9 4" />
+    <path d="M20 20a8 8 0 0 0-8-8H4" />
+  </Svg>
+)
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 type NavId = "home" | "rides" | "payments" | "profile"
 type DriverNavId = "home" | "requests" | "wallet" | "profile"
@@ -462,6 +502,20 @@ type Ride = {
   price: string
   weight: string
   date: string
+  originComplement?: string
+  originReference?: string
+  destinationComplement?: string
+  destinationReference?: string
+  width?: string
+  height?: string
+  length?: string
+  driver?: {
+    name: string
+    vehicle: string
+    plate: string
+    rating: string
+    rides: number
+  }
 }
 type CardData = {
   brand: string
@@ -470,7 +524,7 @@ type CardData = {
   isDefault: boolean
   shade: string
 }
-type AppScreen = "login" | "forgot" | "shared_help" | "shared_terms" | "client_home" | "client_dispatch_search" | "client_dispatch_retry" | "client_driver_found" | "client_rides_empty" | "client_rides_all" | "client_payments_empty" | "client_payments_cards" | "client_profile" | "client_personal_data" | "client_security" | "driver_home" | "driver_offer" | "driver_rides" | "driver_profile" | "driver_personal_data" | "driver_security"
+type AppScreen = "login" | "forgot" | "shared_help" | "shared_terms" | "client_home" | "client_dispatch_search" | "client_dispatch_retry" | "client_driver_found" | "client_ride_tracking" | "client_rides_empty" | "client_rides_all" | "client_payments_empty" | "client_payments_cards" | "client_profile" | "client_personal_data" | "client_security" | "driver_home" | "driver_offer" | "driver_rides" | "driver_profile" | "driver_personal_data" | "driver_security"
 
 const FILTER_LABELS: Record<FilterId, string> = {
   all: "Todas",
@@ -608,6 +662,30 @@ const ACTIVE_STATUSES: RideStatus[] = [
   "on_way_collect",
   "on_way_deliver",
 ]
+
+const HOME_ACTIVE_RIDE: Ride = {
+  id: "#9",
+  status: "waiting_start",
+  origin: "Rua Um 9, Campinas — São Paulo, 13052-502, Brasil",
+  dest: "Rua Marcos Augusto Pinto, Campinas — São Paulo, 13049, Brasil",
+  originComplement: "Casa 2",
+  originReference: "Portão preto, ao lado da padaria",
+  destinationComplement: "Bloco B · Apto 34",
+  destinationReference: "Entrada pela portaria principal",
+  price: "R$ 12,00",
+  weight: "66,0 kg",
+  width: "45 cm",
+  height: "38 cm",
+  length: "62 cm",
+  date: "29/09/2026",
+  driver: {
+    name: "Moreno Antonio",
+    vehicle: "Toyota Etios",
+    plate: "ABC1D23",
+    rating: "4,9",
+    rides: 47,
+  },
+}
 
 const CARDS: CardData[] = [
   {
@@ -1063,7 +1141,15 @@ function StatusBadge({ status }: { status: RideStatus }) {
 }
 
 // ─── RideCard ─────────────────────────────────────────────────────────────────
-function RideCard({ ride }: { ride: Ride }) {
+function RideCard({
+  ride,
+  onCancel,
+  onDetails,
+}: {
+  ride: Ride
+  onCancel?: (ride: Ride) => void
+  onDetails?: (ride: Ride) => void
+}) {
   return (
     <div
       style={{
@@ -1168,6 +1254,7 @@ function RideCard({ ride }: { ride: Ride }) {
         </div>
         <div style={{ flex: 1 }} />
         <button
+          onClick={() => onDetails?.(ride)}
           style={{
             display: "inline-flex",
             alignItems: "center",
@@ -1184,6 +1271,42 @@ function RideCard({ ride }: { ride: Ride }) {
           <IconChevronRight size={12} color={GOLD} />
         </button>
       </div>
+      {onCancel && ACTIVE_STATUSES.includes(ride.status) && (
+        <div style={{ marginTop: 13, paddingTop: 12, borderTop: `1px solid ${BORDER}` }}>
+          <button
+            onClick={() => onCancel(ride)}
+            style={{
+              width: "100%",
+              padding: "11px 12px",
+              borderRadius: 12,
+              background: "rgba(166,44,44,0.045)",
+              border: "1px solid rgba(166,44,44,0.18)",
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 8,
+            }}
+          >
+            <div
+              style={{
+                width: 22,
+                height: 22,
+                borderRadius: 8,
+                background: "rgba(166,44,44,0.08)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <IconX size={11} color="#A62C2C" />
+            </div>
+            <span style={{ fontSize: 12, fontWeight: 700, color: "#A62C2C" }}>
+              Cancelar corrida
+            </span>
+          </button>
+        </div>
+      )}
     </div>
   )
 }
@@ -1542,260 +1665,588 @@ function HomeScreen({
   nav,
   setNav,
   onSolicitarFrete,
+  onTrackRide,
+  initialActiveRide = false,
 }: {
   nav: NavId
   setNav: (n: NavId) => void
   onSolicitarFrete?: () => void
+  onTrackRide?: (ride: Ride) => void
+  initialActiveRide?: boolean
 }) {
+  const [showActiveRide, setShowActiveRide] = useState(initialActiveRide)
+  const [detailsRide, setDetailsRide] = useState<Ride | null>(null)
+  const [cancellationRide, setCancellationRide] = useState<Ride | null>(null)
+
   return (
     <>
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          padding: "4px 20px 10px",
-        }}
-      >
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "4px 20px 10px" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <img
-            src={logoImg}
-            alt="FreteJá"
-            style={{
-              width: 36,
-              height: 36,
-              objectFit: "contain",
-              borderRadius: 10,
-            }}
-          />
-          <span style={{ fontSize: 21, fontWeight: 800, letterSpacing: -0.5 }}>
-            <span style={{ color: DARK }}>Frete</span>
-            <span style={{ color: GOLD }}>Já</span>
-          </span>
+          <img src={logoImg} alt="FreteJá" style={{ width: 36, height: 36, objectFit: "contain", borderRadius: 10 }} />
+          <span style={{ fontSize: 21, fontWeight: 800, letterSpacing: -0.5 }}><span style={{ color: DARK }}>Frete</span><span style={{ color: GOLD }}>Já</span></span>
         </div>
-        <button
-          onClick={() => setNav("profile")}
-          style={{
-            width: 40,
-            height: 40,
-            borderRadius: 14,
-            background: DARK,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            border: "none",
-            cursor: "pointer",
-          }}
-        >
+        <button onClick={() => setNav("profile")} style={{ width: 40, height: 40, borderRadius: 14, background: DARK, display: "flex", alignItems: "center", justifyContent: "center", border: "none", cursor: "pointer" }}>
           <IconUser size={18} color={CARD} />
         </button>
       </div>
 
       <div className="flex-1 overflow-y-auto no-scrollbar">
-        <div
-          style={{
-            padding: "2px 20px 24px",
-            display: "flex",
-            flexDirection: "column",
-            gap: 16,
-          }}
-        >
+        <div style={{ padding: "2px 20px 24px", display: "flex", flexDirection: "column", gap: 16 }}>
           <div>
-            <h1
-              style={{
-                fontSize: 30,
-                fontWeight: 800,
-                letterSpacing: -0.8,
-                color: DARK,
-                lineHeight: "1.18",
-              }}
-            >
-              Olá, <span style={{ color: GOLD }}>Maria!</span>
-            </h1>
-            <p
-              style={{
-                fontSize: 14,
-                color: MUTED,
-                marginTop: 6,
-                lineHeight: "1.55",
-              }}
-            >
-              Para onde vamos hoje? Encontre fretes rápidos e seguros.
-            </p>
+            <h1 style={{ fontSize: 30, fontWeight: 800, letterSpacing: -0.8, color: DARK, lineHeight: "1.18" }}>Olá, <span style={{ color: GOLD }}>Maria!</span></h1>
+            <p style={{ fontSize: 14, color: MUTED, marginTop: 6, lineHeight: "1.55" }}>Para onde vamos hoje? Encontre fretes rápidos e seguros.</p>
           </div>
 
           <div style={{ background: DARK, borderRadius: 20, padding: 20 }}>
-            <div
-              style={{
-                display: "flex",
-                alignItems: "flex-start",
-                justifyContent: "space-between",
-                marginBottom: 14,
-              }}
-            >
-              <div
-                style={{
-                  width: 48,
-                  height: 48,
-                  borderRadius: 14,
-                  background: "rgba(201,162,39,0.11)",
-                  border: "1px solid rgba(201,162,39,0.22)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              >
+            <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 14 }}>
+              <div style={{ width: 48, height: 48, borderRadius: 14, background: "rgba(201,162,39,0.11)", border: "1px solid rgba(201,162,39,0.22)", display: "flex", alignItems: "center", justifyContent: "center" }}>
                 <IconPackage size={22} color={GOLD} />
               </div>
               <IconChevronRight size={18} color="rgba(255,255,255,0.18)" />
             </div>
-            <h2
-              style={{
-                fontSize: 18,
-                fontWeight: 700,
-                color: CARD,
-                marginBottom: 4,
-              }}
-            >
-              Solicitar Frete
-            </h2>
-            <p
-              style={{
-                fontSize: 13,
-                color: "#686868",
-                lineHeight: "1.55",
-                marginBottom: 16,
-              }}
-            >
-              Precisando de alguém para transportar um produto? Nos fretamos
-              para você.
-            </p>
-            <button
-              onClick={onSolicitarFrete}
-              style={{
-                width: "100%",
-                background: GOLD,
-                borderRadius: 14,
-                padding: "14px 0",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: 8,
-                border: "none",
-                cursor: "pointer",
-              }}
-            >
-              <span
-                style={{
-                  fontSize: 13,
-                  fontWeight: 700,
-                  color: DARK,
-                  letterSpacing: "0.08em",
-                }}
-              >
-                SOLICITAR AGORA
-              </span>
+            <h2 style={{ fontSize: 18, fontWeight: 700, color: CARD, marginBottom: 4 }}>Solicitar Frete</h2>
+            <p style={{ fontSize: 13, color: "#686868", lineHeight: "1.55", marginBottom: 16 }}>Precisando de alguém para transportar um produto? Nos fretamos para você.</p>
+            <button onClick={onSolicitarFrete} style={{ width: "100%", background: GOLD, borderRadius: 14, padding: "14px 0", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, border: "none", cursor: "pointer" }}>
+              <span style={{ fontSize: 13, fontWeight: 700, color: DARK, letterSpacing: "0.08em" }}>SOLICITAR AGORA</span>
               <IconArrow size={14} color={DARK} />
             </button>
           </div>
 
-          <QuickCard
-            icon={<IconClock size={20} color={GOLD} />}
-            title="Histórico de corridas"
-            sub="Ver corridas anteriores e finalizadas"
-            onClick={() => setNav("rides")}
-          />
-          <QuickCard
-            icon={<IconCreditCard size={20} color={GOLD} />}
-            title="Métodos de pagamento"
-            sub="Gerenciar cartões para seus fretes"
-            onClick={() => setNav("payments")}
-          />
+          <QuickCard icon={<IconClock size={20} color={GOLD} />} title="Histórico de corridas" sub="Ver corridas anteriores e finalizadas" onClick={() => setNav("rides")} />
+          <QuickCard icon={<IconCreditCard size={20} color={GOLD} />} title="Métodos de pagamento" sub="Gerenciar cartões para seus fretes" onClick={() => setNav("payments")} />
 
           <div>
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                marginBottom: 12,
-              }}
-            >
-              <h3 style={{ fontSize: 15, fontWeight: 700, color: DARK }}>
-                Corridas em andamento
-              </h3>
-              <button
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 5,
-                  background: "none",
-                  border: "none",
-                  cursor: "pointer",
-                  padding: 0,
-                }}
-              >
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+              <div>
+                <h3 style={{ fontSize: 15, fontWeight: 700, color: DARK }}>Corridas em andamento</h3>
+                {showActiveRide && <p style={{ fontSize: 10.5, color: MUTED, marginTop: 2 }}>1 corrida ativa</p>}
+              </div>
+              <button onClick={() => setShowActiveRide(true)} style={{ display: "inline-flex", alignItems: "center", gap: 5, background: "none", border: "none", cursor: "pointer", padding: 0 }}>
                 <IconRefresh size={13} color={GOLD} />
-                <span style={{ fontSize: 12, fontWeight: 500, color: GOLD }}>
-                  Atualizar
-                </span>
+                <span style={{ fontSize: 12, fontWeight: 600, color: GOLD }}>Atualizar</span>
               </button>
             </div>
-            <div
-              style={{
-                background: CARD,
-                borderRadius: 16,
-                padding: 28,
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                border: `1px solid ${BORDER}`,
-                boxShadow: "0 1px 6px rgba(0,0,0,0.05)",
-              }}
-            >
-              <div
-                style={{
-                  width: 52,
-                  height: 52,
-                  borderRadius: 26,
-                  background: BG,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  marginBottom: 12,
-                }}
-              >
-                <IconRouteEmpty size={26} color={GOLD} />
+
+            {!showActiveRide ? (
+              <div style={{ background: CARD, borderRadius: 16, padding: 28, display: "flex", flexDirection: "column", alignItems: "center", border: `1px solid ${BORDER}`, boxShadow: "0 1px 6px rgba(0,0,0,0.05)" }}>
+                <div style={{ width: 52, height: 52, borderRadius: 26, background: BG, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 12 }}>
+                  <IconRouteEmpty size={26} color={GOLD} />
+                </div>
+                <p style={{ fontSize: 14, fontWeight: 600, color: DARK, marginBottom: 4 }}>Nenhuma corrida em andamento</p>
+                <p style={{ fontSize: 12, color: MUTED, textAlign: "center", lineHeight: "1.5" }}>Toque em “Atualizar” para simular<br />uma corrida ativa no protótipo.</p>
               </div>
-              <p
-                style={{
-                  fontSize: 14,
-                  fontWeight: 600,
-                  color: DARK,
-                  marginBottom: 4,
-                }}
-              >
-                Nenhuma corrida em andamento
-              </p>
-              <p
-                style={{
-                  fontSize: 12,
-                  color: MUTED,
-                  textAlign: "center",
-                  lineHeight: "1.5",
-                }}
-              >
-                Quando seu frete estiver ativo,
-                <br />
-                ele aparecerá aqui.
-              </p>
-            </div>
+            ) : (
+              <div style={{ background: CARD, borderRadius: 20, border: `1px solid ${BORDER}`, boxShadow: "0 7px 24px rgba(0,0,0,0.07)", overflow: "hidden" }}>
+                <div style={{ height: 4, background: GOLD }} />
+                <div style={{ padding: 17 }}>
+                  <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10 }}>
+                    <div>
+                      <p style={{ fontSize: 10, fontWeight: 700, color: MUTED, letterSpacing: "0.08em" }}>CORRIDA EM ANDAMENTO</p>
+                      <p style={{ fontSize: 18, fontWeight: 800, color: DARK, marginTop: 3 }}>Corrida {HOME_ACTIVE_RIDE.id}</p>
+                    </div>
+                    <StatusBadge status={HOME_ACTIVE_RIDE.status} />
+                  </div>
+
+                  <div style={{ display: "flex", gap: 11, marginTop: 16 }}>
+                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", paddingTop: 3 }}>
+                      <span style={{ width: 9, height: 9, borderRadius: 9, background: GOLD }} />
+                      <span style={{ width: 1, height: 32, background: BORDER, margin: "4px 0" }} />
+                      <span style={{ width: 9, height: 9, borderRadius: 9, background: DARK }} />
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 13 }}>
+                      <div><p style={{ fontSize: 9.5, color: MUTED }}>COLETA</p><p style={{ fontSize: 12, fontWeight: 650, color: DARK, marginTop: 2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{HOME_ACTIVE_RIDE.origin}</p></div>
+                      <div><p style={{ fontSize: 9.5, color: MUTED }}>ENTREGA</p><p style={{ fontSize: 12, color: MUTED, marginTop: 2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{HOME_ACTIVE_RIDE.dest}</p></div>
+                    </div>
+                  </div>
+
+                  {HOME_ACTIVE_RIDE.driver && (
+                    <div style={{ marginTop: 15, padding: "12px 13px", borderRadius: 14, background: BG, border: `1px solid ${BORDER}`, display: "flex", alignItems: "center", gap: 10 }}>
+                      <UserAvatar size={38} initials="MA" />
+                      <div style={{ flex: 1 }}>
+                        <p style={{ fontSize: 12.5, fontWeight: 700, color: DARK }}>{HOME_ACTIVE_RIDE.driver.name}</p>
+                        <p style={{ fontSize: 10.5, color: MUTED, marginTop: 2 }}>{HOME_ACTIVE_RIDE.driver.vehicle} · {HOME_ACTIVE_RIDE.driver.plate}</p>
+                      </div>
+                      <div style={{ textAlign: "right" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 4, justifyContent: "flex-end" }}><IconStar size={11} color={GOLD} /><span style={{ fontSize: 10.5, fontWeight: 700, color: DARK }}>{HOME_ACTIVE_RIDE.driver.rating}</span></div>
+                        <p style={{ fontSize: 9.5, color: MUTED, marginTop: 2 }}>{HOME_ACTIVE_RIDE.driver.rides} corridas</p>
+                      </div>
+                    </div>
+                  )}
+
+                  <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
+                    <div style={{ flex: 1, padding: "10px 11px", borderRadius: 12, background: BG, border: `1px solid ${BORDER}` }}><p style={{ fontSize: 9.5, color: MUTED }}>VALOR</p><p style={{ fontSize: 13, fontWeight: 800, color: DARK, marginTop: 2 }}>{HOME_ACTIVE_RIDE.price}</p></div>
+                    <div style={{ flex: 1, padding: "10px 11px", borderRadius: 12, background: BG, border: `1px solid ${BORDER}` }}><p style={{ fontSize: 9.5, color: MUTED }}>CARGA</p><p style={{ fontSize: 13, fontWeight: 800, color: DARK, marginTop: 2 }}>{HOME_ACTIVE_RIDE.weight}</p></div>
+                  </div>
+
+                  <button onClick={() => onTrackRide?.(HOME_ACTIVE_RIDE)} style={{ width: "100%", marginTop: 14, padding: "13px 0", borderRadius: 13, background: DARK, color: CARD, border: "none", cursor: "pointer", fontSize: 12.5, fontWeight: 750, display: "flex", alignItems: "center", justifyContent: "center", gap: 7 }}>
+                    Acompanhar corrida <IconChevronRight size={13} color={CARD} />
+                  </button>
+                  <button onClick={() => setDetailsRide(HOME_ACTIVE_RIDE)} style={{ width: "100%", marginTop: 7, padding: "11px 0", borderRadius: 12, background: "transparent", color: GOLD, border: "none", cursor: "pointer", fontSize: 11.5, fontWeight: 700 }}>
+                    Ver todos os detalhes
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
 
       <BottomNav active={nav} onSelect={setNav} />
+      {detailsRide && <RideDetailsModal ride={detailsRide} onClose={() => setDetailsRide(null)} onTrack={() => { setDetailsRide(null); onTrackRide?.(detailsRide) }} onCancel={() => { setCancellationRide(detailsRide); setDetailsRide(null) }} />}
+      {cancellationRide && <CancellationModal ride={cancellationRide} onClose={() => setCancellationRide(null)} />}
     </>
+  )
+}
+
+// ─── Cancelamento de corrida (Cliente) ─────────────────────────────────────────
+type CancellationStage =
+  | "request"
+  | "waiting_driver"
+  | "quote"
+  | "success"
+  | "declined"
+
+type ReturnDestination = "origin" | "other"
+
+function formatBrl(value: number) {
+  return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
+}
+
+function parseBrl(value: string) {
+  const normalized = value.replace(/[^0-9,]/g, "").replace(",", ".")
+  return Number(normalized || 0)
+}
+
+function CancellationModal({
+  ride,
+  onClose,
+  initialStage = "request",
+}: {
+  ride: Ride
+  onClose: () => void
+  initialStage?: CancellationStage
+}) {
+  const [stage, setStage] = useState<CancellationStage>(initialStage)
+  const [reason, setReason] = useState("")
+  const [destination, setDestination] = useState<ReturnDestination>("origin")
+  const [otherAddress, setOtherAddress] = useState("")
+
+  const total = parseBrl(ride.price)
+  const fee = Math.round(total * 0.1 * 100) / 100
+  const refund = Math.max(total - fee, 0)
+  const returnCost = Math.round(total * 0.78 * 100) / 100
+  const returnRefund = Math.max(total - returnCost, 0)
+  const additionalCharge = Math.max(returnCost - total, 0)
+  const requiresReason = ride.status === "waiting_start"
+  const reasonValid = reason.trim().length >= 10 && reason.trim().length <= 500
+  const canSubmit = !requiresReason || reasonValid
+
+  const closeButton = (
+    <button
+      onClick={onClose}
+      aria-label="Fechar"
+      style={{
+        width: 34,
+        height: 34,
+        borderRadius: 12,
+        border: `1px solid ${BORDER}`,
+        background: CARD,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        cursor: "pointer",
+        flexShrink: 0,
+      }}
+    >
+      <IconX size={14} color={DARK} />
+    </button>
+  )
+
+  const completeSimpleCancellation = () => setStage("success")
+
+  const renderRequest = () => {
+    if (ride.status === "on_way_deliver") {
+      return (
+        <>
+          <div style={{ display: "flex", justifyContent: "space-between", gap: 14, marginBottom: 18 }}>
+            <div style={{ flex: 1 }}>
+              <p style={{ fontSize: 10, fontWeight: 800, color: GOLD, letterSpacing: "0.12em" }}>
+                DEVOLUÇÃO DA CARGA
+              </p>
+              <h2 style={{ fontSize: 22, fontWeight: 850, color: DARK, letterSpacing: -0.5, marginTop: 5 }}>
+                Onde devemos devolver?
+              </h2>
+              <p style={{ fontSize: 12, color: MUTED, lineHeight: "1.55", marginTop: 6 }}>
+                Como a mercadoria já foi coletada, precisamos definir um destino de devolução antes de calcular o novo custo.
+              </p>
+            </div>
+            {closeButton}
+          </div>
+
+          <div style={{ display: "flex", flexDirection: "column", gap: 9, marginBottom: 14 }}>
+            {([
+              {
+                id: "origin" as const,
+                title: "Devolver ao local de coleta",
+                sub: ride.origin,
+                icon: <IconUndo size={18} color={GOLD} />,
+              },
+              {
+                id: "other" as const,
+                title: "Entregar em outro endereço",
+                sub: "Informe um novo destino para a devolução",
+                icon: <IconMapPin size={18} color={GOLD} />,
+              },
+            ]).map((option) => {
+              const selected = destination === option.id
+              return (
+                <button
+                  key={option.id}
+                  onClick={() => setDestination(option.id)}
+                  style={{
+                    width: "100%",
+                    padding: 14,
+                    borderRadius: 15,
+                    background: selected ? "rgba(201,162,39,0.07)" : CARD,
+                    border: `1.5px solid ${selected ? GOLD : BORDER}`,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 12,
+                    textAlign: "left",
+                    cursor: "pointer",
+                  }}
+                >
+                  <div style={{ width: 40, height: 40, borderRadius: 13, background: selected ? DARK : BG, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                    {option.icon}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <p style={{ fontSize: 13, fontWeight: 750, color: DARK }}>{option.title}</p>
+                    <p style={{ fontSize: 10.5, color: MUTED, lineHeight: "1.45", marginTop: 3 }}>{option.sub}</p>
+                  </div>
+                  <div style={{ width: 20, height: 20, borderRadius: 10, border: `1.5px solid ${selected ? GOLD : "#CFCFCB"}`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    {selected && <div style={{ width: 10, height: 10, borderRadius: 5, background: GOLD }} />}
+                  </div>
+                </button>
+              )
+            })}
+          </div>
+
+          {destination === "other" && (
+            <div style={{ marginBottom: 14 }}>
+              <p style={{ fontSize: 10, fontWeight: 700, color: MUTED, letterSpacing: "0.07em", marginBottom: 6 }}>NOVO DESTINO</p>
+              <div style={{ display: "flex", alignItems: "center", gap: 9, padding: "12px 13px", borderRadius: 13, background: CARD, border: `1px solid ${BORDER}` }}>
+                <IconSearch size={16} color={MUTED} />
+                <input
+                  value={otherAddress}
+                  onChange={(e) => setOtherAddress(e.target.value)}
+                  placeholder="Digite um endereço"
+                  style={{ flex: 1, border: "none", outline: "none", background: "transparent", fontSize: 12, color: DARK, fontFamily: "inherit" }}
+                />
+              </div>
+              {otherAddress.trim().length > 4 && (
+                <button
+                  onClick={() => setOtherAddress("Av. Francisco Glicério, 1000 · Campinas")}
+                  style={{ width: "100%", marginTop: 7, padding: "10px 12px", borderRadius: 12, border: `1px solid ${BORDER}`, background: BG, textAlign: "left", cursor: "pointer" }}
+                >
+                  <p style={{ fontSize: 11.5, fontWeight: 650, color: DARK }}>Av. Francisco Glicério, 1000</p>
+                  <p style={{ fontSize: 10, color: MUTED, marginTop: 2 }}>Centro · Campinas — SP</p>
+                </button>
+              )}
+            </div>
+          )}
+
+          <div style={{ padding: "11px 12px", borderRadius: 13, background: "rgba(201,162,39,0.08)", border: "1px solid rgba(201,162,39,0.20)", marginBottom: 14, display: "flex", gap: 9 }}>
+            <IconAlert size={16} color="#8A6A0A" />
+            <p style={{ fontSize: 10.5, color: "#735A10", lineHeight: "1.5" }}>
+              A corrida ainda não será cancelada. Primeiro o motorista confirmará a posse da carga e o sistema calculará o custo da devolução.
+            </p>
+          </div>
+
+          <button
+            onClick={() => setStage("waiting_driver")}
+            disabled={destination === "other" && otherAddress.trim().length < 5}
+            style={{ width: "100%", padding: "14px 0", borderRadius: 14, background: destination === "other" && otherAddress.trim().length < 5 ? "#D6D4CF" : DARK, color: CARD, border: "none", cursor: destination === "other" && otherAddress.trim().length < 5 ? "not-allowed" : "pointer", fontSize: 13, fontWeight: 750 }}
+          >
+            Solicitar cálculo da devolução
+          </button>
+        </>
+      )
+    }
+
+    const title = ride.status === "on_way_collect" ? "Cancelar mesmo com o motorista a caminho?" : ride.status === "waiting_start" ? "Deseja cancelar esta corrida?" : "Cancelar esta corrida?"
+    const subtitle = ride.status === "on_way_collect"
+      ? "O motorista já iniciou o deslocamento até a coleta. Uma taxa de 10% será destinada a ele."
+      : ride.status === "waiting_start"
+        ? "O motorista já aceitou sua solicitação. Conte rapidamente o motivo do cancelamento."
+        : "Ainda não há motorista confirmado. O cancelamento é gratuito e o valor será estornado integralmente."
+
+    return (
+      <>
+        <div style={{ display: "flex", justifyContent: "space-between", gap: 14, marginBottom: 18 }}>
+          <div style={{ flex: 1 }}>
+            <p style={{ fontSize: 10, fontWeight: 800, color: "#A62C2C", letterSpacing: "0.12em" }}>CANCELAMENTO</p>
+            <h2 style={{ fontSize: 21, fontWeight: 850, color: DARK, letterSpacing: -0.45, marginTop: 5, lineHeight: "1.15" }}>{title}</h2>
+            <p style={{ fontSize: 12, color: MUTED, lineHeight: "1.55", marginTop: 7 }}>{subtitle}</p>
+          </div>
+          {closeButton}
+        </div>
+
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, padding: "12px 13px", background: BG, border: `1px solid ${BORDER}`, borderRadius: 14, marginBottom: 14 }}>
+          <div>
+            <p style={{ fontSize: 10, color: MUTED }}>Corrida {ride.id}</p>
+            <p style={{ fontSize: 12.5, fontWeight: 700, color: DARK, marginTop: 2 }}>{ride.origin.split("—")[0].trim()} → {ride.dest.split("—")[0].trim()}</p>
+          </div>
+          <StatusBadge status={ride.status} />
+        </div>
+
+        {requiresReason && (
+          <div style={{ marginBottom: 14 }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 7 }}>
+              <p style={{ fontSize: 11, fontWeight: 700, color: DARK }}>Por que deseja cancelar?</p>
+              <span style={{ fontSize: 10, color: reason.length > 500 ? "#A62C2C" : MUTED }}>{reason.length}/500</span>
+            </div>
+            <textarea
+              value={reason}
+              maxLength={500}
+              onChange={(e) => setReason(e.target.value)}
+              placeholder="Ex.: Preciso alterar a data da entrega e não conseguirei receber o motorista agora."
+              style={{ width: "100%", minHeight: 105, resize: "none", borderRadius: 14, border: `1.5px solid ${reason.length > 0 && !reasonValid ? "rgba(166,44,44,0.35)" : BORDER}`, background: CARD, padding: "12px 13px", fontFamily: "inherit", fontSize: 12, color: DARK, lineHeight: "1.5", outline: "none", boxSizing: "border-box" }}
+            />
+            <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 6 }}>
+              <div style={{ width: 16, height: 16, borderRadius: 8, background: reasonValid ? "rgba(201,162,39,0.12)" : BG, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                {reasonValid ? <IconCheck size={9} color={GOLD} /> : <span style={{ width: 4, height: 4, borderRadius: 3, background: MUTED }} />}
+              </div>
+              <span style={{ fontSize: 10, color: reasonValid ? "#806515" : MUTED }}>Use entre 10 e 500 caracteres</span>
+            </div>
+          </div>
+        )}
+
+        <div style={{ background: DARK, borderRadius: 16, padding: 14, marginBottom: 14 }}>
+          {ride.status === "on_way_collect" ? (
+            <>
+              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 9 }}><span style={{ fontSize: 10.5, color: "rgba(255,255,255,0.46)" }}>Valor pago</span><span style={{ fontSize: 11.5, fontWeight: 700, color: CARD }}>{formatBrl(total)}</span></div>
+              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 9 }}><span style={{ fontSize: 10.5, color: "rgba(255,255,255,0.46)" }}>Taxa de cancelamento · 10%</span><span style={{ fontSize: 11.5, fontWeight: 700, color: GOLD }}>− {formatBrl(fee)}</span></div>
+              <div style={{ height: 1, background: "rgba(255,255,255,0.08)", margin: "10px 0" }} />
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}><span style={{ fontSize: 11, fontWeight: 650, color: CARD }}>Você receberá de volta</span><span style={{ fontSize: 18, fontWeight: 850, color: CARD }}>{formatBrl(refund)}</span></div>
+            </>
+          ) : (
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div><p style={{ fontSize: 10, color: "rgba(255,255,255,0.42)" }}>Estorno previsto</p><p style={{ fontSize: 11, color: "rgba(255,255,255,0.62)", marginTop: 3 }}>Sem taxa de cancelamento</p></div>
+              <p style={{ fontSize: 20, fontWeight: 850, color: CARD }}>{formatBrl(total)}</p>
+            </div>
+          )}
+        </div>
+
+        <div style={{ display: "flex", gap: 9 }}>
+          <button onClick={onClose} style={{ flex: 1, padding: "13px 0", borderRadius: 13, background: CARD, border: `1px solid ${BORDER}`, color: MUTED, cursor: "pointer", fontSize: 12.5, fontWeight: 700 }}>Manter corrida</button>
+          <button onClick={completeSimpleCancellation} disabled={!canSubmit} style={{ flex: 1.35, padding: "13px 0", borderRadius: 13, background: canSubmit ? "#A62C2C" : "#D8D6D1", border: "none", color: CARD, cursor: canSubmit ? "pointer" : "not-allowed", fontSize: 12.5, fontWeight: 750 }}>Confirmar cancelamento</button>
+        </div>
+      </>
+    )
+  }
+
+  const renderWaitingDriver = () => (
+    <>
+      <div style={{ display: "flex", justifyContent: "space-between", gap: 14, marginBottom: 18 }}>
+        <div style={{ flex: 1 }}>
+          <p style={{ fontSize: 10, fontWeight: 800, color: GOLD, letterSpacing: "0.12em" }}>CANCELAMENTO EM ANÁLISE</p>
+          <h2 style={{ fontSize: 22, fontWeight: 850, color: DARK, letterSpacing: -0.45, marginTop: 5 }}>Aguardando o motorista</h2>
+          <p style={{ fontSize: 12, color: MUTED, lineHeight: "1.55", marginTop: 7 }}>Moreno precisa confirmar que está com a mercadoria e atualizar a localização antes do cálculo.</p>
+        </div>
+        {closeButton}
+      </div>
+      <div style={{ background: DARK, borderRadius: 18, padding: 16, marginBottom: 13, position: "relative", overflow: "hidden" }}>
+        <div style={{ position: "absolute", right: -32, top: -32, width: 110, height: 110, borderRadius: 60, border: "1px solid rgba(201,162,39,0.17)" }} />
+        <div style={{ width: 48, height: 48, borderRadius: 24, background: "rgba(201,162,39,0.12)", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 13 }}><IconMapPin size={21} color={GOLD} /></div>
+        <p style={{ fontSize: 14, fontWeight: 750, color: CARD }}>Sua corrida continua ativa</p>
+        <p style={{ fontSize: 11, color: "rgba(255,255,255,0.48)", lineHeight: "1.55", marginTop: 5 }}>A entrega original fica temporariamente bloqueada para finalização enquanto analisamos a devolução.</p>
+      </div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 14 }}>
+        {["Solicitação enviada ao motorista", "Confirmar posse e localização", "Calcular valor da devolução"].map((item, index) => (
+          <div key={item} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 11px", borderRadius: 12, background: index === 0 ? "rgba(201,162,39,0.08)" : BG, border: `1px solid ${index === 0 ? "rgba(201,162,39,0.18)" : BORDER}` }}>
+            <div style={{ width: 24, height: 24, borderRadius: 12, background: index === 0 ? GOLD : CARD, border: `1px solid ${index === 0 ? GOLD : BORDER}`, display: "flex", alignItems: "center", justifyContent: "center" }}>{index === 0 ? <IconCheck size={10} color={DARK} /> : <span style={{ fontSize: 9, fontWeight: 800, color: MUTED }}>{index + 1}</span>}</div>
+            <span style={{ fontSize: 11.5, fontWeight: index === 0 ? 700 : 600, color: index === 0 ? DARK : MUTED }}>{item}</span>
+          </div>
+        ))}
+      </div>
+      <button onClick={() => setStage("quote")} style={{ width: "100%", padding: "13px 0", borderRadius: 13, background: GOLD, border: "none", cursor: "pointer", fontSize: 12.5, fontWeight: 750, color: DARK }}>Protótipo · receber confirmação</button>
+    </>
+  )
+
+  const renderQuote = () => (
+    <>
+      <div style={{ display: "flex", justifyContent: "space-between", gap: 14, marginBottom: 18 }}>
+        <div style={{ flex: 1 }}>
+          <p style={{ fontSize: 10, fontWeight: 800, color: GOLD, letterSpacing: "0.12em" }}>ORÇAMENTO PRONTO</p>
+          <h2 style={{ fontSize: 22, fontWeight: 850, color: DARK, letterSpacing: -0.45, marginTop: 5 }}>Confira antes de decidir</h2>
+          <p style={{ fontSize: 12, color: MUTED, lineHeight: "1.55", marginTop: 7 }}>O valor considera o trecho já realizado e a rota da posição atual do motorista até o destino de devolução.</p>
+        </div>
+        {closeButton}
+      </div>
+      <div style={{ background: DARK, borderRadius: 18, padding: 16, marginBottom: 12 }}>
+        <p style={{ fontSize: 10, color: "rgba(255,255,255,0.42)" }}>Custo total da devolução</p>
+        <p style={{ fontSize: 29, fontWeight: 850, color: CARD, letterSpacing: -0.6, marginTop: 3 }}>{formatBrl(returnCost)}</p>
+        <div style={{ height: 1, background: "rgba(255,255,255,0.08)", margin: "14px 0" }} />
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+          <div><p style={{ fontSize: 9.5, color: "rgba(255,255,255,0.38)" }}>JÁ PERCORRIDO</p><p style={{ fontSize: 12, fontWeight: 700, color: CARD, marginTop: 4 }}>18,4 km</p></div>
+          <div><p style={{ fontSize: 9.5, color: "rgba(255,255,255,0.38)" }}>ATÉ DEVOLUÇÃO</p><p style={{ fontSize: 12, fontWeight: 700, color: CARD, marginTop: 4 }}>12,7 km</p></div>
+        </div>
+      </div>
+      <div style={{ padding: 14, borderRadius: 15, background: CARD, border: `1px solid ${BORDER}`, marginBottom: 13 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 9 }}><span style={{ fontSize: 11, color: MUTED }}>Valor já pago</span><span style={{ fontSize: 11.5, fontWeight: 700, color: DARK }}>{formatBrl(total)}</span></div>
+        {returnRefund > 0 ? <div style={{ display: "flex", justifyContent: "space-between" }}><span style={{ fontSize: 11, color: MUTED }}>Estorno após confirmação</span><span style={{ fontSize: 13, fontWeight: 800, color: "#4B7B43" }}>{formatBrl(returnRefund)}</span></div> : <div style={{ display: "flex", justifyContent: "space-between" }}><span style={{ fontSize: 11, color: MUTED }}>Cobrança adicional</span><span style={{ fontSize: 13, fontWeight: 800, color: "#A62C2C" }}>{formatBrl(additionalCharge)}</span></div>}
+      </div>
+      <div style={{ padding: "11px 12px", borderRadius: 13, background: "rgba(201,162,39,0.08)", border: "1px solid rgba(201,162,39,0.18)", marginBottom: 14 }}><p style={{ fontSize: 10.5, color: "#735A10", lineHeight: "1.5" }}>Se você mantiver a entrega, a corrida segue para o destino original e o valor pago permanece o mesmo.</p></div>
+      <button onClick={() => setStage("success")} style={{ width: "100%", padding: "14px 0", borderRadius: 14, background: DARK, color: CARD, border: "none", cursor: "pointer", fontSize: 12.5, fontWeight: 750, marginBottom: 8 }}>Confirmar devolução por {formatBrl(returnCost)}</button>
+      <button onClick={() => setStage("declined")} style={{ width: "100%", padding: "13px 0", borderRadius: 14, background: CARD, color: DARK, border: `1px solid ${BORDER}`, cursor: "pointer", fontSize: 12.5, fontWeight: 700 }}>Manter entrega original</button>
+    </>
+  )
+
+  const renderSuccess = () => {
+    const isReturn = ride.status === "on_way_deliver"
+    const amount = ride.status === "on_way_collect" ? refund : total
+    return (
+      <div style={{ textAlign: "center", paddingTop: 2 }}>
+        <div style={{ width: 70, height: 70, borderRadius: 35, background: DARK, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 15px", border: "2px solid rgba(201,162,39,0.32)" }}><IconCheck size={29} color={GOLD} /></div>
+        <p style={{ fontSize: 10, fontWeight: 800, color: GOLD, letterSpacing: "0.12em" }}>{isReturn ? "DEVOLUÇÃO CONFIRMADA" : "CANCELAMENTO CONCLUÍDO"}</p>
+        <h2 style={{ fontSize: 22, fontWeight: 850, color: DARK, letterSpacing: -0.5, marginTop: 6 }}>{isReturn ? "Vamos devolver sua carga" : "Corrida cancelada"}</h2>
+        <p style={{ fontSize: 12, color: MUTED, lineHeight: "1.55", margin: "7px auto 16px", maxWidth: 280 }}>{isReturn ? "O motorista foi avisado e seguirá para o destino de devolução selecionado." : ride.status === "waiting_start" ? "O motorista foi avisado e o estorno foi registrado." : "O cancelamento foi registrado e o ajuste financeiro foi concluído no protótipo."}</p>
+        <div style={{ padding: 14, borderRadius: 15, background: BG, border: `1px solid ${BORDER}`, textAlign: "left", marginBottom: 14 }}>
+          {isReturn ? <><div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}><span style={{ fontSize: 10.5, color: MUTED }}>Novo destino</span><span style={{ maxWidth: 180, textAlign: "right", fontSize: 10.5, fontWeight: 650, color: DARK }}>{destination === "origin" ? "Local de coleta" : otherAddress}</span></div><div style={{ display: "flex", justifyContent: "space-between" }}><span style={{ fontSize: 10.5, color: MUTED }}>Ajuste financeiro</span><span style={{ fontSize: 11.5, fontWeight: 800, color: returnRefund > 0 ? "#4B7B43" : DARK }}>{returnRefund > 0 ? `Estorno de ${formatBrl(returnRefund)}` : additionalCharge > 0 ? `+ ${formatBrl(additionalCharge)}` : "Sem ajuste"}</span></div></> : <><div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}><span style={{ fontSize: 10.5, color: MUTED }}>Status</span><span style={{ fontSize: 10.5, fontWeight: 750, color: "#A62C2C" }}>Cancelada</span></div><div style={{ display: "flex", justifyContent: "space-between" }}><span style={{ fontSize: 10.5, color: MUTED }}>Valor a estornar</span><span style={{ fontSize: 13, fontWeight: 850, color: DARK }}>{formatBrl(amount)}</span></div></>}
+        </div>
+        <button onClick={onClose} style={{ width: "100%", padding: "14px 0", borderRadius: 14, background: GOLD, border: "none", color: DARK, cursor: "pointer", fontSize: 13, fontWeight: 800 }}>Entendi</button>
+      </div>
+    )
+  }
+
+  const renderDeclined = () => (
+    <div style={{ textAlign: "center", paddingTop: 2 }}>
+      <div style={{ width: 66, height: 66, borderRadius: 33, background: "rgba(201,162,39,0.10)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 15px" }}><IconArrow size={25} color={GOLD} /></div>
+      <p style={{ fontSize: 10, fontWeight: 800, color: GOLD, letterSpacing: "0.12em" }}>ENTREGA MANTIDA</p>
+      <h2 style={{ fontSize: 22, fontWeight: 850, color: DARK, letterSpacing: -0.5, marginTop: 6 }}>Tudo certo, a corrida continua</h2>
+      <p style={{ fontSize: 12, color: MUTED, lineHeight: "1.55", margin: "7px auto 17px", maxWidth: 285 }}>A solicitação de cancelamento foi encerrada e Moreno continuará até o destino original.</p>
+      <button onClick={onClose} style={{ width: "100%", padding: "14px 0", borderRadius: 14, background: DARK, border: "none", color: CARD, cursor: "pointer", fontSize: 13, fontWeight: 750 }}>Voltar para a corrida</button>
+    </div>
+  )
+
+  return (
+    <div style={{ position: "absolute", inset: 0, zIndex: 50, background: "rgba(12,12,12,0.58)", backdropFilter: "blur(2px)", display: "flex", alignItems: "flex-end", justifyContent: "center", padding: "0 12px 12px" }}>
+      <div style={{ width: "100%", maxHeight: "88%", overflowY: "auto", background: "#FBFAF7", borderRadius: "24px 24px 20px 20px", padding: "18px 18px 17px", border: "1px solid rgba(255,255,255,0.58)", boxShadow: "0 -18px 55px rgba(0,0,0,0.24)" }}>
+        <div style={{ width: 42, height: 4, borderRadius: 99, background: "#D9D7D2", margin: "0 auto 17px" }} />
+        {stage === "request" && renderRequest()}
+        {stage === "waiting_driver" && renderWaitingDriver()}
+        {stage === "quote" && renderQuote()}
+        {stage === "success" && renderSuccess()}
+        {stage === "declined" && renderDeclined()}
+      </div>
+    </div>
+  )
+}
+
+function RideDetailsModal({
+  ride,
+  onClose,
+  onTrack,
+  onCancel,
+}: {
+  ride: Ride
+  onClose: () => void
+  onTrack?: () => void
+  onCancel?: () => void
+}) {
+  return (
+    <div style={{ position: "absolute", inset: 0, zIndex: 45, background: "rgba(12,12,12,0.55)", backdropFilter: "blur(2px)", display: "flex", alignItems: "flex-end", padding: "0 10px 10px" }}>
+      <div className="no-scrollbar" style={{ width: "100%", maxHeight: "90%", overflowY: "auto", background: "#FBFAF7", borderRadius: "25px 25px 20px 20px", padding: "17px 18px 18px", boxShadow: "0 -18px 50px rgba(0,0,0,0.24)" }}>
+        <div style={{ width: 42, height: 4, borderRadius: 99, background: "#D8D6D1", margin: "0 auto 16px" }} />
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
+          <div><p style={{ fontSize: 10, fontWeight: 750, color: MUTED, letterSpacing: "0.09em" }}>DETALHES DA CORRIDA</p><h2 style={{ fontSize: 22, fontWeight: 850, color: DARK, marginTop: 4 }}>Corrida {ride.id}</h2><p style={{ fontSize: 11, color: MUTED, marginTop: 3 }}>{ride.date}</p></div>
+          <StatusBadge status={ride.status} />
+        </div>
+
+        <div style={{ marginTop: 17, padding: 15, borderRadius: 17, background: CARD, border: `1px solid ${BORDER}` }}>
+          <p style={{ fontSize: 10, fontWeight: 750, color: DARK, marginBottom: 13 }}>ROTA</p>
+          {[{ label: "COLETA", address: ride.origin, complement: ride.originComplement, reference: ride.originReference, dot: GOLD }, { label: "ENTREGA", address: ride.dest, complement: ride.destinationComplement, reference: ride.destinationReference, dot: DARK }].map((item, index) => (
+            <div key={item.label} style={{ display: "flex", gap: 11, marginBottom: index === 0 ? 15 : 0 }}>
+              <div style={{ paddingTop: 4 }}><span style={{ display: "block", width: 9, height: 9, borderRadius: 9, background: item.dot }} /></div>
+              <div style={{ flex: 1 }}><p style={{ fontSize: 9.5, color: MUTED }}>{item.label}</p><p style={{ fontSize: 12.2, fontWeight: 650, color: DARK, lineHeight: "1.45", marginTop: 2 }}>{item.address}</p>{item.complement && <p style={{ fontSize: 10.5, color: MUTED, marginTop: 3 }}>{item.complement}</p>}{item.reference && <p style={{ fontSize: 10, color: "#9A7810", marginTop: 3 }}>Referência: {item.reference}</p>}</div>
+            </div>
+          ))}
+        </div>
+
+        {ride.driver && (
+          <div style={{ marginTop: 10, padding: 14, borderRadius: 17, background: DARK }}>
+            <p style={{ fontSize: 9.5, fontWeight: 750, color: GOLD, letterSpacing: "0.09em", marginBottom: 11 }}>SEU MOTORISTA</p>
+            <div style={{ display: "flex", alignItems: "center", gap: 11 }}>
+              <UserAvatar size={44} initials="MA" />
+              <div style={{ flex: 1 }}><p style={{ fontSize: 13.5, fontWeight: 750, color: CARD }}>{ride.driver.name}</p><p style={{ fontSize: 10.5, color: "rgba(255,255,255,0.46)", marginTop: 3 }}>{ride.driver.vehicle} · {ride.driver.plate}</p></div>
+              <div><div style={{ display: "flex", alignItems: "center", gap: 4 }}><IconStar size={12} color={GOLD} /><span style={{ fontSize: 11, fontWeight: 750, color: CARD }}>{ride.driver.rating}</span></div><p style={{ fontSize: 9, color: "rgba(255,255,255,0.35)", marginTop: 2 }}>{ride.driver.rides} corridas</p></div>
+            </div>
+          </div>
+        )}
+
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 9, marginTop: 10 }}>
+          <div style={{ padding: 13, borderRadius: 15, background: CARD, border: `1px solid ${BORDER}` }}><p style={{ fontSize: 9.5, color: MUTED }}>VALOR</p><p style={{ fontSize: 15, fontWeight: 800, color: DARK, marginTop: 3 }}>{ride.price}</p></div>
+          <div style={{ padding: 13, borderRadius: 15, background: CARD, border: `1px solid ${BORDER}` }}><p style={{ fontSize: 9.5, color: MUTED }}>PESO</p><p style={{ fontSize: 15, fontWeight: 800, color: DARK, marginTop: 3 }}>{ride.weight}</p></div>
+        </div>
+        {(ride.width || ride.height || ride.length) && <div style={{ marginTop: 9, padding: "12px 13px", borderRadius: 14, background: "rgba(201,162,39,0.07)", border: "1px solid rgba(201,162,39,0.17)" }}><p style={{ fontSize: 9.5, color: "#806515", marginBottom: 5 }}>DIMENSÕES DA CARGA</p><p style={{ fontSize: 11.5, fontWeight: 700, color: DARK }}>{ride.width} × {ride.height} × {ride.length}</p></div>}
+
+        {onTrack && ACTIVE_STATUSES.includes(ride.status) && <button onClick={onTrack} style={{ width: "100%", marginTop: 14, padding: "14px 0", borderRadius: 14, background: GOLD, border: "none", color: DARK, cursor: "pointer", fontSize: 13, fontWeight: 800 }}>Acompanhar corrida</button>}
+        {onCancel && ACTIVE_STATUSES.includes(ride.status) && <button onClick={onCancel} style={{ width: "100%", marginTop: 8, padding: "12px 0", borderRadius: 13, background: "rgba(166,44,44,0.045)", border: "1px solid rgba(166,44,44,0.18)", color: "#A62C2C", cursor: "pointer", fontSize: 12, fontWeight: 700 }}>Cancelar corrida</button>}
+        <button onClick={onClose} style={{ width: "100%", marginTop: 7, padding: "11px 0", border: "none", background: "transparent", color: MUTED, cursor: "pointer", fontSize: 11.5, fontWeight: 650 }}>Fechar</button>
+      </div>
+    </div>
+  )
+}
+
+function ClientRideTrackingScreen({ ride = HOME_ACTIVE_RIDE, onBack }: { ride?: Ride; onBack?: () => void }) {
+  const [cancellationRide, setCancellationRide] = useState<Ride | null>(null)
+  return (
+    <>
+      <SecondaryHeader title="Acompanhar corrida" onBack={onBack} />
+      <div className="flex-1 overflow-y-auto no-scrollbar" style={{ padding: "2px 20px 24px" }}>
+        <div style={{ background: DARK, borderRadius: 21, padding: 18, position: "relative", overflow: "hidden" }}>
+          <div style={{ position: "absolute", width: 150, height: 150, borderRadius: 999, border: "1px solid rgba(201,162,39,0.18)", right: -48, top: -54 }} />
+          <div style={{ position: "relative" }}>
+            <StatusBadge status={ride.status} />
+            <h2 style={{ fontSize: 21, fontWeight: 850, color: CARD, marginTop: 13 }}>Seu frete está em andamento</h2>
+            <p style={{ fontSize: 11.5, lineHeight: "1.55", color: "rgba(255,255,255,0.48)", marginTop: 5 }}>Acompanhe os próximos passos e consulte todas as informações sem precisar voltar ao histórico.</p>
+          </div>
+        </div>
+
+        <div style={{ marginTop: 11, padding: 15, borderRadius: 17, background: CARD, border: `1px solid ${BORDER}` }}>
+          {[{ title: "Motorista encontrado", sub: "Moreno aceitou sua corrida", done: true }, { title: "A caminho da coleta", sub: ride.status === "waiting_start" ? "Aguardando o motorista iniciar" : "Motorista em deslocamento", done: ride.status !== "waiting_start" }, { title: "Entrega", sub: ride.status === "on_way_deliver" ? "Carga a caminho do destino" : "Próxima etapa", done: ride.status === "on_way_deliver" }].map((step, i) => (
+            <div key={step.title} style={{ display: "flex", gap: 11, marginBottom: i === 2 ? 0 : 13 }}>
+              <div style={{ width: 25, height: 25, borderRadius: 13, background: step.done ? GOLD : BG, border: `1px solid ${step.done ? GOLD : BORDER}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{step.done ? <IconCheck size={11} color={DARK} /> : <span style={{ width: 5, height: 5, borderRadius: 9, background: MUTED }} />}</div>
+              <div><p style={{ fontSize: 12.5, fontWeight: 700, color: DARK }}>{step.title}</p><p style={{ fontSize: 10.5, color: MUTED, marginTop: 2 }}>{step.sub}</p></div>
+            </div>
+          ))}
+        </div>
+
+        {ride.driver && <div style={{ marginTop: 11, padding: 15, borderRadius: 17, background: CARD, border: `1px solid ${BORDER}` }}><p style={{ fontSize: 10, fontWeight: 750, color: DARK, marginBottom: 12 }}>MOTORISTA</p><div style={{ display: "flex", alignItems: "center", gap: 11 }}><UserAvatar size={48} initials="MA" /><div style={{ flex: 1 }}><p style={{ fontSize: 14, fontWeight: 750, color: DARK }}>{ride.driver.name}</p><p style={{ fontSize: 10.5, color: MUTED, marginTop: 3 }}>{ride.driver.vehicle} · {ride.driver.plate}</p><div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 5 }}><IconStar size={11} color={GOLD} /><span style={{ fontSize: 10.5, fontWeight: 700, color: DARK }}>{ride.driver.rating}</span><span style={{ fontSize: 10, color: MUTED }}>· {ride.driver.rides} corridas</span></div></div></div></div>}
+
+        <div style={{ marginTop: 11 }}><RideCard ride={ride} /></div>
+        <button onClick={() => setCancellationRide(ride)} style={{ width: "100%", marginTop: 11, padding: "12px 0", borderRadius: 13, background: "rgba(166,44,44,0.045)", border: "1px solid rgba(166,44,44,0.18)", color: "#A62C2C", cursor: "pointer", fontSize: 12, fontWeight: 700 }}>Cancelar corrida</button>
+      </div>
+      {cancellationRide && <CancellationModal ride={cancellationRide} onClose={() => setCancellationRide(null)} />}
+    </>
+  )
+}
+
+function CancellationShowcaseScreen({
+  ride,
+  initialStage = "request",
+}: {
+  ride: Ride
+  initialStage?: CancellationStage
+}) {
+  return (
+    <div style={{ flex: 1, position: "relative", overflow: "hidden", background: BG }}>
+      <div style={{ padding: "8px 20px" }}>
+        <h2 style={{ fontSize: 18, fontWeight: 800, color: DARK }}>Acompanhar corrida</h2>
+        <div style={{ marginTop: 14 }}><RideCard ride={ride} /></div>
+      </div>
+      <CancellationModal ride={ride} initialStage={initialStage} onClose={() => {}} />
+    </div>
   )
 }
 
@@ -1806,14 +2257,18 @@ function CorridasScreen({
   nav = "rides",
   setNav,
   onShowAll,
+  onTrackRide,
 }: {
   defaultFilter?: FilterId
   forceEmpty?: boolean
   nav?: NavId
   setNav?: (n: NavId) => void
   onShowAll?: () => void
+  onTrackRide?: (ride: Ride) => void
 }) {
   const [activeFilter, setActiveFilter] = useState<FilterId>(defaultFilter)
+  const [cancellationRide, setCancellationRide] = useState<Ride | null>(null)
+  const [detailsRide, setDetailsRide] = useState<Ride | null>(null)
 
   const filteredRides = forceEmpty
     ? []
@@ -1959,13 +2414,33 @@ function CorridasScreen({
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             {filteredRides.map((ride) => (
-              <RideCard key={ride.id} ride={ride} />
+              <RideCard key={ride.id} ride={ride} onCancel={setCancellationRide} onDetails={setDetailsRide} />
             ))}
           </div>
         )}
       </div>
 
       <BottomNav active={nav} onSelect={setNav} />
+      {detailsRide && (
+        <RideDetailsModal
+          ride={detailsRide}
+          onClose={() => setDetailsRide(null)}
+          onTrack={() => {
+            setDetailsRide(null)
+            onTrackRide?.(detailsRide)
+          }}
+          onCancel={() => {
+            setCancellationRide(detailsRide)
+            setDetailsRide(null)
+          }}
+        />
+      )}
+      {cancellationRide && (
+        <CancellationModal
+          ride={cancellationRide}
+          onClose={() => setCancellationRide(null)}
+        />
+      )}
     </>
   )
 }
@@ -5478,6 +5953,7 @@ export default function App() {
             nav="home"
             setNav={clientNav}
             onSolicitarFrete={() => setScreen("client_dispatch_search")}
+            onTrackRide={(ride) => setScreen(ride.status === "waiting_accept" ? "client_dispatch_search" : ride.status === "waiting_start" ? "client_driver_found" : "client_ride_tracking")}
           />
         )
       case "client_dispatch_search":
@@ -5499,9 +5975,11 @@ export default function App() {
       case "client_driver_found":
         return (
           <ClientDriverFoundScreen
-            onContinue={() => setScreen("client_rides_all")}
+            onContinue={() => setScreen("client_ride_tracking")}
           />
         )
+      case "client_ride_tracking":
+        return <ClientRideTrackingScreen ride={HOME_ACTIVE_RIDE} onBack={() => setScreen("client_home")} />
       case "client_rides_empty":
         return (
           <CorridasScreen
@@ -5514,7 +5992,7 @@ export default function App() {
         )
       case "client_rides_all":
         return (
-          <CorridasScreen defaultFilter="all" nav="rides" setNav={clientNav} />
+          <CorridasScreen defaultFilter="all" nav="rides" setNav={clientNav} onTrackRide={(ride) => setScreen(ride.status === "waiting_accept" ? "client_dispatch_search" : ride.status === "waiting_start" ? "client_driver_found" : "client_ride_tracking")} />
         )
       case "client_payments_empty":
         return (
@@ -5689,7 +6167,7 @@ export default function App() {
 
         <SectionBlock label="Telas — Cliente">
           <PhoneFrame label="Home">
-            <HomeScreen nav="home" setNav={() => {}} />
+            <HomeScreen nav="home" setNav={() => {}} initialActiveRide />
           </PhoneFrame>
           <PhoneFrame label="Busca automática de motorista">
             <ClientDispatchSearchScreen />
@@ -5699,6 +6177,9 @@ export default function App() {
           </PhoneFrame>
           <PhoneFrame label="Motorista encontrado">
             <ClientDriverFoundScreen />
+          </PhoneFrame>
+          <PhoneFrame label="Acompanhar corrida — visão operacional">
+            <ClientRideTrackingScreen ride={HOME_ACTIVE_RIDE} />
           </PhoneFrame>
           <PhoneFrame label="Pagamentos — Vazio">
             <PagamentosScreen hasCards={false} nav="payments" />
@@ -5711,6 +6192,27 @@ export default function App() {
           </PhoneFrame>
           <PhoneFrame label="Dados pessoais">
             <DadosPessoaisScreen />
+          </PhoneFrame>
+        </SectionBlock>
+
+        <SectionBlock label="Fluxos de cancelamento — Cliente">
+          <PhoneFrame label="Aguardando aceite · confirmação + estorno integral">
+            <CancellationShowcaseScreen ride={RIDES[0]} />
+          </PhoneFrame>
+          <PhoneFrame label="Aguardando início · justificativa obrigatória">
+            <CancellationShowcaseScreen ride={RIDES[1]} />
+          </PhoneFrame>
+          <PhoneFrame label="A caminho da coleta · taxa de 10%">
+            <CancellationShowcaseScreen ride={RIDES[2]} />
+          </PhoneFrame>
+          <PhoneFrame label="A caminho da entrega · escolher devolução">
+            <CancellationShowcaseScreen ride={RIDES[3]} />
+          </PhoneFrame>
+          <PhoneFrame label="Em entrega · aguardando motorista">
+            <CancellationShowcaseScreen ride={RIDES[3]} initialStage="waiting_driver" />
+          </PhoneFrame>
+          <PhoneFrame label="Em entrega · orçamento da devolução">
+            <CancellationShowcaseScreen ride={RIDES[3]} initialStage="quote" />
           </PhoneFrame>
         </SectionBlock>
 

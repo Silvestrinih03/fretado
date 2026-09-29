@@ -7,6 +7,9 @@ import '../../../../core/endpoints.dart';
 import '../../../../core/services/http_service.dart';
 import '../../../driver_operations/data/models/driver_operation_models.dart';
 import '../../../payments/presentation/pages/my_payment_methods_page.dart';
+import '../../../ride_cancellation/data/datasources/ride_cancellation_datasource.dart';
+import '../../../ride_cancellation/data/repositories/ride_cancellation_repository_impl.dart';
+import '../../../ride_cancellation/presentation/widgets/client_cancellation_sheet.dart';
 import '../../../rides/presentation/pages/ride_history_page.dart';
 import '../../../shipping_request/presentation/pages/address_map_page.dart';
 
@@ -66,26 +69,30 @@ class ClientHomeContent extends StatelessWidget {
           icon: Icons.history_rounded,
           title: 'Hist\u00f3rico de corridas',
           subtitle: 'Ver corridas anteriores e finalizadas',
-          onTap: onHistoryTap ?? () {
-            Navigator.of(context).push(
-              MaterialPageRoute<void>(
-                builder: (_) => const RideHistoryPage(),
-              ),
-            );
-          },
+          onTap:
+              onHistoryTap ??
+              () {
+                Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const RideHistoryPage(),
+                  ),
+                );
+              },
         ),
         const SizedBox(height: 10),
         FretShortcutTile(
           icon: Icons.credit_card_outlined,
           title: 'M\u00e9todos de pagamento',
           subtitle: 'Gerenciar cart\u00f5es para seus fretes',
-          onTap: onPaymentMethodsTap ?? () {
-            Navigator.of(context).push(
-              MaterialPageRoute<void>(
-                builder: (_) => MyPaymentMethodsPage(userId: userId),
-              ),
-            );
-          },
+          onTap:
+              onPaymentMethodsTap ??
+              () {
+                Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => MyPaymentMethodsPage(userId: userId),
+                  ),
+                );
+              },
         ),
         const SizedBox(height: 22),
         _ClientRideInProgressSection(userId: userId),
@@ -184,13 +191,18 @@ class _ClientRideInProgressSection extends StatefulWidget {
 class _ClientRideInProgressSectionState
     extends State<_ClientRideInProgressSection> {
   late final HttpService _httpService;
+  late final RideCancellationRepositoryImpl _cancellationRepository;
   late Future<List<DriverRideModel>> _ridesFuture;
+  final Set<int> _pendingCancellationRideIds = <int>{};
   Timer? _refreshTimer;
 
   @override
   void initState() {
     super.initState();
     _httpService = HttpService();
+    _cancellationRepository = RideCancellationRepositoryImpl(
+      RideCancellationDatasource(_httpService),
+    );
     _ridesFuture = _loadRides();
     _refreshTimer = Timer.periodic(
       const Duration(seconds: 8),
@@ -236,11 +248,46 @@ class _ClientRideInProgressSectionState
       return bDate.compareTo(aDate);
     });
 
+    final pendingIds = <int>{};
+    await Future.wait(
+      rides.where((ride) => ride.statusId == 4).map((ride) async {
+        try {
+          final cancellation = await _cancellationRepository.latest(ride.id);
+          if (cancellation?.isAwaitingDriver == true ||
+              cancellation?.isAwaitingClient == true) {
+            pendingIds.add(ride.id);
+          }
+        } catch (_) {
+          // The ride list remains usable if cancellation state is unavailable.
+        }
+      }),
+    );
+    _pendingCancellationRideIds
+      ..clear()
+      ..addAll(pendingIds);
+
     return rides;
   }
 
   void _reload() {
     setState(() {
+      _ridesFuture = _loadRides();
+    });
+  }
+
+  Future<void> _openCancellation(DriverRideModel ride) async {
+    final result = await showClientCancellationFlow(
+      context,
+      ride: ride,
+      repository: _cancellationRepository,
+    );
+    if (!mounted) return;
+    setState(() {
+      if (result == ClientCancellationResult.pending) {
+        _pendingCancellationRideIds.add(ride.id);
+      } else if (result != null) {
+        _pendingCancellationRideIds.remove(ride.id);
+      }
       _ridesFuture = _loadRides();
     });
   }
@@ -283,7 +330,12 @@ class _ClientRideInProgressSectionState
               ...rides.map(
                 (ride) => Padding(
                   padding: const EdgeInsets.only(bottom: 10),
-                  child: _ClientRideHistoryCard(ride: ride),
+                  child: _ClientRideHistoryCard(
+                    ride: ride,
+                    hasPendingCancellation: _pendingCancellationRideIds
+                        .contains(ride.id),
+                    onCancel: () => _openCancellation(ride),
+                  ),
                 ),
               ),
           ],
@@ -334,8 +386,14 @@ class _ClientRideHistoryHeader extends StatelessWidget {
 
 class _ClientRideHistoryCard extends StatelessWidget {
   final DriverRideModel ride;
+  final bool hasPendingCancellation;
+  final VoidCallback onCancel;
 
-  const _ClientRideHistoryCard({required this.ride});
+  const _ClientRideHistoryCard({
+    required this.ride,
+    required this.hasPendingCancellation,
+    required this.onCancel,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -347,6 +405,29 @@ class _ClientRideHistoryCard extends StatelessWidget {
       destination: ride.destinationLabel,
       totalPrice: ride.totalPrice,
       packageWeight: ride.packageWeight,
+      footer:
+          ride.isCancellationReturn || ride.statusId < 1 || ride.statusId > 4
+          ? null
+          : SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: onCancel,
+                icon: const Icon(Icons.cancel_outlined),
+                label: Text(
+                  hasPendingCancellation
+                      ? 'Ver cancelamento'
+                      : 'Cancelar corrida',
+                ),
+                style: OutlinedButton.styleFrom(
+                  minimumSize: const Size.fromHeight(46),
+                  foregroundColor: FretColors.destructive700,
+                  side: const BorderSide(color: FretColors.destructive300),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
+            ),
     );
   }
 }

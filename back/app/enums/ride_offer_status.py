@@ -5,3 +5,4 @@ class RideOfferStatusEnum(IntEnum):
     ACEITA = 2
     RECUSADA = 3
     EXPIRADA = 4
+    CANCELADA = 5

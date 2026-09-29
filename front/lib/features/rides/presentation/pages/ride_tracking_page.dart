@@ -8,17 +8,24 @@ import '../../../../core/services/http_service.dart';
 import '../../../driver_operations/data/datasources/driver_operations_datasource.dart';
 import '../../../driver_operations/data/models/driver_operation_models.dart';
 import '../../../home/presentation/pages/home_page.dart';
+import '../../../ride_cancellation/data/datasources/ride_cancellation_datasource.dart';
+import '../../../ride_cancellation/data/models/ride_cancellation_models.dart';
+import '../../../ride_cancellation/data/repositories/ride_cancellation_repository_impl.dart';
+import '../../../ride_cancellation/domain/repositories/ride_cancellation_repository.dart';
+import '../../../ride_cancellation/presentation/widgets/client_cancellation_sheet.dart';
 
 class RideTrackingPage extends StatefulWidget {
   final int rideId;
   final int userId;
   final String vehicleCategory;
+  final bool startCancellationFlow;
 
   const RideTrackingPage({
     super.key,
     required this.rideId,
     required this.userId,
     required this.vehicleCategory,
+    this.startCancellationFlow = false,
   });
 
   @override
@@ -28,15 +35,22 @@ class RideTrackingPage extends StatefulWidget {
 class _RideTrackingPageState extends State<RideTrackingPage> {
   late final HttpService _httpService;
   late final DriverOperationsDatasource _datasource;
+  late final RideCancellationRepository _cancellationRepository;
   Timer? _timer;
   DriverRideModel? _ride;
   String? _error;
+  RideCancellationModel? _cancellation;
+  bool _isCancellationAction = false;
+  bool _didHandleInitialCancellation = false;
 
   @override
   void initState() {
     super.initState();
     _httpService = HttpService();
     _datasource = DriverOperationsDatasource(_httpService);
+    _cancellationRepository = RideCancellationRepositoryImpl(
+      RideCancellationDatasource(_httpService),
+    );
     _load();
     _timer = Timer.periodic(const Duration(seconds: 6), (_) => _load());
   }
@@ -51,13 +65,39 @@ class _RideTrackingPageState extends State<RideTrackingPage> {
   Future<void> _load() async {
     try {
       final ride = await _datasource.getRideById(widget.rideId);
+      RideCancellationModel? cancellation;
+      bool cancellationLoaded = true;
+      try {
+        cancellation = await _cancellationRepository.latest(widget.rideId);
+      } catch (_) {
+        cancellationLoaded = false;
+        cancellation = _cancellation;
+      }
       if (!mounted) return;
       setState(() {
         _ride = ride;
+        _cancellation = cancellation;
         _error = null;
       });
       if (ride.statusId == 5 || ride.statusId == 6 || ride.statusId == 7) {
         _timer?.cancel();
+      }
+      if (widget.startCancellationFlow &&
+          !_didHandleInitialCancellation &&
+          cancellationLoaded) {
+        _didHandleInitialCancellation = true;
+        final hasPendingCancellation =
+            cancellation?.isAwaitingDriver == true ||
+            cancellation?.isAwaitingClient == true;
+        if (!ride.isCancellationReturn &&
+            ((ride.statusId >= 1 && ride.statusId <= 4) ||
+                hasPendingCancellation)) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) {
+              _openCancellationFlow(initialCancellation: cancellation);
+            }
+          });
+        }
       }
     } catch (_) {
       if (mounted) {
@@ -67,6 +107,7 @@ class _RideTrackingPageState extends State<RideTrackingPage> {
   }
 
   void _goHome() {
+    _timer?.cancel();
     Navigator.of(context).pushAndRemoveUntil(
       MaterialPageRoute<void>(
         builder: (_) => HomePage(
@@ -77,6 +118,27 @@ class _RideTrackingPageState extends State<RideTrackingPage> {
       ),
       (route) => false,
     );
+  }
+
+  Future<void> _openCancellationFlow({
+    RideCancellationModel? initialCancellation,
+  }) async {
+    final ride = _ride;
+    if (ride == null || _isCancellationAction) return;
+    setState(() => _isCancellationAction = true);
+    final result = await showClientCancellationFlow(
+      context,
+      ride: ride,
+      repository: _cancellationRepository,
+      initialCancellation: initialCancellation ?? _cancellation,
+    );
+    if (!mounted) return;
+    setState(() => _isCancellationAction = false);
+    if (result == ClientCancellationResult.completed) {
+      _goHome();
+      return;
+    }
+    await _load();
   }
 
   @override
@@ -211,6 +273,27 @@ class _RideTrackingPageState extends State<RideTrackingPage> {
                       ),
                     ],
                     const SizedBox(height: 18),
+                    if (ride != null &&
+                        !ride.isCancellationReturn &&
+                        ride.statusId >= 1 &&
+                        ride.statusId <= 4) ...[
+                      OutlinedButton.icon(
+                        onPressed: _isCancellationAction
+                            ? null
+                            : _openCancellationFlow,
+                        icon: const Icon(Icons.cancel_outlined),
+                        label: Text(
+                          (_cancellation?.isAwaitingDriver ?? false) ||
+                                  (_cancellation?.isAwaitingClient ?? false)
+                              ? 'Ver cancelamento'
+                              : 'Cancelar corrida',
+                        ),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: FretColors.destructive700,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                    ],
                     OutlinedButton(
                       onPressed: _goHome,
                       child: const Text('Voltar para o inicio'),

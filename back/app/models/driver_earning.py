@@ -1,4 +1,4 @@
-from sqlalchemy import BigInteger, Column, DateTime, ForeignKey, Numeric
+from sqlalchemy import BigInteger, Column, DateTime, ForeignKey, Numeric, String
 from sqlalchemy.sql import func
 from app.database.base import Base
 
@@ -12,4 +12,5 @@ class DriverEarning(Base):
     gross_value = Column(Numeric(10, 2), nullable=False)
     app_fee_value = Column(Numeric(10, 2), nullable=False)
     net_value = Column(Numeric(10, 2), nullable=False)
+    earning_type = Column(String(30), nullable=False, default="ride_completion")
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)

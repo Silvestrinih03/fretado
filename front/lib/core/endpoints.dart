@@ -31,11 +31,9 @@ abstract class Endpoints {
       'limit': limit.toString(),
       if (cursor != null && cursor.isNotEmpty) 'cursor': cursor,
     };
-    return Uri(
-      path: '$rides/me',
-      queryParameters: queryParameters,
-    ).toString();
+    return Uri(path: '$rides/me', queryParameters: queryParameters).toString();
   }
+
   static String ridesInProgressByUser(int userId) =>
       '$rides/in-progress/user/$userId';
   static String rideGeocode(String query) =>
@@ -58,6 +56,21 @@ abstract class Endpoints {
   static String completeRidePickup(int rideId) =>
       '$rides/$rideId/pickup-completed';
   static String finishRide(int rideId) => '$rides/$rideId/finish';
+  static String rideCancellationPreview(int rideId) =>
+      '$rides/$rideId/cancellation-preview';
+  static String createRideCancellation(int rideId) =>
+      '$rides/$rideId/cancellations';
+  static String latestRideCancellation(int rideId) =>
+      '$rides/$rideId/cancellations/latest';
+
+  static const String driverCancellationAction =
+      '/ride-cancellations/driver/me/action-required';
+  static String confirmCancellationCargo(int cancellationId) =>
+      '/ride-cancellations/$cancellationId/driver-confirm';
+  static String decideRideCancellation(int cancellationId) =>
+      '/ride-cancellations/$cancellationId/client-decision';
+  static String acknowledgeRideCancellation(int cancellationId) =>
+      '/ride-cancellations/$cancellationId/driver-acknowledge';
 
   static const String rideOffers = '/offers';
   static String offersByDriver(int driverUserId) =>
@@ -77,7 +90,6 @@ abstract class Endpoints {
   static String driverLocationOffline(int driverUserId) =>
       '$driverLocations/$driverUserId/offline';
 
-
   static const String driverEarnings = '/driver_earnings';
   static String driverEarningsByDriver(int driverUserId) =>
       '$driverEarnings/driver/$driverUserId';
@@ -93,10 +105,7 @@ abstract class Endpoints {
   static const String cards = '/cards';
   static const String createCard = '$cards/';
   static String cardsByUser(int userId) => '$cards/user/$userId';
-  static String cardByUser({
-    required int userId,
-    required int cardId,
-  }) =>
+  static String cardByUser({required int userId, required int cardId}) =>
       '$cards/user/$userId/$cardId';
 
   static const String vehicleTypes = '/vehicle-types';
@@ -125,5 +134,4 @@ abstract class Endpoints {
       '$driverDocuments/user/$userId';
   static String updateDriverDocument(int documentId) =>
       '$driverDocuments/$documentId';
-
 }

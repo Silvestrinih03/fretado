@@ -14,6 +14,7 @@ from app.api.routes.driver_earnings import router as driver_earnings_router
 from app.api.routes.driver_wallets import router as driver_wallets_router
 from app.api.routes.wallet_transactions import router as wallet_transactions_router
 from app.api.routes.driver_location import router as driver_location_router
+from app.api.routes.ride_cancellation import router as ride_cancellation_router
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
 
@@ -43,3 +44,4 @@ app.include_router(driver_earnings_router)
 app.include_router(driver_wallets_router)
 app.include_router(wallet_transactions_router)
 app.include_router(driver_location_router)
+app.include_router(ride_cancellation_router)

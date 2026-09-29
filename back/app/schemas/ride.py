@@ -125,6 +125,8 @@ class RideResponse(BaseModel):
 class RideFullResponse(RideResponse):
     details: RideDetailResponse | None = None
     required_vehicle_type_name: str | None = None
+    ride_purpose: str = "standard"
+    source_ride_id: int | None = None
 
 
 class RideHistoryPageResponse(BaseModel):

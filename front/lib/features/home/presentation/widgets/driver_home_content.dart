@@ -140,7 +140,6 @@ class _DriverHomeContentState extends State<DriverHomeContent> {
       ],
     );
   }
-
 }
 
 class _DriverRequiredSetupAlert extends StatefulWidget {
@@ -501,9 +500,7 @@ class _DriverAvailabilityCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: isOnline ? FretColors.screenDark : FretColors.white,
         borderRadius: BorderRadius.circular(18),
-        border: isOnline
-            ? null
-            : Border.all(color: FretColors.screenBorder),
+        border: isOnline ? null : Border.all(color: FretColors.screenBorder),
         boxShadow: isOnline
             ? null
             : const [
@@ -606,9 +603,7 @@ class _DriverSearchStatusCard extends StatelessWidget {
             child: Icon(
               Icons.search_rounded,
               size: 21,
-              color: isOnline
-                  ? FretColors.screenGold
-                  : FretColors.screenMuted,
+              color: isOnline ? FretColors.screenGold : FretColors.screenMuted,
             ),
           ),
           const SizedBox(width: 12),
@@ -942,27 +937,44 @@ class _DriverActiveRideCard extends StatelessWidget {
       packageWeight: ride.packageWeight,
       footer: actionLabel == null || actionIcon == null
           ? null
-          : SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: isBusy ? null : onAdvance,
-                icon: isBusy
-                    ? const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : Icon(actionIcon, size: 18),
-                label: Text(actionLabel),
-                style: ElevatedButton.styleFrom(
-                  minimumSize: const Size.fromHeight(46),
-                  backgroundColor: FretColors.brandBlack,
-                  foregroundColor: FretColors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (ride.isCancellationReturn) ...[
+                  const Text(
+                    'DEVOLUCAO DE CANCELAMENTO',
+                    style: TextStyle(
+                      color: FretColors.brandGoldDark,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                ],
+                ElevatedButton.icon(
+                  onPressed: isBusy ? null : onAdvance,
+                  icon: isBusy
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : Icon(actionIcon, size: 18),
+                  label: Text(
+                    ride.isCancellationReturn
+                        ? 'Confirmar devolucao'
+                        : actionLabel,
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    minimumSize: const Size.fromHeight(46),
+                    backgroundColor: FretColors.brandBlack,
+                    foregroundColor: FretColors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
                 ),
-              ),
+              ],
             ),
     );
   }

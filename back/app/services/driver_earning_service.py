@@ -48,6 +48,7 @@ def create_driver_earning(
         gross_value=gross_value,
         app_fee_value=app_fee_value,
         net_value=net_value,
+        earning_type="ride_completion",
     )
     db.add(earning)
     add_balance(db, ride.driver_user_id, net_value)
@@ -55,4 +56,33 @@ def create_driver_earning(
     if commit:
         db.commit()
         db.refresh(earning)
+    return earning
+
+
+def create_cancellation_earning(
+    db: Session,
+    ride: Ride,
+    value,
+) -> DriverEarning:
+    if ride.driver_user_id is None or ride.status_id != int(RideStatusEnum.CANCELADA):
+        raise HTTPException(status_code=409, detail="Cancelamento sem motorista ou estado invalido.")
+    amount = value if isinstance(value, Decimal) else Decimal(str(value))
+    if not amount.is_finite() or amount <= 0 or amount != amount.quantize(Decimal("0.01")):
+        raise HTTPException(status_code=409, detail="Valor da taxa de cancelamento invalido.")
+    existing = db.query(DriverEarning).filter(DriverEarning.ride_id == ride.id).first()
+    if existing:
+        if existing.earning_type != "cancellation_fee":
+            raise HTTPException(status_code=409, detail="Corrida ja possui outro tipo de ganho.")
+        return existing
+    earning = DriverEarning(
+        driver_user_id=ride.driver_user_id,
+        ride_id=ride.id,
+        gross_value=amount,
+        app_fee_value=Decimal("0.00"),
+        net_value=amount,
+        earning_type="cancellation_fee",
+    )
+    db.add(earning)
+    add_balance(db, ride.driver_user_id, amount)
+    db.flush()
     return earning

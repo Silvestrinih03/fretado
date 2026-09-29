@@ -15,6 +15,7 @@ class DriverEarningResponse(BaseModel):
     gross_value: Decimal
     app_fee_value: Decimal
     net_value: Decimal
+    earning_type: str
     created_at: datetime
 
     class Config:

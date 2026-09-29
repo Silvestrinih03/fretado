@@ -1,6 +1,7 @@
 """Registro central dos models que compõem o metadata do SQLAlchemy."""
 
 from app.models.driver_document import DriverDocument
+from app.models.cancellation_status import CancellationStatus
 from app.models.driver_earning import DriverEarning
 from app.models.driver_license_category import DriverLicenseCategory
 from app.models.driver_location import DriverLocation
@@ -9,6 +10,8 @@ from app.models.fuel_price import FuelPrice
 from app.models.fuel_type import FuelType
 from app.models.pricing_policy import PricingPolicy
 from app.models.ride import Ride
+from app.models.ride_cancellation import RideCancellation
+from app.models.ride_cancellation_event import RideCancellationEvent
 from app.models.ride_detail import RideDetail
 from app.models.ride_offer import RideOffer
 from app.models.ride_offer_status import RideOfferStatus
@@ -24,6 +27,7 @@ from app.models.wallet_transaction import WalletTransaction
 from app.models.wallet_transaction_status import WalletTransactionStatus
 
 __all__ = [
+    "CancellationStatus",
     "DriverDocument",
     "DriverEarning",
     "DriverLicenseCategory",
@@ -33,6 +37,8 @@ __all__ = [
     "FuelType",
     "PricingPolicy",
     "Ride",
+    "RideCancellation",
+    "RideCancellationEvent",
     "RideDetail",
     "RideOffer",
     "RideOfferStatus",

@@ -264,10 +264,7 @@ class _WalletBalanceCard extends StatelessWidget {
                 ),
               ),
               Spacer(),
-              Icon(
-                Icons.account_balance_wallet,
-                color: FretColors.screenGold,
-              ),
+              Icon(Icons.account_balance_wallet, color: FretColors.screenGold),
             ],
           ),
           const SizedBox(height: 8),
@@ -317,8 +314,12 @@ class _EarningRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return _ListRow(
       icon: Icons.trending_up_rounded,
-      title: 'Corrida #${earning.rideId}',
-      subtitle: 'Taxa app ${_formatMoney(earning.appFeeValue)}',
+      title: earning.isCancellationFee
+          ? 'Taxa de cancelamento #${earning.rideId}'
+          : 'Corrida #${earning.rideId}',
+      subtitle: earning.isCancellationFee
+          ? 'Compensacao integral'
+          : 'Taxa app ${_formatMoney(earning.appFeeValue)}',
       trailing: _formatMoney(earning.netValue),
     );
   }

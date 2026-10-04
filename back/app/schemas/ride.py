@@ -122,11 +122,39 @@ class RideResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class RidePartySummary(BaseModel):
+    id: int
+    full_name: str
+    completed_rides_count: int = Field(default=0, ge=0)
+
+
+class RideAssignedVehicleSummary(BaseModel):
+    id: int
+    brand: str
+    model: str
+    plate: str
+
+
+class RideActiveCancellationSummary(BaseModel):
+    id: int
+    status: str
+
+
 class RideFullResponse(RideResponse):
     details: RideDetailResponse | None = None
     required_vehicle_type_name: str | None = None
     ride_purpose: str = "standard"
     source_ride_id: int | None = None
+    client: RidePartySummary | None = None
+    driver: RidePartySummary | None = None
+    assigned_vehicle: RideAssignedVehicleSummary | None = None
+    active_cancellation: RideActiveCancellationSummary | None = None
+
+
+class RidePickupEstimateResponse(BaseModel):
+    distance_km: Decimal
+    estimated_time_minutes: int = Field(..., ge=1)
+    location_recorded_at: datetime
 
 
 class RideHistoryPageResponse(BaseModel):

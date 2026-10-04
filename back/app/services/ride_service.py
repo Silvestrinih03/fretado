@@ -1,7 +1,7 @@
 import base64
 import binascii
 import json
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from fastapi import HTTPException
 from sqlalchemy import and_, or_
@@ -15,9 +15,16 @@ from app.models.ride_cancellation import RideCancellation
 from app.models.ride_cancellation_event import RideCancellationEvent
 from app.models.ride_detail import RideDetail
 from app.models.ride_offer import RideOffer
+from app.models.driver_location import DriverLocation
+from app.models.cancellation_status import CancellationStatus
 from app.models.user import User
+from app.models.user_profile import UserProfile
 from app.models.user_card import UserCard
+from app.models.vehicle import Vehicle
+from app.models.vehicle_model import VehicleModel
 from app.models.vehicle_type import VehicleType
+from app.enums.ride_offer_status import RideOfferStatusEnum
+from app.core.config import settings
 from app.schemas.driver_earning import DriverEarningCreate
 from app.schemas.ride import (
     RideCreate,
@@ -30,6 +37,7 @@ from app.schemas.ride import (
 from app.services.driver_earning_service import create_driver_earning
 from app.services.ride_offer_service import create_offer, find_nearest_candidate
 from app.services.ride_quote_service import RideQuoteService
+from app.services.route_service import MapboxRouteService
 
 
 def calculate_ride_price(db: Session, payload: RideQuoteRequest) -> RideQuoteResponse:
@@ -104,16 +112,78 @@ def build_full_response(db: Session, ride: Ride) -> RideFullResponse:
     cancellation = db.query(RideCancellation).filter(
         RideCancellation.return_ride_id == ride.id,
     ).first()
+    client = _build_party_summary(db, ride.client_user_id)
+    driver = _build_party_summary(db, ride.driver_user_id)
+    assigned_vehicle = _build_assigned_vehicle_summary(db, ride.id)
+    active_cancellation = _build_active_cancellation_summary(db, ride.id)
     return RideFullResponse(
         **{field: getattr(ride, field) for field in RideFullResponse.model_fields
            if field not in {
                "details", "required_vehicle_type_name", "ride_purpose", "source_ride_id",
+               "client", "driver", "assigned_vehicle", "active_cancellation",
            }},
         details=detail,
         required_vehicle_type_name=category.type if category else None,
         ride_purpose="cancellation_return" if cancellation else "standard",
         source_ride_id=cancellation.ride_id if cancellation else None,
+        client=client,
+        driver=driver,
+        assigned_vehicle=assigned_vehicle,
+        active_cancellation=active_cancellation,
     )
+
+
+def get_pickup_estimate(db: Session, ride_id: int):
+    ride = _get_ride(db, ride_id)
+    if ride.driver_user_id is None:
+        raise HTTPException(status_code=409, detail="Corrida ainda nao possui motorista.")
+    if ride.status_id not in (
+        int(RideStatusEnum.AGUARDANDO_INICIO),
+        int(RideStatusEnum.A_CAMINHO_COLETA),
+    ):
+        raise HTTPException(
+            status_code=409,
+            detail="A previsao de coleta nao esta disponivel neste status.",
+        )
+
+    detail = db.query(RideDetail).filter(RideDetail.ride_id == ride.id).first()
+    location = db.query(DriverLocation).filter(
+        DriverLocation.driver_user_id == ride.driver_user_id,
+    ).first()
+    if detail is None or location is None or not location.is_online:
+        raise HTTPException(
+            status_code=409,
+            detail="Localizacao recente do motorista indisponivel.",
+        )
+
+    recorded_at = location.location_recorded_at or location.last_seen_at
+    if recorded_at is None:
+        raise HTTPException(
+            status_code=409,
+            detail="Localizacao recente do motorista indisponivel.",
+        )
+    if recorded_at.tzinfo is None:
+        recorded_at = recorded_at.replace(tzinfo=timezone.utc)
+    freshness_limit = datetime.now(timezone.utc) - timedelta(
+        minutes=settings.DRIVER_LOCATION_MAX_AGE_MINUTES,
+    )
+    if recorded_at < freshness_limit:
+        raise HTTPException(
+            status_code=409,
+            detail="Localizacao recente do motorista indisponivel.",
+        )
+
+    estimate = MapboxRouteService().estimate_route(
+        origin_latitude=location.latitude,
+        origin_longitude=location.longitude,
+        destination_latitude=detail.origin_latitude,
+        destination_longitude=detail.origin_longitude,
+    )
+    return {
+        "distance_km": estimate.distance_km,
+        "estimated_time_minutes": estimate.estimated_time_minutes,
+        "location_recorded_at": recorded_at,
+    }
 
 
 def get_rides_by_client_user_id(db: Session, client_user_id: int):
@@ -169,7 +239,7 @@ def get_rides_for_user(
     has_more = len(rows) > limit
     page_rows = rows[:limit]
     items = [
-        _build_full_response_from_row(ride, detail, vehicle_type_name)
+        _build_full_response_from_row(db, ride, detail, vehicle_type_name)
         for ride, detail, vehicle_type_name in page_rows
     ]
     next_cursor = None
@@ -300,6 +370,7 @@ def _get_ride(db: Session, ride_id: int, lock: bool = False) -> Ride:
 
 
 def _build_full_response_from_row(
+    db: Session,
     ride: Ride,
     detail: RideDetail | None,
     vehicle_type_name: str | None,
@@ -310,13 +381,82 @@ def _build_full_response_from_row(
             for field in RideFullResponse.model_fields
             if field not in {
                 "details", "required_vehicle_type_name", "ride_purpose", "source_ride_id",
+                "client", "driver", "assigned_vehicle", "active_cancellation",
             }
         },
         details=detail,
         required_vehicle_type_name=vehicle_type_name,
         ride_purpose="standard",
         source_ride_id=None,
+        client=_build_party_summary(db, ride.client_user_id),
+        driver=_build_party_summary(db, ride.driver_user_id),
+        assigned_vehicle=_build_assigned_vehicle_summary(db, ride.id),
+        active_cancellation=_build_active_cancellation_summary(db, ride.id),
     )
+
+
+def _build_party_summary(db: Session, user_id: int | None):
+    if user_id is None:
+        return None
+    row = (
+        db.query(UserProfile)
+        .filter(UserProfile.user_id == user_id)
+        .first()
+    )
+    if row is None:
+        return None
+    completed_rides = db.query(Ride).filter(
+        or_(Ride.client_user_id == user_id, Ride.driver_user_id == user_id),
+        Ride.status_id == int(RideStatusEnum.FINALIZADA),
+    ).count()
+    return {
+        "id": user_id,
+        "full_name": f"{row.first_name} {row.last_name}".strip(),
+        "completed_rides_count": completed_rides,
+    }
+
+
+def _build_assigned_vehicle_summary(db: Session, ride_id: int):
+    row = (
+        db.query(Vehicle, VehicleModel)
+        .join(RideOffer, RideOffer.vehicle_id == Vehicle.id)
+        .join(VehicleModel, Vehicle.vehicle_model_id == VehicleModel.id)
+        .filter(
+            RideOffer.ride_id == ride_id,
+            RideOffer.status_id == int(RideOfferStatusEnum.ACEITA),
+        )
+        .order_by(RideOffer.updated_at.desc(), RideOffer.id.desc())
+        .first()
+    )
+    if row is None:
+        return None
+    vehicle, model = row
+    return {
+        "id": vehicle.id,
+        "brand": model.brand,
+        "model": model.model,
+        "plate": vehicle.plate,
+    }
+
+
+def _build_active_cancellation_summary(db: Session, ride_id: int):
+    row = (
+        db.query(RideCancellation, CancellationStatus.status)
+        .join(
+            CancellationStatus,
+            CancellationStatus.id == RideCancellation.status_id,
+        )
+        .filter(
+            RideCancellation.ride_id == ride_id,
+            RideCancellation.resolved_at.is_(None),
+        )
+        .order_by(RideCancellation.created_at.desc(), RideCancellation.id.desc())
+        .first()
+    )
+    if row is None:
+        return None
+    cancellation, status_name = row
+    return {"id": cancellation.id, "status": status_name}
 
 
 def _status_ids_for_group(

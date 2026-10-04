@@ -223,7 +223,15 @@ def driver_action_required(db: Session, driver: User) -> RideCancellationRespons
         .all()
     )
     for cancellation in rows:
-        if cancellation.previous_ride_status_id != int(RideStatusEnum.AGUARDANDO_ACEITE):
+        if cancellation.previous_ride_status_id == int(RideStatusEnum.AGUARDANDO_ACEITE):
+            continue
+        cancellation_status = _status_name(db, cancellation.status_id)
+        if cancellation_status == AWAITING_DRIVER:
+            return _response(db, cancellation)
+        if (
+            cancellation.resolved_at is not None
+            and cancellation.driver_acknowledged_at is None
+        ):
             return _response(db, cancellation)
     return None
 

@@ -25,6 +25,7 @@ from app.services.ride_service import (
     get_rides_by_driver_user_id,
     get_rides_for_user,
     get_rides_in_progress_by_user_id,
+    get_pickup_estimate,
     start_ride,
     update_ride,
 )
@@ -32,7 +33,7 @@ from app.services.ride_service import (
 from app.services.route_service import (
     MapboxRouteService,
 )
-from app.schemas.ride import RideCreate, RideFullResponse, RideGeocodeResponse, RideHistoryPageResponse, RideQuoteRequest, RideQuoteResponse, RideQuoteRouteResponse, RideUpdate
+from app.schemas.ride import RideCreate, RideFullResponse, RideGeocodeResponse, RideHistoryPageResponse, RidePickupEstimateResponse, RideQuoteRequest, RideQuoteResponse, RideQuoteRouteResponse, RideUpdate
 
 router = APIRouter(
     prefix="/rides",
@@ -244,6 +245,19 @@ def get_by_id(
         db=db,
         ride_id=ride_id,
     )
+
+
+@router.get(
+    "/{ride_id}/pickup-estimate",
+    response_model=RidePickupEstimateResponse,
+)
+def get_ride_pickup_estimate(
+    ride_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    ensure_ride_access(db, ride_id, current_user)
+    return get_pickup_estimate(db, ride_id)
 
 
 @router.put(

@@ -82,6 +82,20 @@ class DriverOperationsDatasource {
     }
   }
 
+  Future<RidePickupEstimateModel> getPickupEstimate(int rideId) async {
+    try {
+      final response = await _httpService.get(
+        Endpoints.ridePickupEstimate(rideId),
+      );
+      return RidePickupEstimateModel.fromJson(response);
+    } on HttpServiceException catch (e) {
+      throw DriverOperationsDatasourceException(
+        e.message,
+        statusCode: e.statusCode,
+      );
+    }
+  }
+
   Future<double> getRouteDistance(DriverRideModel ride) async {
     final details = ride.details;
     if (details == null) {

@@ -21,6 +21,8 @@ abstract class Endpoints {
 
   static const String rides = '/rides';
   static String rideById(int rideId) => '$rides/$rideId';
+  static String ridePickupEstimate(int rideId) =>
+      '$rides/$rideId/pickup-estimate';
   static String ridesMe({
     String statusGroup = 'all',
     int limit = 20,

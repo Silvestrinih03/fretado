@@ -6,6 +6,7 @@ import '../../../../core/services/myself/services/myself_service.dart';
 import '../controllers/driver_availability_controller.dart';
 import '../widgets/client_home_shell.dart';
 import '../widgets/driver_home_shell.dart';
+import '../../../ride_cancellation/presentation/widgets/driver_cancellation_gate.dart';
 
 class HomePage extends StatefulWidget {
   final HomeProfileEnum profile;
@@ -28,6 +29,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   late final Future<MyselfUserModel> _myselfFuture;
   DriverAvailabilityController? _driverAvailabilityController;
   int? _driverAvailabilityUserId;
+  int _cancellationRefreshVersion = 0;
 
   @override
   void initState() {
@@ -69,7 +71,8 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
         final String firstName = snapshot.data?.firstName.isNotEmpty == true
             ? snapshot.data!.firstName
             : '';
-        final int? userTypeId = widget.userTypeId ??
+        final int? userTypeId =
+            widget.userTypeId ??
             _myselfService.currentUserTypeId ??
             snapshot.data?.userTypeId;
         final HomeProfileEnum profile = userTypeId != null
@@ -80,20 +83,24 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
             widget.userId ?? _myselfService.currentUserId ?? 5;
         final DriverAvailabilityController? driverAvailability =
             profile == HomeProfileEnum.driver
-                ? _availabilityControllerFor(resolvedUserId)
-                : null;
+            ? _availabilityControllerFor(resolvedUserId)
+            : null;
 
         if (profile == HomeProfileEnum.client) {
-          return ClientHomeShell(
-            userName: firstName,
-            userId: resolvedUserId,
-          );
+          return ClientHomeShell(userName: firstName, userId: resolvedUserId);
         }
 
-        return DriverHomeShell(
-          userName: firstName,
-          userId: resolvedUserId,
+        return DriverCancellationGate(
           availabilityController: driverAvailability!,
+          onCancellationChanged: () {
+            if (mounted) setState(() => _cancellationRefreshVersion++);
+          },
+          child: DriverHomeShell(
+            userName: firstName,
+            userId: resolvedUserId,
+            availabilityController: driverAvailability,
+            cancellationRefreshVersion: _cancellationRefreshVersion,
+          ),
         );
       },
     );

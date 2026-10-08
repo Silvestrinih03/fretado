@@ -4,6 +4,7 @@ import '../../../../app/design_system/design_system.dart';
 import '../../../../core/endpoints.dart';
 import '../../../../core/services/http_service.dart';
 import '../../../driver_operations/data/models/driver_operation_models.dart';
+import '../../../ride_cancellation/presentation/widgets/cancellation_log_timeline.dart';
 import '../../data/models/ride_history_page_model.dart';
 
 class RideHistoryPage extends StatefulWidget {
@@ -402,6 +403,8 @@ class _HistoryRideCard extends StatelessWidget {
       destination: ride.destinationLabel,
       totalPrice: ride.totalPrice,
       packageWeight: ride.packageWeight,
+      cancellation: ride.cancellation,
+      linkedReturnRide: ride.linkedReturnRide,
     );
   }
 }
@@ -509,6 +512,8 @@ class _HistorySummaryCard extends StatelessWidget {
   final String destination;
   final double totalPrice;
   final double packageWeight;
+  final RideActiveCancellationModel? cancellation;
+  final RideLinkedReturnModel? linkedReturnRide;
 
   const _HistorySummaryCard({
     required this.rideId,
@@ -518,6 +523,8 @@ class _HistorySummaryCard extends StatelessWidget {
     required this.destination,
     required this.totalPrice,
     required this.packageWeight,
+    required this.cancellation,
+    required this.linkedReturnRide,
   });
 
   @override
@@ -576,11 +583,26 @@ class _HistorySummaryCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 10),
-              _HistoryStatusPill(statusId: statusId),
+              _HistoryStatusPill(
+                statusId: statusId,
+                label: linkedReturnRide == null
+                    ? null
+                    : linkedReturnRide!.statusId == 5
+                    ? 'Cancelada · devolução concluída'
+                    : 'Cancelada · devolução em andamento',
+              ),
             ],
           ),
           const SizedBox(height: 12),
           _HistoryRouteTimeline(origin: origin, destination: destination),
+          if (linkedReturnRide != null) ...[
+            const SizedBox(height: 12),
+            _LinkedReturnSummary(
+              originalRideId: rideId,
+              linkedReturn: linkedReturnRide!,
+              cancellation: cancellation,
+            ),
+          ],
           const SizedBox(height: 12),
           Row(
             children: [
@@ -613,7 +635,14 @@ class _HistorySummaryCard extends StatelessWidget {
                             ),
                           ),
                           const SizedBox(height: 12),
-                          _HistoryStatusPill(statusId: statusId),
+                          _HistoryStatusPill(
+                            statusId: statusId,
+                            label: linkedReturnRide == null
+                                ? null
+                                : linkedReturnRide!.statusId == 5
+                                ? 'Cancelada · devolução concluída'
+                                : 'Cancelada · devolução em andamento',
+                          ),
                           const SizedBox(height: 16),
                           Text('Data: ${_formatDate(createdAt)}'),
                           const SizedBox(height: 12),
@@ -623,6 +652,14 @@ class _HistorySummaryCard extends StatelessWidget {
                           const SizedBox(height: 12),
                           Text('Valor: ${_formatMoney(totalPrice)}'),
                           Text('Peso: ${_formatNumber(packageWeight)} kg'),
+                          if (linkedReturnRide != null) ...[
+                            const SizedBox(height: 18),
+                            _LinkedReturnDetails(
+                              originalRideId: rideId,
+                              linkedReturn: linkedReturnRide!,
+                              cancellation: cancellation,
+                            ),
+                          ],
                           const SizedBox(height: 16),
                           TextButton(
                             onPressed: () => Navigator.pop(context),
@@ -661,15 +698,16 @@ class _HistorySummaryCard extends StatelessWidget {
 
 class _HistoryStatusPill extends StatelessWidget {
   final int statusId;
+  final String? label;
 
-  const _HistoryStatusPill({required this.statusId});
+  const _HistoryStatusPill({required this.statusId, this.label});
 
   @override
   Widget build(BuildContext context) {
     final style = _HistoryRideStatusVisualStyle.fromStatusId(statusId);
 
     return Container(
-      constraints: const BoxConstraints(minHeight: 24, maxWidth: 150),
+      constraints: const BoxConstraints(minHeight: 24, maxWidth: 220),
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
         color: style.backgroundColor,
@@ -697,7 +735,7 @@ class _HistoryStatusPill extends StatelessWidget {
           ],
           Flexible(
             child: Text(
-              style.label,
+              label ?? style.label,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
@@ -713,6 +751,127 @@ class _HistoryStatusPill extends StatelessWidget {
       ),
     );
   }
+}
+
+class _LinkedReturnSummary extends StatelessWidget {
+  final int originalRideId;
+  final RideLinkedReturnModel linkedReturn;
+  final RideActiveCancellationModel? cancellation;
+
+  const _LinkedReturnSummary({
+    required this.originalRideId,
+    required this.linkedReturn,
+    required this.cancellation,
+  });
+
+  @override
+  Widget build(BuildContext context) => Container(
+    width: double.infinity,
+    padding: const EdgeInsets.all(12),
+    decoration: BoxDecoration(
+      color: FretColors.attention050,
+      borderRadius: BorderRadius.circular(12),
+      border: Border.all(color: FretColors.attention200),
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Corrida #$originalRideId · devolução #${linkedReturn.id}',
+          style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w800),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          'Destino da devolução: ${linkedReturn.destination}',
+          style: const TextStyle(fontSize: 10, height: 1.35),
+        ),
+        if (cancellation != null) ...[
+          const SizedBox(height: 6),
+          Text(
+            'Percorrido: ${_formatDistance(cancellation!.traveledDistanceKm)} · '
+            'devolução: ${_formatDistance(cancellation!.returnDistanceKm)}',
+            style: const TextStyle(color: FretColors.screenMuted, fontSize: 9),
+          ),
+        ],
+      ],
+    ),
+  );
+}
+
+class _LinkedReturnDetails extends StatelessWidget {
+  final int originalRideId;
+  final RideLinkedReturnModel linkedReturn;
+  final RideActiveCancellationModel? cancellation;
+
+  const _LinkedReturnDetails({
+    required this.originalRideId,
+    required this.linkedReturn,
+    required this.cancellation,
+  });
+
+  @override
+  Widget build(BuildContext context) => Container(
+    width: double.infinity,
+    padding: const EdgeInsets.all(14),
+    decoration: BoxDecoration(
+      color: FretColors.attention050,
+      borderRadius: BorderRadius.circular(14),
+      border: Border.all(color: FretColors.attention200),
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'JORNADA DO CANCELAMENTO',
+          style: TextStyle(
+            color: FretColors.attention800,
+            fontSize: 9,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+        const SizedBox(height: 9),
+        Text('Corrida original: #$originalRideId'),
+        Text('Corrida de devolução: #${linkedReturn.id}'),
+        const SizedBox(height: 8),
+        Text(
+          'Entrega original: ${_cancellationAddress(cancellation, original: true)}',
+        ),
+        Text('Destino da devolução: ${linkedReturn.destination}'),
+        const SizedBox(height: 8),
+        Text(
+          'Distância até o cancelamento: '
+          '${_formatDistance(cancellation?.traveledDistanceKm)}',
+        ),
+        Text(
+          'Distância da devolução: '
+          '${_formatDistance(cancellation?.returnDistanceKm)}',
+        ),
+        const SizedBox(height: 8),
+        Text('Valor da devolução: ${_formatMoney(linkedReturn.totalPrice)}'),
+        if (cancellation != null) ...[
+          Text(
+            'Valor retido: ${_formatMoney(cancellation!.cancellationCharge)}',
+          ),
+          Text('Reembolso: ${_formatMoney(cancellation!.refundAmount)}'),
+          Text(
+            'Cobrança adicional: '
+            '${_formatMoney(cancellation!.additionalChargeAmount)}',
+          ),
+          const SizedBox(height: 12),
+          const Text(
+            'EVENTOS',
+            style: TextStyle(
+              color: FretColors.screenMuted,
+              fontSize: 9,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: 6),
+          CancellationLogTimeline(rideId: originalRideId),
+        ],
+      ],
+    ),
+  );
 }
 
 class _HistoryRideStatusVisualStyle {
@@ -927,6 +1086,33 @@ String _formatMoney(double value) {
 
 String _formatNumber(double value) {
   return value.toStringAsFixed(1).replaceAll('.', ',');
+}
+
+String _formatDistance(double? value) => value == null
+    ? 'Indisponível'
+    : '${value.toStringAsFixed(1).replaceAll('.', ',')} km';
+
+String _cancellationAddress(
+  RideActiveCancellationModel? cancellation, {
+  required bool original,
+}) {
+  if (cancellation == null) return 'Não informada';
+  final values = original
+      ? [
+          cancellation.originalDestinationAddress,
+          cancellation.originalDestinationAddressComplement,
+          cancellation.originalDestinationReferencePoint,
+        ]
+      : [
+          cancellation.returnAddress,
+          cancellation.returnAddressComplement,
+          cancellation.returnReferencePoint,
+        ];
+  final result = values
+      .whereType<String>()
+      .where((value) => value.trim().isNotEmpty)
+      .join(' · ');
+  return result.isEmpty ? 'Não informada' : result;
 }
 
 String _formatDate(DateTime? value) {

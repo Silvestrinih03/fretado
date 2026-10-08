@@ -999,6 +999,12 @@ class _DriverActiveRideCard extends StatelessWidget {
 
     return FretRideSummaryCard(
       rideId: ride.id,
+      eyebrow: ride.isCancellationReturn
+          ? 'DEVOLUÇÃO EM ANDAMENTO'
+          : 'CORRIDA EM ANDAMENTO',
+      title: ride.isCancellationReturn
+          ? 'Devolução da corrida #${ride.sourceRideId ?? ride.activeCancellation?.originalRideId ?? ride.id}'
+          : null,
       statusId: ride.statusId,
       createdAt: ride.createdAt,
       origin: ride.originLabel,
@@ -1009,9 +1015,9 @@ class _DriverActiveRideCard extends StatelessWidget {
       participantName: client?.fullName,
       participantInitials: client?.initials,
       participantRidesCount: client?.completedRidesCount,
-      activeCancellationStatus: ride.activeCancellation?.status,
+      activeCancellationStatus: ride.activeCancellation?.phase,
       cancellationNotice: fretCancellationNotice(
-        ride.activeCancellation?.status,
+        ride.activeCancellation?.phase,
         isDriver: true,
       ),
       participantSubtitle: client == null
@@ -1041,9 +1047,7 @@ class _DriverActiveRideCard extends StatelessWidget {
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
                   : Icon(actionIcon, size: 18),
-              label: Text(
-                ride.isCancellationReturn ? 'Confirmar devolução' : actionLabel,
-              ),
+              label: Text(actionLabel),
               style: ElevatedButton.styleFrom(
                 minimumSize: const Size.fromHeight(46),
                 backgroundColor: FretColors.screenGold,
@@ -1434,7 +1438,8 @@ String? _rideProgressActionLabel(DriverRideModel ride) {
   return switch (ride.statusId) {
     2 => 'Iniciar corrida',
     3 => 'Confirmar coleta',
-    4 => 'Finalizar entrega',
+    4 =>
+      ride.isCancellationReturn ? 'Finalizar devolução' : 'Finalizar entrega',
     _ => null,
   };
 }
@@ -1443,7 +1448,10 @@ String? _rideProgressSuccessMessage(DriverRideModel ride) {
   return switch (ride.statusId) {
     2 => 'Corrida iniciada.',
     3 => 'Coleta concluida.',
-    4 => 'Corrida finalizada.',
+    4 =>
+      ride.isCancellationReturn
+          ? 'Devolução finalizada. O valor foi liberado.'
+          : 'Corrida finalizada.',
     _ => null,
   };
 }

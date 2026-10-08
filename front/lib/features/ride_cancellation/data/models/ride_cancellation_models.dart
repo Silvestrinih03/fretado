@@ -40,11 +40,15 @@ class RideCancellationModel {
   final int rideId;
   final int previousRideStatusId;
   final String status;
+  final String phase;
   final String? reason;
   final String? returnDestinationType;
   final String? returnAddress;
   final String? returnAddressComplement;
   final String? returnReferencePoint;
+  final String? originalDestinationAddress;
+  final String? originalDestinationAddressComplement;
+  final String? originalDestinationReferencePoint;
   final double? returnLatitude;
   final double? returnLongitude;
   final double? traveledDistanceKm;
@@ -55,6 +59,10 @@ class RideCancellationModel {
   final double additionalChargeAmount;
   final String financialStatus;
   final int? returnRideId;
+  final DateTime? quotePreparedAt;
+  final DateTime? returnStartedAt;
+  final DateTime? returnCompletedAt;
+  final String? distanceCalculationSource;
   final DateTime? driverConfirmedAt;
   final DateTime? driverAcknowledgedAt;
   final DateTime? resolvedAt;
@@ -65,11 +73,15 @@ class RideCancellationModel {
     required this.rideId,
     required this.previousRideStatusId,
     required this.status,
+    required this.phase,
     required this.reason,
     required this.returnDestinationType,
     required this.returnAddress,
     required this.returnAddressComplement,
     required this.returnReferencePoint,
+    required this.originalDestinationAddress,
+    required this.originalDestinationAddressComplement,
+    required this.originalDestinationReferencePoint,
     required this.returnLatitude,
     required this.returnLongitude,
     required this.traveledDistanceKm,
@@ -80,6 +92,10 @@ class RideCancellationModel {
     required this.additionalChargeAmount,
     required this.financialStatus,
     required this.returnRideId,
+    required this.quotePreparedAt,
+    required this.returnStartedAt,
+    required this.returnCompletedAt,
+    required this.distanceCalculationSource,
     required this.driverConfirmedAt,
     required this.driverAcknowledgedAt,
     required this.resolvedAt,
@@ -92,11 +108,18 @@ class RideCancellationModel {
         rideId: _int(json['ride_id']),
         previousRideStatusId: _int(json['previous_ride_status_id']),
         status: json['status']?.toString() ?? '',
+        phase: json['phase']?.toString() ?? json['status']?.toString() ?? '',
         reason: json['reason']?.toString(),
         returnDestinationType: json['return_destination_type']?.toString(),
         returnAddress: json['return_address']?.toString(),
         returnAddressComplement: json['return_address_complement']?.toString(),
         returnReferencePoint: json['return_reference_point']?.toString(),
+        originalDestinationAddress: json['original_destination_address']
+            ?.toString(),
+        originalDestinationAddressComplement:
+            json['original_destination_address_complement']?.toString(),
+        originalDestinationReferencePoint:
+            json['original_destination_reference_point']?.toString(),
         returnLatitude: _nullableDouble(json['return_latitude']),
         returnLongitude: _nullableDouble(json['return_longitude']),
         traveledDistanceKm: _nullableDouble(json['traveled_distance_km']),
@@ -107,6 +130,11 @@ class RideCancellationModel {
         additionalChargeAmount: _double(json['additional_charge_amount']),
         financialStatus: json['financial_status']?.toString() ?? '',
         returnRideId: _nullableInt(json['return_ride_id']),
+        quotePreparedAt: _date(json['quote_prepared_at']),
+        returnStartedAt: _date(json['return_started_at']),
+        returnCompletedAt: _date(json['return_completed_at']),
+        distanceCalculationSource: json['distance_calculation_source']
+            ?.toString(),
         driverConfirmedAt: _date(json['driver_confirmed_at']),
         driverAcknowledgedAt: _date(json['driver_acknowledged_at']),
         resolvedAt: _date(json['resolved_at']),

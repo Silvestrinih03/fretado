@@ -115,12 +115,15 @@ def build_full_response(db: Session, ride: Ride) -> RideFullResponse:
     client = _build_party_summary(db, ride.client_user_id)
     driver = _build_party_summary(db, ride.driver_user_id)
     assigned_vehicle = _build_assigned_vehicle_summary(db, ride.id)
-    active_cancellation = _build_active_cancellation_summary(db, ride.id)
+    cancellation_summary = _build_cancellation_summary(db, ride)
+    active_cancellation = _active_cancellation_summary(cancellation_summary)
+    linked_return_ride = _build_linked_return_summary(db, ride.id)
     return RideFullResponse(
         **{field: getattr(ride, field) for field in RideFullResponse.model_fields
            if field not in {
                "details", "required_vehicle_type_name", "ride_purpose", "source_ride_id",
                "client", "driver", "assigned_vehicle", "active_cancellation",
+               "cancellation", "linked_return_ride",
            }},
         details=detail,
         required_vehicle_type_name=category.type if category else None,
@@ -130,6 +133,8 @@ def build_full_response(db: Session, ride: Ride) -> RideFullResponse:
         driver=driver,
         assigned_vehicle=assigned_vehicle,
         active_cancellation=active_cancellation,
+        cancellation=cancellation_summary,
+        linked_return_ride=linked_return_ride,
     )
 
 
@@ -218,6 +223,10 @@ def get_rides_for_user(
 
     status_ids = _status_ids_for_group(status_group)
     query = query.filter(Ride.status_id.in_(status_ids))
+    return_ride_ids = db.query(RideCancellation.return_ride_id).filter(
+        RideCancellation.return_ride_id.is_not(None),
+    )
+    query = query.filter(~Ride.id.in_(return_ride_ids))
 
     if cursor is not None:
         cursor_created_at, cursor_id = _decode_history_cursor(cursor)
@@ -343,13 +352,32 @@ def _advance(db: Session, ride_id: int, expected: RideStatusEnum, target: RideSt
                 RideCancellation.return_ride_id == ride.id,
             ).first()
             if cancellation is not None:
+                cancellation.return_completed_at = ride.finished_at
                 db.add(RideCancellationEvent(
                     cancellation_id=cancellation.id,
                     actor_user_id=ride.driver_user_id,
                     event_type="return_delivery_completed",
                     previous_status_id=cancellation.status_id,
                     new_status_id=cancellation.status_id,
-                    event_metadata={"return_ride_id": ride.id},
+                    event_metadata={
+                        "return_ride_id": ride.id,
+                        "source_ride_id": cancellation.ride_id,
+                        "driver_compensation": str(cancellation.driver_compensation),
+                        "traveled_distance_km": str(cancellation.traveled_distance_km),
+                        "return_distance_km": str(cancellation.return_distance_km),
+                    },
+                ))
+                db.add(RideCancellationEvent(
+                    cancellation_id=cancellation.id,
+                    actor_user_id=None,
+                    event_type="driver_compensation_credited",
+                    previous_status_id=cancellation.status_id,
+                    new_status_id=cancellation.status_id,
+                    event_metadata={
+                        "return_ride_id": ride.id,
+                        "amount": str(cancellation.driver_compensation),
+                        "earning_type": "cancellation_return",
+                    },
                 ))
         db.commit()
         db.refresh(ride)
@@ -375,6 +403,10 @@ def _build_full_response_from_row(
     detail: RideDetail | None,
     vehicle_type_name: str | None,
 ) -> RideFullResponse:
+    return_cancellation = db.query(RideCancellation).filter(
+        RideCancellation.return_ride_id == ride.id,
+    ).first()
+    cancellation_summary = _build_cancellation_summary(db, ride)
     return RideFullResponse(
         **{
             field: getattr(ride, field)
@@ -382,16 +414,19 @@ def _build_full_response_from_row(
             if field not in {
                 "details", "required_vehicle_type_name", "ride_purpose", "source_ride_id",
                 "client", "driver", "assigned_vehicle", "active_cancellation",
+                "cancellation", "linked_return_ride",
             }
         },
         details=detail,
         required_vehicle_type_name=vehicle_type_name,
-        ride_purpose="standard",
-        source_ride_id=None,
+        ride_purpose="cancellation_return" if return_cancellation else "standard",
+        source_ride_id=return_cancellation.ride_id if return_cancellation else None,
         client=_build_party_summary(db, ride.client_user_id),
         driver=_build_party_summary(db, ride.driver_user_id),
         assigned_vehicle=_build_assigned_vehicle_summary(db, ride.id),
-        active_cancellation=_build_active_cancellation_summary(db, ride.id),
+        active_cancellation=_active_cancellation_summary(cancellation_summary),
+        cancellation=cancellation_summary,
+        linked_return_ride=_build_linked_return_summary(db, ride.id),
     )
 
 
@@ -439,7 +474,7 @@ def _build_assigned_vehicle_summary(db: Session, ride_id: int):
     }
 
 
-def _build_active_cancellation_summary(db: Session, ride_id: int):
+def _build_cancellation_summary(db: Session, ride: Ride):
     row = (
         db.query(RideCancellation, CancellationStatus.status)
         .join(
@@ -447,8 +482,10 @@ def _build_active_cancellation_summary(db: Session, ride_id: int):
             CancellationStatus.id == RideCancellation.status_id,
         )
         .filter(
-            RideCancellation.ride_id == ride_id,
-            RideCancellation.resolved_at.is_(None),
+            or_(
+                RideCancellation.ride_id == ride.id,
+                RideCancellation.return_ride_id == ride.id,
+            ),
         )
         .order_by(RideCancellation.created_at.desc(), RideCancellation.id.desc())
         .first()
@@ -456,7 +493,75 @@ def _build_active_cancellation_summary(db: Session, ride_id: int):
     if row is None:
         return None
     cancellation, status_name = row
-    return {"id": cancellation.id, "status": status_name}
+    phase = status_name
+    if status_name == "completed" and cancellation.return_ride_id is not None:
+        return_status = db.query(Ride.status_id).filter(
+            Ride.id == cancellation.return_ride_id,
+        ).scalar()
+        phase = (
+            "return_completed"
+            if return_status == int(RideStatusEnum.FINALIZADA)
+            else "return_in_progress"
+        )
+    return {
+        "id": cancellation.id,
+        "status": status_name,
+        "phase": phase,
+        "original_ride_id": cancellation.ride_id,
+        "return_ride_id": cancellation.return_ride_id,
+        "original_destination_address": cancellation.original_destination_address,
+        "original_destination_address_complement": cancellation.original_destination_address_complement,
+        "original_destination_reference_point": cancellation.original_destination_reference_point,
+        "return_address": cancellation.return_address,
+        "return_address_complement": cancellation.return_address_complement,
+        "return_reference_point": cancellation.return_reference_point,
+        "traveled_distance_km": cancellation.traveled_distance_km,
+        "return_distance_km": cancellation.return_distance_km,
+        "cancellation_charge": cancellation.cancellation_charge,
+        "driver_compensation": cancellation.driver_compensation,
+        "refund_amount": cancellation.refund_amount,
+        "additional_charge_amount": cancellation.additional_charge_amount,
+        "quote_prepared_at": cancellation.quote_prepared_at,
+        "return_started_at": cancellation.return_started_at,
+        "return_completed_at": cancellation.return_completed_at,
+    }
+
+
+def _active_cancellation_summary(summary):
+    if summary is None:
+        return None
+    if summary["phase"] in {
+        "awaiting_driver_confirmation",
+        "awaiting_client_confirmation",
+        "return_in_progress",
+    }:
+        return summary
+    return None
+
+
+def _build_linked_return_summary(db: Session, original_ride_id: int):
+    row = (
+        db.query(Ride, RideDetail)
+        .join(
+            RideCancellation,
+            RideCancellation.return_ride_id == Ride.id,
+        )
+        .outerjoin(RideDetail, RideDetail.ride_id == Ride.id)
+        .filter(RideCancellation.ride_id == original_ride_id)
+        .first()
+    )
+    if row is None:
+        return None
+    return_ride, detail = row
+    return {
+        "id": return_ride.id,
+        "status_id": return_ride.status_id,
+        "total_price": return_ride.total_price,
+        "origin": detail.origin_address if detail else "Ponto do cancelamento",
+        "destination": detail.destination_address if detail else "Destino da devolucao",
+        "started_at": return_ride.started_at,
+        "finished_at": return_ride.finished_at,
+    }
 
 
 def _status_ids_for_group(

@@ -20,6 +20,9 @@ class RideCancellationRepositoryImpl implements RideCancellationRepository {
   @override
   Future<RideCancellationModel?> driverAction() => _datasource.driverAction();
   @override
+  Future<RideCancellationModel> prepareDriverQuote(int cancellationId) =>
+      _datasource.prepareDriverQuote(cancellationId);
+  @override
   Future<RideCancellationModel> confirmCargo(int cancellationId) =>
       _datasource.confirmCargo(cancellationId);
   @override

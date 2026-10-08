@@ -74,6 +74,38 @@ class VehiclePricingProfileService:
             db, vehicle_type, fuel_id, median(consumptions), len(candidates),
         )
 
+    @classmethod
+    def build_assigned_vehicle_profile(
+        cls,
+        db: Session,
+        vehicle_model: VehicleModel,
+        vehicle_type: VehicleType,
+    ) -> VehiclePricingProfile:
+        if vehicle_model.vehicle_type_id != vehicle_type.id:
+            raise HTTPException(
+                status_code=409,
+                detail="Assigned vehicle type does not match its pricing category.",
+            )
+
+        fuel_id = (
+            vehicle_model.fuel_type_id
+            if vehicle_model.fuel_type_id is not None
+            else vehicle_type.default_fuel_type_id
+        )
+        consumption = (
+            vehicle_model.average_consumption_km_l
+            if vehicle_model.average_consumption_km_l is not None
+            else vehicle_type.default_consumption_km_l
+        )
+        return cls._build_profile(
+            db,
+            vehicle_type,
+            fuel_id,
+            consumption,
+            1,
+            source="assigned_vehicle",
+        )
+
     @staticmethod
     def get_required_vehicle_type(db: Session, payload: RideQuoteRequest) -> VehicleType:
         vehicle_types = db.query(VehicleType).order_by(
@@ -136,7 +168,14 @@ class VehiclePricingProfileService:
         ).all()
 
     @staticmethod
-    def _build_profile(db, vehicle_type, fuel_id=None, consumption=None, count=0):
+    def _build_profile(
+        db,
+        vehicle_type,
+        fuel_id=None,
+        consumption=None,
+        count=0,
+        source=None,
+    ):
         fallback = fuel_id is None
         if fallback:
             fuel_id = vehicle_type.default_fuel_type_id
@@ -172,6 +211,8 @@ class VehiclePricingProfileService:
             consumption_km_l=consumption,
             operational_cost_per_km=cost,
             minimum_freight_price=minimum_freight_price,
-            source="vehicle_type_fallback" if fallback else "available_fleet",
+            source=source or (
+                "vehicle_type_fallback" if fallback else "available_fleet"
+            ),
             available_vehicle_count=count,
         )

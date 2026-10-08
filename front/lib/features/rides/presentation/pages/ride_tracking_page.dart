@@ -261,6 +261,12 @@ class _RideTrackingPageState extends State<RideTrackingPage> {
         const SizedBox(height: 11),
         FretRideSummaryCard(
           rideId: ride.id,
+          eyebrow: ride.isCancellationReturn
+              ? 'DEVOLUÇÃO EM ANDAMENTO'
+              : 'CORRIDA EM ANDAMENTO',
+          title: ride.isCancellationReturn
+              ? 'Devolução da corrida #${ride.sourceRideId ?? ride.activeCancellation?.originalRideId ?? ride.id}'
+              : null,
           statusId: ride.statusId,
           createdAt: ride.createdAt,
           origin: ride.originLabel,
@@ -268,9 +274,9 @@ class _RideTrackingPageState extends State<RideTrackingPage> {
           totalPrice: _isClient ? ride.totalPrice : ride.driverNetValue,
           valueLabel: _isClient ? 'VALOR' : 'VOCÊ RECEBE',
           packageWeight: ride.packageWeight,
-          activeCancellationStatus: ride.activeCancellation?.status,
+          activeCancellationStatus: ride.activeCancellation?.phase,
           cancellationNotice: fretCancellationNotice(
-            ride.activeCancellation?.status,
+            ride.activeCancellation?.phase,
             isDriver: !_isClient,
           ),
           footer: OutlinedButton(
@@ -355,7 +361,7 @@ class _TrackingHero extends StatelessWidget {
   Widget build(BuildContext context) {
     final isClient = profile == HomeProfileEnum.client;
     final waiting = ride.statusId == 1;
-    final cancellationStatus = ride.activeCancellation?.status;
+    final cancellationStatus = ride.activeCancellation?.phase;
     final cancellationNotice = fretCancellationNotice(
       cancellationStatus,
       isDriver: !isClient,
@@ -395,6 +401,8 @@ class _TrackingHero extends StatelessWidget {
               Text(
                 waiting
                     ? 'Buscando um motorista para você'
+                    : ride.isCancellationReturn
+                    ? 'Devolução em andamento'
                     : isClient
                     ? 'Seu frete está em andamento'
                     : 'Entrega em andamento',

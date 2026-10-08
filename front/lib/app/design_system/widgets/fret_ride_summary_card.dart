@@ -6,6 +6,8 @@ const String fretTemporaryRatingLabel = '4,8';
 
 class FretRideSummaryCard extends StatelessWidget {
   final int rideId;
+  final String eyebrow;
+  final String? title;
   final int statusId;
   final DateTime? createdAt;
   final String origin;
@@ -24,6 +26,8 @@ class FretRideSummaryCard extends StatelessWidget {
   const FretRideSummaryCard({
     super.key,
     required this.rideId,
+    this.eyebrow = 'CORRIDA EM ANDAMENTO',
+    this.title,
     required this.statusId,
     required this.createdAt,
     required this.origin,
@@ -75,9 +79,9 @@ class FretRideSummaryCard extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
-                          'CORRIDA EM ANDAMENTO',
-                          style: TextStyle(
+                        Text(
+                          eyebrow,
+                          style: const TextStyle(
                             color: FretColors.screenMuted,
                             fontSize: 9,
                             fontWeight: FontWeight.w800,
@@ -86,7 +90,7 @@ class FretRideSummaryCard extends StatelessWidget {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          'Corrida #$rideId',
+                          title ?? 'Corrida #$rideId',
                           style: const TextStyle(
                             color: FretColors.screenDark,
                             fontSize: 18,
@@ -240,18 +244,24 @@ class FretCancellationNotice extends StatelessWidget {
   );
 }
 
-String? fretCancellationNotice(String? status, {required bool isDriver}) =>
-    switch (status) {
-      'awaiting_driver_confirmation' =>
-        isDriver
-            ? 'O cliente solicitou o cancelamento. Confirme a posse da carga.'
-            : 'Cancelamento solicitado. Aguardando a confirmação do motorista.',
-      'awaiting_client_confirmation' =>
-        isDriver
-            ? 'Confirmação enviada. Aguardando a decisão do cliente.'
-            : 'O motorista confirmou a posse da carga. Revise o cancelamento.',
-      _ => null,
-    };
+String? fretCancellationNotice(
+  String? status, {
+  required bool isDriver,
+}) => switch (status) {
+  'awaiting_driver_confirmation' =>
+    isDriver
+        ? 'O cliente solicitou o cancelamento. Confirme a posse da carga.'
+        : 'Cancelamento solicitado. Aguardando a confirmação do motorista.',
+  'awaiting_client_confirmation' =>
+    isDriver
+        ? 'Confirmação enviada. Aguardando a decisão do cliente.'
+        : 'O motorista confirmou a posse da carga. Revise o cancelamento.',
+  'return_in_progress' =>
+    isDriver
+        ? 'Esta devolução está vinculada à corrida original. Finalize-a para receber o valor informado.'
+        : 'A devolução da carga está em andamento e vinculada à corrida original.',
+  _ => null,
+};
 
 class _FretParticipantSummary extends StatelessWidget {
   final String name;
@@ -507,6 +517,24 @@ class _FretRideStatusVisualStyle {
         FretColors.attention200,
         FretColors.attention800,
         FretColors.attention600,
+      );
+    }
+    if (cancellationStatus == 'return_in_progress') {
+      return const _FretRideStatusVisualStyle(
+        'Devolução em andamento',
+        FretColors.attention050,
+        FretColors.attention200,
+        FretColors.attention800,
+        FretColors.screenGold,
+      );
+    }
+    if (cancellationStatus == 'return_completed') {
+      return const _FretRideStatusVisualStyle(
+        'Devolução concluída',
+        Color(0xFFF0F0F0),
+        Color(0xFFD0D0D0),
+        Color(0xFF555555),
+        Color(0xFF555555),
       );
     }
     return _FretRideStatusVisualStyle.fromStatusId(statusId);

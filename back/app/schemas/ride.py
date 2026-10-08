@@ -138,6 +138,34 @@ class RideAssignedVehicleSummary(BaseModel):
 class RideActiveCancellationSummary(BaseModel):
     id: int
     status: str
+    phase: str
+    original_ride_id: int
+    return_ride_id: int | None = None
+    original_destination_address: str | None = None
+    original_destination_address_complement: str | None = None
+    original_destination_reference_point: str | None = None
+    return_address: str | None = None
+    return_address_complement: str | None = None
+    return_reference_point: str | None = None
+    traveled_distance_km: Decimal | None = None
+    return_distance_km: Decimal | None = None
+    cancellation_charge: Decimal = Decimal("0")
+    driver_compensation: Decimal = Decimal("0")
+    refund_amount: Decimal = Decimal("0")
+    additional_charge_amount: Decimal = Decimal("0")
+    quote_prepared_at: datetime | None = None
+    return_started_at: datetime | None = None
+    return_completed_at: datetime | None = None
+
+
+class RideLinkedReturnSummary(BaseModel):
+    id: int
+    status_id: int
+    total_price: Decimal
+    origin: str
+    destination: str
+    started_at: datetime | None = None
+    finished_at: datetime | None = None
 
 
 class RideFullResponse(RideResponse):
@@ -149,6 +177,8 @@ class RideFullResponse(RideResponse):
     driver: RidePartySummary | None = None
     assigned_vehicle: RideAssignedVehicleSummary | None = None
     active_cancellation: RideActiveCancellationSummary | None = None
+    cancellation: RideActiveCancellationSummary | None = None
+    linked_return_ride: RideLinkedReturnSummary | None = None
 
 
 class RidePickupEstimateResponse(BaseModel):

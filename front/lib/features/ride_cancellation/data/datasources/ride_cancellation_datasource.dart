@@ -27,6 +27,13 @@ class RideCancellationDatasource {
   Future<RideCancellationModel?> driverAction() async =>
       _readNullable(await _http.get(Endpoints.driverCancellationAction));
 
+  Future<RideCancellationModel> prepareDriverQuote(int cancellationId) async =>
+      RideCancellationModel.fromJson(
+        await _http.post(
+          Endpoints.prepareCancellationDriverQuote(cancellationId),
+        ),
+      );
+
   Future<RideCancellationModel> confirmCargo(int cancellationId) async =>
       RideCancellationModel.fromJson(
         await _http.post(Endpoints.confirmCancellationCargo(cancellationId)),

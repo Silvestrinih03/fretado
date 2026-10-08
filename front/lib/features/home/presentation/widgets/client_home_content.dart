@@ -448,6 +448,12 @@ class _ClientRideHistoryCard extends StatelessWidget {
     final vehicle = ride.assignedVehicle;
     return FretRideSummaryCard(
       rideId: ride.id,
+      eyebrow: ride.isCancellationReturn
+          ? 'DEVOLUÇÃO EM ANDAMENTO'
+          : 'CORRIDA EM ANDAMENTO',
+      title: ride.isCancellationReturn
+          ? 'Devolução da corrida #${ride.sourceRideId ?? ride.activeCancellation?.originalRideId ?? ride.id}'
+          : null,
       statusId: ride.statusId,
       createdAt: ride.createdAt,
       origin: ride.originLabel,
@@ -457,9 +463,9 @@ class _ClientRideHistoryCard extends StatelessWidget {
       participantName: driver?.fullName,
       participantInitials: driver?.initials,
       participantRidesCount: driver?.completedRidesCount,
-      activeCancellationStatus: ride.activeCancellation?.status,
+      activeCancellationStatus: ride.activeCancellation?.phase,
       cancellationNotice: fretCancellationNotice(
-        ride.activeCancellation?.status,
+        ride.activeCancellation?.phase,
         isDriver: false,
       ),
       participantSubtitle: vehicle == null

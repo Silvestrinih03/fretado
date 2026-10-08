@@ -21,9 +21,16 @@ class RideCancellation(Base):
     return_latitude = Column(Numeric(9, 6), nullable=True)
     return_longitude = Column(Numeric(9, 6), nullable=True)
 
+    original_destination_address = Column(String(255), nullable=True)
+    original_destination_address_complement = Column(String(255), nullable=True)
+    original_destination_reference_point = Column(String(255), nullable=True)
+    original_destination_latitude = Column(Numeric(9, 6), nullable=True)
+    original_destination_longitude = Column(Numeric(9, 6), nullable=True)
+
     driver_latitude = Column(Numeric(9, 6), nullable=True)
     driver_longitude = Column(Numeric(9, 6), nullable=True)
     driver_location_recorded_at = Column(DateTime(timezone=True), nullable=True)
+    quote_prepared_at = Column(DateTime(timezone=True), nullable=True)
     traveled_distance_km = Column(Numeric(10, 3), nullable=True)
     return_distance_km = Column(Numeric(10, 3), nullable=True)
 
@@ -33,6 +40,9 @@ class RideCancellation(Base):
     additional_charge_amount = Column(Numeric(10, 2), nullable=False, default=0)
     financial_status = Column(String(30), nullable=False, default="simulated_completed")
     return_ride_id = Column(BigInteger, ForeignKey("rides.id", ondelete="RESTRICT"), nullable=True)
+    return_started_at = Column(DateTime(timezone=True), nullable=True)
+    return_completed_at = Column(DateTime(timezone=True), nullable=True)
+    distance_calculation_source = Column(String(30), nullable=True)
 
     driver_confirmed_at = Column(DateTime(timezone=True), nullable=True)
     driver_acknowledged_at = Column(DateTime(timezone=True), nullable=True)

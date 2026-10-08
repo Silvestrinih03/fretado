@@ -11,24 +11,46 @@ class DriverHomeShell extends StatefulWidget {
   final String userName;
   final int userId;
   final DriverAvailabilityController availabilityController;
+  final int cancellationRefreshVersion;
 
   const DriverHomeShell({
     super.key,
     required this.userName,
     required this.userId,
     required this.availabilityController,
+    this.cancellationRefreshVersion = 0,
   });
 
   @override
   State<DriverHomeShell> createState() => _DriverHomeShellState();
 }
 
-class _DriverHomeShellState extends State<DriverHomeShell> {
+class _DriverHomeShellState extends State<DriverHomeShell>
+    with WidgetsBindingObserver {
   int _selectedIndex = 0;
   int _homeRefreshVersion = 0;
   int _historyRefreshVersion = 0;
   int _walletRefreshVersion = 0;
   final List<bool> _visitedTabs = <bool>[true, false, false, false];
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && _selectedIndex == 0) {
+      setState(() => _homeRefreshVersion++);
+    }
+  }
 
   void _selectTab(int index) {
     if (_selectedIndex == index) {
@@ -71,6 +93,8 @@ class _DriverHomeShellState extends State<DriverHomeShell> {
                     userId: widget.userId,
                     availabilityController: widget.availabilityController,
                     refreshVersion: _homeRefreshVersion,
+                    cancellationRefreshVersion:
+                        widget.cancellationRefreshVersion,
                     onHistoryTap: () => _selectTab(1),
                     onWalletTap: () => _selectTab(2),
                   ),
@@ -172,10 +196,7 @@ class _DriverHeaderAvatar extends StatelessWidget {
   final bool isOnline;
   final bool showStatus;
 
-  const _DriverHeaderAvatar({
-    required this.isOnline,
-    required this.showStatus,
-  });
+  const _DriverHeaderAvatar({required this.isOnline, required this.showStatus});
 
   @override
   Widget build(BuildContext context) {
@@ -203,9 +224,7 @@ class _DriverHeaderAvatar extends StatelessWidget {
               width: 10,
               height: 10,
               decoration: BoxDecoration(
-                color: isOnline
-                    ? FretColors.success500
-                    : FretColors.neutral400,
+                color: isOnline ? FretColors.success500 : FretColors.neutral400,
                 shape: BoxShape.circle,
                 border: Border.all(color: FretColors.brandBlack, width: 2),
               ),

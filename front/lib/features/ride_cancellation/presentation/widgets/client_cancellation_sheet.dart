@@ -735,15 +735,25 @@ class _ClientCancellationSheetState extends State<_ClientCancellationSheet> {
       eyebrow: isReturn ? 'DEVOLUÇÃO CONFIRMADA' : 'CANCELAMENTO CONCLUÍDO',
       title: isReturn ? 'Vamos devolver sua carga' : 'Corrida cancelada',
       message: isReturn
-          ? 'O motorista foi avisado e seguirá para o destino de devolução selecionado.'
+          ? 'A devolução #${cancellation.returnRideId} foi criada e vinculada '
+                'à corrida #${cancellation.rideId}. O motorista seguirá para '
+                'o destino selecionado.'
           : cancellation.previousRideStatusId == 2
           ? 'O motorista foi avisado e o estorno foi registrado.'
           : 'O cancelamento foi registrado e o ajuste financeiro foi concluído.',
       details: isReturn
           ? [
               _ResultDetail(
+                'Corridas vinculadas',
+                '#${cancellation.rideId} → #${cancellation.returnRideId}',
+              ),
+              _ResultDetail(
                 'Novo destino',
                 _returnDestinationLabel(cancellation),
+              ),
+              _ResultDetail(
+                'Valor do motorista',
+                '${_money(cancellation.driverCompensation)} após concluir',
               ),
               _ResultDetail(
                 'Ajuste financeiro',
@@ -1334,19 +1344,28 @@ class _ValueRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Row(
+    crossAxisAlignment: CrossAxisAlignment.start,
     children: [
       Expanded(
+        flex: 2,
         child: Text(
           label,
           style: const TextStyle(color: FretColors.textSecondary, fontSize: 11),
         ),
       ),
-      Text(
-        value,
-        style: TextStyle(
-          color: valueColor,
-          fontSize: 13,
-          fontWeight: FontWeight.w900,
+      const SizedBox(width: 12),
+      Expanded(
+        flex: 3,
+        child: Text(
+          value,
+          textAlign: TextAlign.end,
+          softWrap: true,
+          style: TextStyle(
+            color: valueColor,
+            fontSize: 13,
+            fontWeight: FontWeight.w900,
+            height: 1.3,
+          ),
         ),
       ),
     ],

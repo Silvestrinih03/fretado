@@ -21,14 +21,17 @@ from app.models.vehicle_model import VehicleModel
 from app.models.vehicle_type import VehicleType
 from app.schemas.ride_cancellation import (
     RideCancellationCreate,
+    RideCancellationLogResponse,
     RideCancellationPreviewResponse,
     RideCancellationResponse,
 )
 from app.services.driver_earning_service import create_cancellation_earning
 from app.services.fuel_price_service import FuelPriceService
+from app.services.freight_pricing_service import FreightPricingService
 from app.services.geocoding_service import MapboxGeocodingService
 from app.services.pricing_policy_service import PricingPolicyService
 from app.services.route_service import MapboxRouteService
+from app.services.vehicle_pricing_profile_service import VehiclePricingProfileService
 
 
 MONEY = Decimal("0.01")
@@ -132,6 +135,11 @@ def request_cancellation(
         status_id=_status_id(db, target_status),
         reason=reason,
         financial_status="simulated_completed",
+        original_destination_address=detail.destination_address,
+        original_destination_address_complement=detail.destination_address_complement,
+        original_destination_reference_point=detail.destination_reference_point,
+        original_destination_latitude=detail.destination_latitude,
+        original_destination_longitude=detail.destination_longitude,
     )
     if is_delivery:
         _set_return_destination(cancellation, detail, payload)
@@ -149,7 +157,22 @@ def request_cancellation(
     try:
         db.add(cancellation)
         db.flush()
-        _event(db, cancellation, client.id, "cancellation_requested", None, target_status)
+        _event(
+            db,
+            cancellation,
+            client.id,
+            "cancellation_requested",
+            None,
+            target_status,
+            {
+                "original_destination_address": detail.destination_address,
+                "original_destination_latitude": str(detail.destination_latitude),
+                "original_destination_longitude": str(detail.destination_longitude),
+                "return_address": cancellation.return_address,
+                "return_latitude": str(cancellation.return_latitude) if cancellation.return_latitude is not None else None,
+                "return_longitude": str(cancellation.return_longitude) if cancellation.return_longitude is not None else None,
+            },
+        )
         if ride.status_id == int(RideStatusEnum.AGUARDANDO_ACEITE):
             cancelled_offers = (
                 db.query(RideOffer)
@@ -223,20 +246,32 @@ def driver_action_required(db: Session, driver: User) -> RideCancellationRespons
         .all()
     )
     for cancellation in rows:
-        if cancellation.previous_ride_status_id != int(RideStatusEnum.AGUARDANDO_ACEITE):
+        if cancellation.previous_ride_status_id == int(RideStatusEnum.AGUARDANDO_ACEITE):
+            continue
+        cancellation_status = _status_name(db, cancellation.status_id)
+        if cancellation_status == AWAITING_DRIVER:
+            return _response(db, cancellation)
+        if (
+            cancellation.resolved_at is not None
+            and cancellation.driver_acknowledged_at is None
+        ):
             return _response(db, cancellation)
     return None
 
 
-def confirm_cargo(db: Session, cancellation_id: int, driver: User) -> RideCancellationResponse:
+def prepare_driver_quote(
+    db: Session,
+    cancellation_id: int,
+    driver: User,
+) -> RideCancellationResponse:
     cancellation, ride = _locked_cancellation_and_ride(db, cancellation_id)
     current_status = _status_name(db, cancellation.status_id)
-    if current_status == AWAITING_CLIENT:
-        return _response(db, cancellation)
-    if current_status != AWAITING_DRIVER:
-        raise HTTPException(status_code=409, detail="A solicitacao nao aguarda confirmacao do motorista.")
     if ride.driver_user_id != driver.id:
         raise HTTPException(status_code=403, detail="Esta solicitacao pertence a outro motorista.")
+    if cancellation.quote_prepared_at is not None:
+        return _response(db, cancellation)
+    if current_status != AWAITING_DRIVER:
+        raise HTTPException(status_code=409, detail="A solicitacao nao aguarda orcamento do motorista.")
     if ride.status_id != int(RideStatusEnum.A_CAMINHO_ENTREGA):
         raise HTTPException(status_code=409, detail="A corrida mudou de estado.")
 
@@ -252,14 +287,20 @@ def confirm_cargo(db: Session, cancellation_id: int, driver: User) -> RideCancel
         .first()
     )
     if location is None:
-        raise HTTPException(status_code=409, detail="Atualize sua localizacao antes de confirmar a mercadoria.")
+        raise HTTPException(status_code=409, detail="Atualize sua localizacao antes de calcular a devolucao.")
     detail = db.query(RideDetail).filter(RideDetail.ride_id == ride.id).first()
     if detail is None:
         raise HTTPException(status_code=409, detail="A corrida nao possui detalhes de rota.")
 
-    traveled, returning, charge = _calculate_delivery_charge(db, ride, detail, location, cancellation)
+    traveled, returning, pricing = _calculate_delivery_charge(
+        db,
+        ride,
+        detail,
+        location,
+        cancellation,
+    )
+    charge = pricing.total_price
     now = _now()
-    previous_id = cancellation.status_id
     try:
         cancellation.driver_latitude = location.latitude
         cancellation.driver_longitude = location.longitude
@@ -267,30 +308,77 @@ def confirm_cargo(db: Session, cancellation_id: int, driver: User) -> RideCancel
         cancellation.traveled_distance_km = traveled
         cancellation.return_distance_km = returning
         cancellation.cancellation_charge = charge
-        cancellation.driver_compensation = charge
-        original_total = _money(Decimal(str(ride.total_price)))
-        cancellation.refund_amount = _money(max(original_total - charge, ZERO))
-        cancellation.additional_charge_amount = _money(max(charge - original_total, ZERO))
-        cancellation.driver_confirmed_at = now
-        cancellation.status_id = _status_id(db, AWAITING_CLIENT)
-        _event(db, cancellation, driver.id, "driver_confirmed_cargo", AWAITING_DRIVER, AWAITING_CLIENT)
+        cancellation.driver_compensation = pricing.driver_net_value
+        refund, additional_charge = _calculate_financial_adjustment(
+            ride.total_price,
+            charge,
+        )
+        cancellation.refund_amount = refund
+        cancellation.additional_charge_amount = additional_charge
+        cancellation.quote_prepared_at = now
+        cancellation.distance_calculation_source = "mapbox_route"
         _event(
             db,
             cancellation,
-            None,
-            "cancellation_cost_calculated",
-            AWAITING_CLIENT,
-            AWAITING_CLIENT,
+            driver.id,
+            "driver_quote_prepared",
+            AWAITING_DRIVER,
+            AWAITING_DRIVER,
             {
+                "driver_latitude": str(location.latitude),
+                "driver_longitude": str(location.longitude),
+                "location_recorded_at": location.location_recorded_at.isoformat(),
                 "traveled_distance_km": str(traveled),
                 "return_distance_km": str(returning),
                 "cancellation_charge": str(charge),
+                "app_fee_value": str(pricing.app_fee_value),
+                "driver_compensation": str(pricing.driver_net_value),
+                "refund_amount": str(cancellation.refund_amount),
+                "additional_charge_amount": str(cancellation.additional_charge_amount),
+                "distance_calculation_source": "mapbox_route",
             },
         )
         db.commit()
         db.refresh(cancellation)
     except Exception:
-        cancellation.status_id = previous_id
+        db.rollback()
+        raise
+    return _response(db, cancellation)
+
+
+def confirm_cargo(db: Session, cancellation_id: int, driver: User) -> RideCancellationResponse:
+    cancellation, ride = _locked_cancellation_and_ride(db, cancellation_id)
+    current_status = _status_name(db, cancellation.status_id)
+    if current_status == AWAITING_CLIENT:
+        return _response(db, cancellation)
+    if current_status != AWAITING_DRIVER:
+        raise HTTPException(status_code=409, detail="A solicitacao nao aguarda confirmacao do motorista.")
+    if ride.driver_user_id != driver.id:
+        raise HTTPException(status_code=403, detail="Esta solicitacao pertence a outro motorista.")
+    if ride.status_id != int(RideStatusEnum.A_CAMINHO_ENTREGA):
+        raise HTTPException(status_code=409, detail="A corrida mudou de estado.")
+    if cancellation.quote_prepared_at is None:
+        raise HTTPException(status_code=409, detail="Calcule o valor da devolucao antes de confirmar a mercadoria.")
+
+    now = _now()
+    try:
+        cancellation.driver_confirmed_at = now
+        cancellation.status_id = _status_id(db, AWAITING_CLIENT)
+        _event(
+            db,
+            cancellation,
+            driver.id,
+            "driver_confirmed_cargo",
+            AWAITING_DRIVER,
+            AWAITING_CLIENT,
+            {
+                "driver_compensation": str(cancellation.driver_compensation),
+                "quote_prepared_at": cancellation.quote_prepared_at.isoformat(),
+            },
+        )
+        db.commit()
+        db.refresh(cancellation)
+    except Exception:
         db.rollback()
         raise
     return _response(db, cancellation)
@@ -324,11 +412,25 @@ def client_decision(
             ride.status_id = int(RideStatusEnum.CANCELADA)
             ride.cancelled_at = now
             cancellation.return_ride_id = return_ride.id
+            cancellation.return_started_at = now
             cancellation.status_id = _status_id(db, COMPLETED)
             cancellation.resolved_at = now
             cancellation.completed_at = now
             _event(db, cancellation, client.id, "client_confirmed_cancellation", AWAITING_CLIENT, COMPLETED)
-            _event(db, cancellation, None, "return_ride_created", COMPLETED, COMPLETED, {"return_ride_id": return_ride.id})
+            _event(
+                db,
+                cancellation,
+                None,
+                "return_ride_created",
+                COMPLETED,
+                COMPLETED,
+                {
+                    "return_ride_id": return_ride.id,
+                    "source_ride_id": ride.id,
+                    "return_address": cancellation.return_address,
+                    "driver_compensation": str(cancellation.driver_compensation),
+                },
+            )
             _event(
                 db,
                 cancellation,
@@ -361,6 +463,68 @@ def acknowledge_driver(db: Session, cancellation_id: int, driver: User) -> RideC
         db.commit()
         db.refresh(cancellation)
     return _response(db, cancellation)
+
+
+def cancellation_log(
+    db: Session,
+    ride_id: int,
+    user: User,
+) -> RideCancellationLogResponse:
+    ride = db.query(Ride).filter(Ride.id == ride_id).first()
+    if ride is None:
+        raise HTTPException(status_code=404, detail="Corrida nao encontrada.")
+    cancellation = _latest_cancellation(db, ride_id)
+    if cancellation is None:
+        cancellation = db.query(RideCancellation).filter(
+            RideCancellation.return_ride_id == ride_id,
+        ).first()
+    if cancellation is None:
+        raise HTTPException(status_code=404, detail="Esta corrida nao possui log de cancelamento.")
+    original_ride = db.query(Ride).filter(Ride.id == cancellation.ride_id).first()
+    if original_ride is None or user.id not in (
+        original_ride.client_user_id,
+        original_ride.driver_user_id,
+    ):
+        raise HTTPException(status_code=403, detail="Acesso ao log de cancelamento nao permitido.")
+    rows = db.query(RideCancellationEvent).filter(
+        RideCancellationEvent.cancellation_id == cancellation.id,
+    ).order_by(
+        RideCancellationEvent.created_at.asc(),
+        RideCancellationEvent.id.asc(),
+    ).all()
+    allowed_metadata = {
+        "count",
+        "return_ride_id",
+        "source_ride_id",
+        "original_destination_address",
+        "return_address",
+        "traveled_distance_km",
+        "return_distance_km",
+        "cancellation_charge",
+        "app_fee_value",
+        "driver_compensation",
+        "refund_amount",
+        "additional_charge_amount",
+        "distance_calculation_source",
+        "amount",
+        "earning_type",
+    }
+    events = [
+        {
+            "event_type": row.event_type,
+            "created_at": row.created_at,
+            "details": {
+                key: value
+                for key, value in (row.event_metadata or {}).items()
+                if key in allowed_metadata
+            },
+        }
+        for row in rows
+    ]
+    return RideCancellationLogResponse(
+        cancellation=_response(db, cancellation),
+        events=events,
+    )
 
 
 def _calculate_delivery_charge(db, ride, detail, location, cancellation):
@@ -406,28 +570,33 @@ def _calculate_delivery_charge(db, ride, detail, location, cancellation):
     )
     if vehicle is None:
         raise HTTPException(status_code=409, detail="Veiculo aceito nao encontrado.")
-    fuel_type_id = model.fuel_type_id or vehicle_type.default_fuel_type_id
-    consumption = model.average_consumption_km_l or vehicle_type.default_consumption_km_l
-    operational = vehicle_type.operational_cost_per_km
-    if fuel_type_id is None or consumption is None or operational is None:
-        raise HTTPException(status_code=503, detail="Precificacao do veiculo incompleta.")
+    vehicle_profile = VehiclePricingProfileService.build_assigned_vehicle_profile(
+        db,
+        model,
+        vehicle_type,
+    )
     origin = MapboxGeocodingService().reverse(float(detail.origin_latitude), float(detail.origin_longitude))
     state_code = origin.get("state") if origin else None
     if not state_code:
         raise HTTPException(status_code=400, detail="Nao foi possivel identificar a UF da coleta.")
     state_code = str(state_code).strip().upper().removeprefix("BR-")
-    fuel_price = FuelPriceService.get_latest_price(db, int(fuel_type_id), str(state_code))
+    fuel_price = FuelPriceService.get_latest_price(
+        db,
+        vehicle_profile.fuel_type_id,
+        str(state_code),
+    )
     policy = PricingPolicyService.get_active_policy(db)
     total_distance = first_distance + second_distance
-    direct_cost = (
-        total_distance / Decimal(str(consumption)) * Decimal(str(fuel_price.average_price))
-        + total_distance * Decimal(str(operational))
+    pricing = FreightPricingService.calculate(
+        distance_km=total_distance,
+        vehicle_profile=vehicle_profile,
+        fuel_price=fuel_price,
+        pricing_policy=policy,
     )
-    charge = _money(direct_cost * (Decimal("1") + Decimal(str(policy.driver_margin_percentage))))
     return (
         first_distance.quantize(Decimal("0.001"), rounding=ROUND_HALF_UP),
         second_distance.quantize(Decimal("0.001"), rounding=ROUND_HALF_UP),
-        charge,
+        pricing,
     )
 
 
@@ -452,12 +621,35 @@ def _create_return_ride(db, original, cancellation, now):
         driver_user_id=original.driver_user_id,
         required_vehicle_type_id=original.required_vehicle_type_id,
         total_price=cancellation.cancellation_charge,
-        app_fee_value=ZERO,
+        app_fee_value=_money(
+            Decimal(str(cancellation.cancellation_charge))
+            - Decimal(str(cancellation.driver_compensation))
+        ),
         status_id=int(RideStatusEnum.A_CAMINHO_ENTREGA),
         started_at=now,
     )
     db.add(return_ride)
     db.flush()
+    accepted_offer = (
+        db.query(RideOffer)
+        .filter(
+            RideOffer.ride_id == original.id,
+            RideOffer.driver_user_id == original.driver_user_id,
+            RideOffer.status_id == int(RideOfferStatusEnum.ACEITA),
+        )
+        .first()
+    )
+    if accepted_offer is None:
+        raise HTTPException(status_code=409, detail="Oferta aceita da corrida nao encontrada.")
+    db.add(
+        RideOffer(
+            ride_id=return_ride.id,
+            driver_user_id=accepted_offer.driver_user_id,
+            vehicle_id=accepted_offer.vehicle_id,
+            status_id=int(RideOfferStatusEnum.ACEITA),
+            expires_at=now,
+        )
+    )
     db.add(RideDetail(
         ride_id=return_ride.id,
         origin_address="Localizacao do motorista no cancelamento",
@@ -578,15 +770,37 @@ def _response(db, cancellation):
         **{
             field: getattr(cancellation, field)
             for field in RideCancellationResponse.model_fields
-            if field not in {"status", "has_cancellation_fee"}
+            if field not in {"status", "phase", "has_cancellation_fee"}
         },
         status=_status_name(db, cancellation.status_id),
+        phase=_cancellation_phase(db, cancellation),
         has_cancellation_fee=Decimal(str(cancellation.cancellation_charge or 0)) > ZERO,
     )
 
 
+def _cancellation_phase(db: Session, cancellation: RideCancellation) -> str:
+    status_name = _status_name(db, cancellation.status_id)
+    if status_name != COMPLETED or cancellation.return_ride_id is None:
+        return status_name
+    return_ride = db.query(Ride.status_id).filter(
+        Ride.id == cancellation.return_ride_id,
+    ).scalar()
+    if return_ride == int(RideStatusEnum.FINALIZADA):
+        return "return_completed"
+    return "return_in_progress"
+
+
 def _money(value):
     return Decimal(str(value)).quantize(MONEY, rounding=ROUND_HALF_UP)
+
+
+def _calculate_financial_adjustment(original_total, cancellation_charge):
+    original = _money(original_total)
+    charge = _money(cancellation_charge)
+    return (
+        _money(max(original - charge, ZERO)),
+        _money(max(charge - original, ZERO)),
+    )
 
 
 def _now():

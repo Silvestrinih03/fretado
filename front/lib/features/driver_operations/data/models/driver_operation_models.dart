@@ -89,6 +89,12 @@ class DriverRideModel {
   final DateTime? cancelledAt;
   final String ridePurpose;
   final int? sourceRideId;
+  final RidePartyModel? client;
+  final RidePartyModel? driver;
+  final RideAssignedVehicleModel? assignedVehicle;
+  final RideActiveCancellationModel? activeCancellation;
+  final RideActiveCancellationModel? cancellation;
+  final RideLinkedReturnModel? linkedReturnRide;
 
   DriverRideModel.fromJson(Map<String, dynamic> json)
     : id = _readInt(json['id']),
@@ -114,9 +120,40 @@ class DriverRideModel {
       finishedAt = _readDateTime(json['finished_at']),
       cancelledAt = _readDateTime(json['cancelled_at']),
       ridePurpose = _readNullableString(json['ride_purpose']) ?? 'standard',
-      sourceRideId = _readNullableInt(json['source_ride_id']);
+      sourceRideId = _readNullableInt(json['source_ride_id']),
+      client = json['client'] is Map
+          ? RidePartyModel.fromJson(
+              Map<String, dynamic>.from(json['client'] as Map),
+            )
+          : null,
+      driver = json['driver'] is Map
+          ? RidePartyModel.fromJson(
+              Map<String, dynamic>.from(json['driver'] as Map),
+            )
+          : null,
+      assignedVehicle = json['assigned_vehicle'] is Map
+          ? RideAssignedVehicleModel.fromJson(
+              Map<String, dynamic>.from(json['assigned_vehicle'] as Map),
+            )
+          : null,
+      activeCancellation = json['active_cancellation'] is Map
+          ? RideActiveCancellationModel.fromJson(
+              Map<String, dynamic>.from(json['active_cancellation'] as Map),
+            )
+          : null,
+      cancellation = json['cancellation'] is Map
+          ? RideActiveCancellationModel.fromJson(
+              Map<String, dynamic>.from(json['cancellation'] as Map),
+            )
+          : null,
+      linkedReturnRide = json['linked_return_ride'] is Map
+          ? RideLinkedReturnModel.fromJson(
+              Map<String, dynamic>.from(json['linked_return_ride'] as Map),
+            )
+          : null;
 
   bool get isActive => statusId >= 1 && statusId <= 4;
+  bool get hasPendingCancellation => activeCancellation != null;
   bool get isCancellationReturn => ridePurpose == 'cancellation_return';
   String get vehicleCategoryLabel =>
       requiredVehicleTypeName ?? 'Categoria #$requiredVehicleTypeId';
@@ -136,6 +173,198 @@ class DriverRideModel {
     7 => 'NÃO ATENDIDA',
     _ => 'STATUS $statusId',
   };
+}
+
+class RideActiveCancellationModel {
+  final int id;
+  final String status;
+  final String phase;
+  final int originalRideId;
+  final int? returnRideId;
+  final String? originalDestinationAddress;
+  final String? originalDestinationAddressComplement;
+  final String? originalDestinationReferencePoint;
+  final String? returnAddress;
+  final String? returnAddressComplement;
+  final String? returnReferencePoint;
+  final double? traveledDistanceKm;
+  final double? returnDistanceKm;
+  final double cancellationCharge;
+  final double driverCompensation;
+  final double refundAmount;
+  final double additionalChargeAmount;
+  final DateTime? quotePreparedAt;
+  final DateTime? returnStartedAt;
+  final DateTime? returnCompletedAt;
+
+  const RideActiveCancellationModel({
+    required this.id,
+    required this.status,
+    required this.phase,
+    required this.originalRideId,
+    required this.returnRideId,
+    required this.originalDestinationAddress,
+    required this.originalDestinationAddressComplement,
+    required this.originalDestinationReferencePoint,
+    required this.returnAddress,
+    required this.returnAddressComplement,
+    required this.returnReferencePoint,
+    required this.traveledDistanceKm,
+    required this.returnDistanceKm,
+    required this.cancellationCharge,
+    required this.driverCompensation,
+    required this.refundAmount,
+    required this.additionalChargeAmount,
+    required this.quotePreparedAt,
+    required this.returnStartedAt,
+    required this.returnCompletedAt,
+  });
+
+  factory RideActiveCancellationModel.fromJson(
+    Map<String, dynamic> json,
+  ) => RideActiveCancellationModel(
+    id: _readInt(json['id']),
+    status: _readString(json['status']),
+    phase: _readNullableString(json['phase']) ?? _readString(json['status']),
+    originalRideId: _readInt(json['original_ride_id']),
+    returnRideId: _readNullableInt(json['return_ride_id']),
+    originalDestinationAddress: _readNullableString(
+      json['original_destination_address'],
+    ),
+    originalDestinationAddressComplement: _readNullableString(
+      json['original_destination_address_complement'],
+    ),
+    originalDestinationReferencePoint: _readNullableString(
+      json['original_destination_reference_point'],
+    ),
+    returnAddress: _readNullableString(json['return_address']),
+    returnAddressComplement: _readNullableString(
+      json['return_address_complement'],
+    ),
+    returnReferencePoint: _readNullableString(json['return_reference_point']),
+    traveledDistanceKm: json['traveled_distance_km'] == null
+        ? null
+        : _readDouble(json['traveled_distance_km']),
+    returnDistanceKm: json['return_distance_km'] == null
+        ? null
+        : _readDouble(json['return_distance_km']),
+    cancellationCharge: _readDouble(json['cancellation_charge']),
+    driverCompensation: _readDouble(json['driver_compensation']),
+    refundAmount: _readDouble(json['refund_amount']),
+    additionalChargeAmount: _readDouble(json['additional_charge_amount']),
+    quotePreparedAt: _readDateTime(json['quote_prepared_at']),
+    returnStartedAt: _readDateTime(json['return_started_at']),
+    returnCompletedAt: _readDateTime(json['return_completed_at']),
+  );
+
+  bool get isAwaitingDriver => phase == 'awaiting_driver_confirmation';
+  bool get isAwaitingClient => phase == 'awaiting_client_confirmation';
+  bool get isReturnInProgress => phase == 'return_in_progress';
+  bool get isReturnCompleted => phase == 'return_completed';
+}
+
+class RideLinkedReturnModel {
+  final int id;
+  final int statusId;
+  final double totalPrice;
+  final String origin;
+  final String destination;
+  final DateTime? startedAt;
+  final DateTime? finishedAt;
+
+  const RideLinkedReturnModel({
+    required this.id,
+    required this.statusId,
+    required this.totalPrice,
+    required this.origin,
+    required this.destination,
+    required this.startedAt,
+    required this.finishedAt,
+  });
+
+  factory RideLinkedReturnModel.fromJson(Map<String, dynamic> json) =>
+      RideLinkedReturnModel(
+        id: _readInt(json['id']),
+        statusId: _readInt(json['status_id']),
+        totalPrice: _readDouble(json['total_price']),
+        origin: _readString(json['origin']),
+        destination: _readString(json['destination']),
+        startedAt: _readDateTime(json['started_at']),
+        finishedAt: _readDateTime(json['finished_at']),
+      );
+}
+
+class RidePartyModel {
+  final int id;
+  final String fullName;
+  final int completedRidesCount;
+
+  const RidePartyModel({
+    required this.id,
+    required this.fullName,
+    required this.completedRidesCount,
+  });
+
+  factory RidePartyModel.fromJson(Map<String, dynamic> json) => RidePartyModel(
+    id: _readInt(json['id']),
+    fullName: _readString(json['full_name']),
+    completedRidesCount: _readInt(json['completed_rides_count']),
+  );
+
+  String get initials {
+    final parts = fullName
+        .trim()
+        .split(RegExp(r'\s+'))
+        .where((part) => part.isNotEmpty)
+        .toList();
+    if (parts.isEmpty) return '--';
+    if (parts.length == 1) return parts.first.substring(0, 1).toUpperCase();
+    return '${parts.first[0]}${parts.last[0]}'.toUpperCase();
+  }
+}
+
+class RideAssignedVehicleModel {
+  final int id;
+  final String brand;
+  final String model;
+  final String plate;
+
+  const RideAssignedVehicleModel({
+    required this.id,
+    required this.brand,
+    required this.model,
+    required this.plate,
+  });
+
+  factory RideAssignedVehicleModel.fromJson(Map<String, dynamic> json) =>
+      RideAssignedVehicleModel(
+        id: _readInt(json['id']),
+        brand: _readString(json['brand']),
+        model: _readString(json['model']),
+        plate: _readString(json['plate']),
+      );
+
+  String get displayName =>
+      [brand, model].where((value) => value.trim().isNotEmpty).join(' ');
+}
+
+class RidePickupEstimateModel {
+  final double distanceKm;
+  final int estimatedTimeMinutes;
+  final DateTime? locationRecordedAt;
+
+  const RidePickupEstimateModel({
+    required this.distanceKm,
+    required this.estimatedTimeMinutes,
+    required this.locationRecordedAt,
+  });
+
+  factory RidePickupEstimateModel.fromJson(Map<String, dynamic> json) =>
+      RidePickupEstimateModel(
+        distanceKm: _readDouble(json['distance_km']),
+        estimatedTimeMinutes: _readInt(json['estimated_time_minutes']),
+        locationRecordedAt: _readDateTime(json['location_recorded_at']),
+      );
 }
 
 class RideOfferModel {

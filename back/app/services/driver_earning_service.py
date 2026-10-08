@@ -1,9 +1,12 @@
+from decimal import Decimal
+
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.enums.ride_status_enum import RideStatusEnum
 from app.models.driver_earning import DriverEarning
 from app.models.ride import Ride
+from app.models.ride_cancellation import RideCancellation
 from app.schemas.driver_earning import DriverEarningCreate
 from app.services.driver_wallet_service import add_balance
 
@@ -42,13 +45,20 @@ def create_driver_earning(
     if not 0 <= app_fee_value <= gross_value:
         raise HTTPException(status_code=409, detail="Invalid stored ride fee.")
     net_value = gross_value - app_fee_value
+    is_cancellation_return = db.query(RideCancellation.id).filter(
+        RideCancellation.return_ride_id == ride.id,
+    ).first() is not None
     earning = DriverEarning(
         driver_user_id=ride.driver_user_id,
         ride_id=ride.id,
         gross_value=gross_value,
         app_fee_value=app_fee_value,
         net_value=net_value,
-        earning_type="ride_completion",
+        earning_type=(
+            "cancellation_return"
+            if is_cancellation_return
+            else "ride_completion"
+        ),
     )
     db.add(earning)
     add_balance(db, ride.driver_user_id, net_value)

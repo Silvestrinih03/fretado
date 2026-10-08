@@ -43,5 +43,11 @@ CREATE TABLE driver_earnings (
         ),
 
     CONSTRAINT chk_driver_earnings_type
-        CHECK (earning_type IN ('ride_completion', 'cancellation_fee'))
+        CHECK (
+            earning_type IN (
+                'ride_completion',
+                'cancellation_fee',
+                'cancellation_return'
+            )
+        )
 );

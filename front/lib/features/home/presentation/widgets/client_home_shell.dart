@@ -20,18 +20,46 @@ class ClientHomeShell extends StatefulWidget {
   State<ClientHomeShell> createState() => _ClientHomeShellState();
 }
 
-class _ClientHomeShellState extends State<ClientHomeShell> {
+class _ClientHomeShellState extends State<ClientHomeShell>
+    with WidgetsBindingObserver {
   int _selectedIndex = 0;
+  int _homeRefreshVersion = 0;
   final List<bool> _visitedTabs = <bool>[true, false, false, false];
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && _selectedIndex == 0) {
+      _refreshHome();
+    }
+  }
+
+  void _refreshHome() {
+    if (!mounted) return;
+    setState(() => _homeRefreshVersion++);
+  }
 
   void _selectTab(int index) {
     if (_selectedIndex == index) {
+      if (index == 0) _refreshHome();
       return;
     }
 
     setState(() {
       _selectedIndex = index;
       _visitedTabs[index] = true;
+      if (index == 0) _homeRefreshVersion++;
     });
   }
 
@@ -50,6 +78,8 @@ class _ClientHomeShellState extends State<ClientHomeShell> {
                   child: ClientHomeContent(
                     userName: widget.userName,
                     userId: widget.userId,
+                    refreshVersion: _homeRefreshVersion,
+                    onHomeRefreshRequested: _refreshHome,
                     onHistoryTap: () => _selectTab(1),
                     onPaymentMethodsTap: () => _selectTab(2),
                   ),

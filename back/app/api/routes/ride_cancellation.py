@@ -7,6 +7,7 @@ from app.models.user import User
 from app.schemas.ride_cancellation import (
     RideCancellationCreate,
     RideCancellationDecision,
+    RideCancellationLogResponse,
     RideCancellationPreviewResponse,
     RideCancellationResponse,
 )
@@ -15,8 +16,10 @@ from app.services.ride_cancellation_service import (
     cancellation_preview,
     client_decision,
     confirm_cargo,
+    cancellation_log,
     driver_action_required,
     latest_cancellation,
+    prepare_driver_quote,
     request_cancellation,
 )
 
@@ -56,6 +59,18 @@ def action_required(db: Session = Depends(get_db), current_driver: User = Depend
 
 
 @router.post(
+    "/ride-cancellations/{cancellation_id}/driver-quote",
+    response_model=RideCancellationResponse,
+)
+def driver_quote(
+    cancellation_id: int,
+    db: Session = Depends(get_db),
+    current_driver: User = Depends(get_current_driver),
+):
+    return prepare_driver_quote(db, cancellation_id, current_driver)
+
+
+@router.post(
     "/ride-cancellations/{cancellation_id}/driver-confirm",
     response_model=RideCancellationResponse,
 )
@@ -90,3 +105,15 @@ def acknowledge(
     current_driver: User = Depends(get_current_driver),
 ):
     return acknowledge_driver(db, cancellation_id, current_driver)
+
+
+@router.get(
+    "/rides/{ride_id}/cancellation-log",
+    response_model=RideCancellationLogResponse,
+)
+def log(
+    ride_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    return cancellation_log(db, ride_id, current_user)

@@ -1,11 +1,17 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../../../app/design_system/design_system.dart';
 import '../../../../core/endpoints.dart';
+import '../../../../core/enums/home_profile.dart';
 import '../../../../core/services/http_service.dart';
 import '../../../driver_operations/data/models/driver_operation_models.dart';
 import '../../../documents/presentation/pages/my_documents.dart';
 import '../../../vehicles/presentation/pages/my_vehicles.dart';
+import '../../../rides/presentation/pages/ride_tracking_page.dart';
+import '../../../rides/presentation/widgets/active_ride_details_sheet.dart';
+import '../../../ride_cancellation/presentation/widgets/driver_cancellation_gate.dart';
 import '../controllers/driver_availability_controller.dart';
 
 class DriverHomeContent extends StatefulWidget {
@@ -13,6 +19,7 @@ class DriverHomeContent extends StatefulWidget {
   final int userId;
   final DriverAvailabilityController availabilityController;
   final int refreshVersion;
+  final int cancellationRefreshVersion;
   final VoidCallback onHistoryTap;
   final VoidCallback onWalletTap;
 
@@ -22,6 +29,7 @@ class DriverHomeContent extends StatefulWidget {
     required this.userId,
     required this.availabilityController,
     this.refreshVersion = 0,
+    this.cancellationRefreshVersion = 0,
     required this.onHistoryTap,
     required this.onWalletTap,
   });
@@ -98,6 +106,7 @@ class _DriverHomeContentState extends State<DriverHomeContent> {
         _DriverRideInProgressSection(
           userId: widget.userId,
           refreshVersion: _refreshVersion,
+          cancellationRefreshVersion: widget.cancellationRefreshVersion,
           onRideFinished: _reloadHomeData,
         ),
         const SizedBox(height: 10),
@@ -705,11 +714,13 @@ class _DriverAvailabilityMessage extends StatelessWidget {
 class _DriverRideInProgressSection extends StatefulWidget {
   final int userId;
   final int refreshVersion;
+  final int cancellationRefreshVersion;
   final VoidCallback onRideFinished;
 
   const _DriverRideInProgressSection({
     required this.userId,
     required this.refreshVersion,
+    required this.cancellationRefreshVersion,
     required this.onRideFinished,
   });
 
@@ -721,23 +732,29 @@ class _DriverRideInProgressSection extends StatefulWidget {
 class _DriverRideInProgressSectionState
     extends State<_DriverRideInProgressSection> {
   late final HttpService _httpService;
-  late Future<List<DriverRideModel>> _ridesFuture;
+  List<DriverRideModel> _rides = <DriverRideModel>[];
+  bool _initialLoading = true;
+  bool _refreshing = false;
+  Object? _loadError;
   int? _rideInActionId;
 
   @override
   void initState() {
     super.initState();
     _httpService = HttpService();
-    _ridesFuture = _loadRides();
+    unawaited(_loadRides(initial: true));
   }
 
   @override
   void didUpdateWidget(covariant _DriverRideInProgressSection oldWidget) {
     super.didUpdateWidget(oldWidget);
 
-    if (oldWidget.userId != widget.userId ||
-        oldWidget.refreshVersion != widget.refreshVersion) {
-      _reload();
+    if (oldWidget.userId != widget.userId) {
+      unawaited(_loadRides(initial: true));
+    } else if (oldWidget.refreshVersion != widget.refreshVersion ||
+        oldWidget.cancellationRefreshVersion !=
+            widget.cancellationRefreshVersion) {
+      unawaited(_loadRides());
     }
   }
 
@@ -747,36 +764,48 @@ class _DriverRideInProgressSectionState
     super.dispose();
   }
 
-  Future<List<DriverRideModel>> _loadRides() async {
-    final response = await _httpService.get(
-      Endpoints.ridesInProgressByUser(widget.userId),
-    );
-    final dynamic data = response['data'];
-
-    if (data is! List<dynamic>) {
-      return <DriverRideModel>[];
-    }
-
-    final rides = data
-        .whereType<Map<String, dynamic>>()
-        .map(DriverRideModel.fromJson)
-        .toList();
-
-    rides.sort((a, b) {
-      final DateTime aDate =
-          a.createdAt ?? DateTime.fromMillisecondsSinceEpoch(0);
-      final DateTime bDate =
-          b.createdAt ?? DateTime.fromMillisecondsSinceEpoch(0);
-      return bDate.compareTo(aDate);
+  Future<void> _loadRides({bool initial = false}) async {
+    if (!mounted) return;
+    setState(() {
+      if (initial) {
+        _initialLoading = true;
+      } else {
+        _refreshing = true;
+      }
+      _loadError = null;
     });
-
-    return rides;
+    try {
+      final response = await _httpService.get(
+        Endpoints.ridesInProgressByUser(widget.userId),
+      );
+      final dynamic data = response['data'];
+      final rides = data is List<dynamic>
+          ? data
+                .whereType<Map<String, dynamic>>()
+                .map(DriverRideModel.fromJson)
+                .toList()
+          : <DriverRideModel>[];
+      rides.sort((a, b) {
+        final aDate = a.createdAt ?? DateTime.fromMillisecondsSinceEpoch(0);
+        final bDate = b.createdAt ?? DateTime.fromMillisecondsSinceEpoch(0);
+        return bDate.compareTo(aDate);
+      });
+      if (mounted) setState(() => _rides = rides);
+    } catch (error) {
+      if (mounted) setState(() => _loadError = error);
+    } finally {
+      if (mounted) {
+        setState(() {
+          _initialLoading = false;
+          _refreshing = false;
+        });
+      }
+    }
   }
 
-  void _reload() {
-    setState(() {
-      _ridesFuture = _loadRides();
-    });
+  Future<void> _manualRefresh() async {
+    await _loadRides();
+    if (mounted) await DriverCancellationGate.checkNow(context);
   }
 
   Future<void> _advanceRide(DriverRideModel ride) async {
@@ -801,9 +830,7 @@ class _DriverRideInProgressSectionState
 
       _showMessage(message, isError: false);
 
-      setState(() {
-        _ridesFuture = _loadRides();
-      });
+      await _loadRides();
 
       if (ride.statusId == 4) {
         widget.onRideFinished();
@@ -832,22 +859,41 @@ class _DriverRideInProgressSectionState
     ).showSnackBar(SnackBar(content: Text(message)));
   }
 
+  Future<void> _openTracking(DriverRideModel ride) async {
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => RideTrackingPage(
+          rideId: ride.id,
+          userId: widget.userId,
+          vehicleCategory: ride.vehicleCategoryLabel,
+          profile: HomeProfileEnum.driver,
+        ),
+      ),
+    );
+    if (mounted) await _loadRides();
+  }
+
+  void _openDetails(DriverRideModel ride) {
+    showActiveRideDetailsSheet(
+      context,
+      ride: ride,
+      profile: HomeProfileEnum.driver,
+      onTrack: () => _openTracking(ride),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<List<DriverRideModel>>(
-      future: _ridesFuture,
-      builder: (context, snapshot) {
-        final bool isLoading = snapshot.connectionState != ConnectionState.done;
-        final List<DriverRideModel> rides =
-            snapshot.data ?? <DriverRideModel>[];
-
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
           children: [
-            Row(
-              children: [
-                const Expanded(
-                  child: Text(
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
                     'Corrida em andamento',
                     style: TextStyle(
                       color: FretColors.screenDark,
@@ -855,58 +901,77 @@ class _DriverRideInProgressSectionState
                       fontWeight: FontWeight.w700,
                     ),
                   ),
-                ),
-                TextButton.icon(
-                  onPressed: isLoading ? null : _reload,
-                  style: TextButton.styleFrom(
-                    foregroundColor: FretColors.screenGold,
-                    padding: EdgeInsets.zero,
-                    minimumSize: const Size(0, 32),
-                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  ),
-                  icon: const Icon(Icons.refresh_rounded, size: 14),
-                  label: const Text(
-                    'Atualizar',
-                    style: TextStyle(fontSize: 12),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            if (isLoading)
-              const _DriverRideStateCard(
-                icon: Icons.hourglass_top_rounded,
-                title: 'Carregando corridas',
-                subtitle: 'Buscando suas corridas em andamento.',
-              )
-            else if (snapshot.hasError)
-              _DriverRideStateCard(
-                icon: Icons.error_outline_rounded,
-                title: 'Nao foi possivel carregar',
-                subtitle: 'Verifique sua conexao e tente novamente.',
-                actionLabel: 'Tentar novamente',
-                onTap: _reload,
-              )
-            else if (rides.isEmpty)
-              const _DriverRideStateCard(
-                icon: Icons.route_outlined,
-                title: 'Nenhuma corrida em andamento',
-                subtitle: 'Corridas aceitas e ativas aparecem aqui.',
-              )
-            else
-              ...rides.map(
-                (ride) => Padding(
-                  padding: const EdgeInsets.only(bottom: 10),
-                  child: _DriverActiveRideCard(
-                    ride: ride,
-                    isBusy: _rideInActionId == ride.id,
-                    onAdvance: () => _advanceRide(ride),
-                  ),
-                ),
+                  if (_rides.isNotEmpty)
+                    Text(
+                      '${_rides.length} ${_rides.length == 1 ? 'corrida ativa' : 'corridas ativas'}',
+                      style: const TextStyle(
+                        color: FretColors.screenMuted,
+                        fontSize: 10,
+                      ),
+                    ),
+                ],
               ),
+            ),
+            TextButton.icon(
+              onPressed: _refreshing ? null : _manualRefresh,
+              style: TextButton.styleFrom(
+                foregroundColor: FretColors.screenGold,
+                padding: EdgeInsets.zero,
+                minimumSize: const Size(0, 32),
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
+              icon: _refreshing
+                  ? const SizedBox.square(
+                      dimension: 13,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.refresh_rounded, size: 14),
+              label: const Text('Atualizar', style: TextStyle(fontSize: 12)),
+            ),
           ],
-        );
-      },
+        ),
+        const SizedBox(height: 8),
+        if (_loadError != null && _rides.isNotEmpty) ...[
+          const Text(
+            'Não foi possível atualizar agora. Os dados anteriores foram mantidos.',
+            style: TextStyle(color: FretColors.destructive700, fontSize: 11),
+          ),
+          const SizedBox(height: 8),
+        ],
+        if (_initialLoading && _rides.isEmpty)
+          const _DriverRideStateCard(
+            icon: Icons.hourglass_top_rounded,
+            title: 'Carregando corridas',
+            subtitle: 'Buscando suas corridas em andamento.',
+          )
+        else if (_loadError != null && _rides.isEmpty)
+          _DriverRideStateCard(
+            icon: Icons.error_outline_rounded,
+            title: 'Nao foi possivel carregar',
+            subtitle: 'Verifique sua conexao e tente novamente.',
+            actionLabel: 'Tentar novamente',
+            onTap: _manualRefresh,
+          )
+        else if (_rides.isEmpty)
+          const _DriverRideStateCard(
+            icon: Icons.route_outlined,
+            title: 'Nenhuma corrida em andamento',
+            subtitle: 'Corridas aceitas e ativas aparecem aqui.',
+          )
+        else
+          ..._rides.map(
+            (ride) => Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: _DriverActiveRideCard(
+                ride: ride,
+                isBusy: _rideInActionId == ride.id,
+                onAdvance: () => _advanceRide(ride),
+                onTrack: () => _openTracking(ride),
+                onDetails: () => _openDetails(ride),
+              ),
+            ),
+          ),
+      ],
     );
   }
 }
@@ -915,67 +980,109 @@ class _DriverActiveRideCard extends StatelessWidget {
   final DriverRideModel ride;
   final bool isBusy;
   final VoidCallback onAdvance;
+  final VoidCallback onTrack;
+  final VoidCallback onDetails;
 
   const _DriverActiveRideCard({
     required this.ride,
     required this.isBusy,
     required this.onAdvance,
+    required this.onTrack,
+    required this.onDetails,
   });
 
   @override
   Widget build(BuildContext context) {
     final actionLabel = _rideProgressActionLabel(ride);
     final actionIcon = _rideProgressActionIcon(ride);
+    final client = ride.client;
 
     return FretRideSummaryCard(
       rideId: ride.id,
+      eyebrow: ride.isCancellationReturn
+          ? 'DEVOLUÇÃO EM ANDAMENTO'
+          : 'CORRIDA EM ANDAMENTO',
+      title: ride.isCancellationReturn
+          ? 'Devolução da corrida #${ride.sourceRideId ?? ride.activeCancellation?.originalRideId ?? ride.id}'
+          : null,
       statusId: ride.statusId,
       createdAt: ride.createdAt,
       origin: ride.originLabel,
       destination: ride.destinationLabel,
-      totalPrice: ride.totalPrice,
+      totalPrice: ride.driverNetValue,
       packageWeight: ride.packageWeight,
-      footer: actionLabel == null || actionIcon == null
+      valueLabel: 'VOCÊ RECEBE',
+      participantName: client?.fullName,
+      participantInitials: client?.initials,
+      participantRidesCount: client?.completedRidesCount,
+      activeCancellationStatus: ride.activeCancellation?.phase,
+      cancellationNotice: fretCancellationNotice(
+        ride.activeCancellation?.phase,
+        isDriver: true,
+      ),
+      participantSubtitle: client == null
           ? null
-          : Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                if (ride.isCancellationReturn) ...[
-                  const Text(
-                    'DEVOLUCAO DE CANCELAMENTO',
-                    style: TextStyle(
-                      color: FretColors.brandGoldDark,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                ],
-                ElevatedButton.icon(
-                  onPressed: isBusy ? null : onAdvance,
-                  icon: isBusy
-                      ? const SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : Icon(actionIcon, size: 18),
-                  label: Text(
-                    ride.isCancellationReturn
-                        ? 'Confirmar devolucao'
-                        : actionLabel,
-                  ),
-                  style: ElevatedButton.styleFrom(
-                    minimumSize: const Size.fromHeight(46),
-                    backgroundColor: FretColors.brandBlack,
-                    foregroundColor: FretColors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
+          : 'Cliente · ${client.completedRidesCount} corridas',
+      footer: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (ride.isCancellationReturn) ...[
+            const Text(
+              'DEVOLUÇÃO DE CANCELAMENTO',
+              style: TextStyle(
+                color: FretColors.brandGoldDark,
+                fontSize: 10,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+            const SizedBox(height: 8),
+          ],
+          if (actionLabel != null && actionIcon != null) ...[
+            ElevatedButton.icon(
+              onPressed: isBusy ? null : onAdvance,
+              icon: isBusy
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : Icon(actionIcon, size: 18),
+              label: Text(actionLabel),
+              style: ElevatedButton.styleFrom(
+                minimumSize: const Size.fromHeight(46),
+                backgroundColor: FretColors.screenGold,
+                foregroundColor: FretColors.screenDark,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(13),
                 ),
+              ),
+            ),
+            const SizedBox(height: 8),
+          ],
+          FilledButton(
+            onPressed: onTrack,
+            style: FilledButton.styleFrom(
+              minimumSize: const Size.fromHeight(46),
+              backgroundColor: FretColors.screenDark,
+              foregroundColor: FretColors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(13),
+              ),
+            ),
+            child: const Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  'Acompanhar detalhes da corrida',
+                  style: TextStyle(fontWeight: FontWeight.w800),
+                ),
+                SizedBox(width: 4),
+                Icon(Icons.chevron_right_rounded, size: 16),
               ],
             ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -1331,7 +1438,8 @@ String? _rideProgressActionLabel(DriverRideModel ride) {
   return switch (ride.statusId) {
     2 => 'Iniciar corrida',
     3 => 'Confirmar coleta',
-    4 => 'Finalizar entrega',
+    4 =>
+      ride.isCancellationReturn ? 'Finalizar devolução' : 'Finalizar entrega',
     _ => null,
   };
 }
@@ -1340,7 +1448,10 @@ String? _rideProgressSuccessMessage(DriverRideModel ride) {
   return switch (ride.statusId) {
     2 => 'Corrida iniciada.',
     3 => 'Coleta concluida.',
-    4 => 'Corrida finalizada.',
+    4 =>
+      ride.isCancellationReturn
+          ? 'Devolução finalizada. O valor foi liberado.'
+          : 'Corrida finalizada.',
     _ => null,
   };
 }

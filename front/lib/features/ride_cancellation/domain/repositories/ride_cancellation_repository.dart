@@ -8,6 +8,7 @@ abstract class RideCancellationRepository {
     RideCancellationRequestModel request,
   );
   Future<RideCancellationModel?> driverAction();
+  Future<RideCancellationModel> prepareDriverQuote(int cancellationId);
   Future<RideCancellationModel> confirmCargo(int cancellationId);
   Future<RideCancellationModel> decide(int cancellationId, bool accept);
   Future<RideCancellationModel> acknowledge(int cancellationId);

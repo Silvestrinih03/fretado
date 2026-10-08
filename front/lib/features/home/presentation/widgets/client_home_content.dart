@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../app/design_system/design_system.dart';
 import '../../../../core/endpoints.dart';
+import '../../../../core/enums/home_profile.dart';
 import '../../../../core/services/http_service.dart';
 import '../../../driver_operations/data/models/driver_operation_models.dart';
 import '../../../payments/presentation/pages/my_payment_methods_page.dart';
@@ -11,11 +12,15 @@ import '../../../ride_cancellation/data/datasources/ride_cancellation_datasource
 import '../../../ride_cancellation/data/repositories/ride_cancellation_repository_impl.dart';
 import '../../../ride_cancellation/presentation/widgets/client_cancellation_sheet.dart';
 import '../../../rides/presentation/pages/ride_history_page.dart';
+import '../../../rides/presentation/pages/ride_tracking_page.dart';
+import '../../../rides/presentation/widgets/active_ride_details_sheet.dart';
 import '../../../shipping_request/presentation/pages/address_map_page.dart';
 
 class ClientHomeContent extends StatelessWidget {
   final String userName;
   final int userId;
+  final int refreshVersion;
+  final VoidCallback? onHomeRefreshRequested;
   final VoidCallback? onHistoryTap;
   final VoidCallback? onPaymentMethodsTap;
 
@@ -23,6 +28,8 @@ class ClientHomeContent extends StatelessWidget {
     super.key,
     required this.userName,
     required this.userId,
+    this.refreshVersion = 0,
+    this.onHomeRefreshRequested,
     this.onHistoryTap,
     this.onPaymentMethodsTap,
   });
@@ -63,7 +70,7 @@ class ClientHomeContent extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 20),
-        _FreightRequestCard(userId: userId),
+        _FreightRequestCard(userId: userId, onReturn: onHomeRefreshRequested),
         const SizedBox(height: 14),
         FretShortcutTile(
           icon: Icons.history_rounded,
@@ -95,7 +102,10 @@ class ClientHomeContent extends StatelessWidget {
               },
         ),
         const SizedBox(height: 22),
-        _ClientRideInProgressSection(userId: userId),
+        _ClientRideInProgressSection(
+          userId: userId,
+          refreshVersion: refreshVersion,
+        ),
       ],
     );
   }
@@ -103,8 +113,9 @@ class ClientHomeContent extends StatelessWidget {
 
 class _FreightRequestCard extends StatelessWidget {
   final int userId;
+  final VoidCallback? onReturn;
 
-  const _FreightRequestCard({required this.userId});
+  const _FreightRequestCard({required this.userId, this.onReturn});
 
   @override
   Widget build(BuildContext context) {
@@ -164,12 +175,13 @@ class _FreightRequestCard extends StatelessWidget {
           const SizedBox(height: 16),
           FretPrimaryButton(
             label: 'SOLICITAR AGORA',
-            onPressed: () {
-              Navigator.of(context).push(
+            onPressed: () async {
+              await Navigator.of(context).push(
                 MaterialPageRoute<void>(
                   builder: (_) => AddressMapPage(userId: userId),
                 ),
               );
+              onReturn?.call();
             },
           ),
         ],
@@ -180,8 +192,12 @@ class _FreightRequestCard extends StatelessWidget {
 
 class _ClientRideInProgressSection extends StatefulWidget {
   final int userId;
+  final int refreshVersion;
 
-  const _ClientRideInProgressSection({required this.userId});
+  const _ClientRideInProgressSection({
+    required this.userId,
+    required this.refreshVersion,
+  });
 
   @override
   State<_ClientRideInProgressSection> createState() =>
@@ -192,9 +208,10 @@ class _ClientRideInProgressSectionState
     extends State<_ClientRideInProgressSection> {
   late final HttpService _httpService;
   late final RideCancellationRepositoryImpl _cancellationRepository;
-  late Future<List<DriverRideModel>> _ridesFuture;
-  final Set<int> _pendingCancellationRideIds = <int>{};
-  Timer? _refreshTimer;
+  List<DriverRideModel> _rides = <DriverRideModel>[];
+  bool _initialLoading = true;
+  bool _refreshing = false;
+  Object? _loadError;
 
   @override
   void initState() {
@@ -203,76 +220,62 @@ class _ClientRideInProgressSectionState
     _cancellationRepository = RideCancellationRepositoryImpl(
       RideCancellationDatasource(_httpService),
     );
-    _ridesFuture = _loadRides();
-    _refreshTimer = Timer.periodic(
-      const Duration(seconds: 8),
-      (_) => _reload(),
-    );
+    unawaited(_loadRides(initial: true));
   }
 
   @override
   void didUpdateWidget(covariant _ClientRideInProgressSection oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.userId != widget.userId) {
-      _ridesFuture = _loadRides();
+      unawaited(_loadRides(initial: true));
+    } else if (oldWidget.refreshVersion != widget.refreshVersion) {
+      unawaited(_loadRides());
     }
   }
 
   @override
   void dispose() {
-    _refreshTimer?.cancel();
     _httpService.dispose();
     super.dispose();
   }
 
-  Future<List<DriverRideModel>> _loadRides() async {
-    final response = await _httpService.get(
-      Endpoints.ridesInProgressByUser(widget.userId),
-    );
-    final dynamic data = response['data'];
-
-    if (data is! List<dynamic>) {
-      return <DriverRideModel>[];
-    }
-
-    final rides = data
-        .whereType<Map<String, dynamic>>()
-        .map(DriverRideModel.fromJson)
-        .toList();
-
-    rides.sort((a, b) {
-      final DateTime aDate =
-          a.createdAt ?? DateTime.fromMillisecondsSinceEpoch(0);
-      final DateTime bDate =
-          b.createdAt ?? DateTime.fromMillisecondsSinceEpoch(0);
-      return bDate.compareTo(aDate);
-    });
-
-    final pendingIds = <int>{};
-    await Future.wait(
-      rides.where((ride) => ride.statusId == 4).map((ride) async {
-        try {
-          final cancellation = await _cancellationRepository.latest(ride.id);
-          if (cancellation?.isAwaitingDriver == true ||
-              cancellation?.isAwaitingClient == true) {
-            pendingIds.add(ride.id);
-          }
-        } catch (_) {
-          // The ride list remains usable if cancellation state is unavailable.
-        }
-      }),
-    );
-    _pendingCancellationRideIds
-      ..clear()
-      ..addAll(pendingIds);
-
-    return rides;
-  }
-
-  void _reload() {
+  Future<void> _loadRides({bool initial = false}) async {
+    if (!mounted) return;
     setState(() {
-      _ridesFuture = _loadRides();
+      if (initial) {
+        _initialLoading = true;
+      } else {
+        _refreshing = true;
+      }
+      _loadError = null;
     });
+    try {
+      final response = await _httpService.get(
+        Endpoints.ridesInProgressByUser(widget.userId),
+      );
+      final dynamic data = response['data'];
+      final rides = data is List<dynamic>
+          ? data
+                .whereType<Map<String, dynamic>>()
+                .map(DriverRideModel.fromJson)
+                .toList()
+          : <DriverRideModel>[];
+      rides.sort((a, b) {
+        final aDate = a.createdAt ?? DateTime.fromMillisecondsSinceEpoch(0);
+        final bDate = b.createdAt ?? DateTime.fromMillisecondsSinceEpoch(0);
+        return bDate.compareTo(aDate);
+      });
+      if (mounted) setState(() => _rides = rides);
+    } catch (error) {
+      if (mounted) setState(() => _loadError = error);
+    } finally {
+      if (mounted) {
+        setState(() {
+          _initialLoading = false;
+          _refreshing = false;
+        });
+      }
+    }
   }
 
   Future<void> _openCancellation(DriverRideModel ride) async {
@@ -282,92 +285,136 @@ class _ClientRideInProgressSectionState
       repository: _cancellationRepository,
     );
     if (!mounted) return;
-    setState(() {
-      if (result == ClientCancellationResult.pending) {
-        _pendingCancellationRideIds.add(ride.id);
-      } else if (result != null) {
-        _pendingCancellationRideIds.remove(ride.id);
-      }
-      _ridesFuture = _loadRides();
-    });
+    if (result != null) await _loadRides();
+  }
+
+  Future<void> _openTracking(DriverRideModel ride) async {
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => RideTrackingPage(
+          rideId: ride.id,
+          userId: widget.userId,
+          vehicleCategory: ride.vehicleCategoryLabel,
+          profile: HomeProfileEnum.client,
+        ),
+      ),
+    );
+    if (mounted) await _loadRides();
+  }
+
+  void _openDetails(DriverRideModel ride) {
+    showActiveRideDetailsSheet(
+      context,
+      ride: ride,
+      profile: HomeProfileEnum.client,
+      onTrack: () => _openTracking(ride),
+      onCancel: ride.isCancellationReturn
+          ? null
+          : () => _openCancellation(ride),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<List<DriverRideModel>>(
-      future: _ridesFuture,
-      builder: (context, snapshot) {
-        final bool isLoading = snapshot.connectionState != ConnectionState.done;
-        final List<DriverRideModel> rides =
-            snapshot.data ?? <DriverRideModel>[];
-
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _ClientRideHistoryHeader(onRefresh: isLoading ? null : _reload),
-            const SizedBox(height: 12),
-            if (isLoading)
-              const _RideHistoryStateCard(
-                icon: Icons.hourglass_top_rounded,
-                title: 'Carregando corridas',
-                subtitle: 'Buscando suas corridas em andamento.',
-              )
-            else if (snapshot.hasError)
-              _RideHistoryStateCard(
-                icon: Icons.error_outline_rounded,
-                title: 'Nao foi possivel carregar',
-                subtitle: 'Verifique sua conexao e tente novamente.',
-                actionLabel: 'Tentar novamente',
-                onTap: _reload,
-              )
-            else if (rides.isEmpty)
-              const _RideHistoryStateCard(
-                icon: Icons.route_outlined,
-                title: 'Nenhuma corrida em andamento',
-                subtitle: 'Quando seu frete estiver ativo, ele aparecera aqui.',
-              )
-            else
-              ...rides.map(
-                (ride) => Padding(
-                  padding: const EdgeInsets.only(bottom: 10),
-                  child: _ClientRideHistoryCard(
-                    ride: ride,
-                    hasPendingCancellation: _pendingCancellationRideIds
-                        .contains(ride.id),
-                    onCancel: () => _openCancellation(ride),
-                  ),
-                ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _ClientRideHistoryHeader(
+          activeCount: _rides.length,
+          refreshing: _refreshing,
+          onRefresh: _refreshing ? null : () => _loadRides(),
+        ),
+        const SizedBox(height: 12),
+        if (_loadError != null && _rides.isNotEmpty) ...[
+          const Text(
+            'Não foi possível atualizar agora. Os dados anteriores foram mantidos.',
+            style: TextStyle(color: FretColors.destructive700, fontSize: 11),
+          ),
+          const SizedBox(height: 8),
+        ],
+        if (_initialLoading && _rides.isEmpty)
+          const _RideHistoryStateCard(
+            icon: Icons.hourglass_top_rounded,
+            title: 'Carregando corridas',
+            subtitle: 'Buscando suas corridas em andamento.',
+          )
+        else if (_loadError != null && _rides.isEmpty)
+          _RideHistoryStateCard(
+            icon: Icons.error_outline_rounded,
+            title: 'Nao foi possivel carregar',
+            subtitle: 'Verifique sua conexao e tente novamente.',
+            actionLabel: 'Tentar novamente',
+            onTap: () => _loadRides(),
+          )
+        else if (_rides.isEmpty)
+          const _RideHistoryStateCard(
+            icon: Icons.route_outlined,
+            title: 'Nenhuma corrida em andamento',
+            subtitle: 'Quando seu frete estiver ativo, ele aparecera aqui.',
+          )
+        else
+          ..._rides.map(
+            (ride) => Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: _ClientRideHistoryCard(
+                ride: ride,
+                onTrack: () => _openTracking(ride),
+                onDetails: () => _openDetails(ride),
               ),
-          ],
-        );
-      },
+            ),
+          ),
+      ],
     );
   }
 }
 
 class _ClientRideHistoryHeader extends StatelessWidget {
+  final int activeCount;
   final VoidCallback? onRefresh;
+  final bool refreshing;
 
-  const _ClientRideHistoryHeader({this.onRefresh});
+  const _ClientRideHistoryHeader({
+    required this.activeCount,
+    required this.refreshing,
+    this.onRefresh,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Row(
       children: [
-        const Expanded(
-          child: Text(
-            'Corridas em andamento',
-            maxLines: 2,
-            style: TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.w900,
-              color: FretColors.textPrimary,
-            ),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Corridas em andamento',
+                maxLines: 2,
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w900,
+                  color: FretColors.textPrimary,
+                ),
+              ),
+              if (activeCount > 0)
+                Text(
+                  '$activeCount ${activeCount == 1 ? 'corrida ativa' : 'corridas ativas'}',
+                  style: const TextStyle(
+                    color: FretColors.screenMuted,
+                    fontSize: 10,
+                  ),
+                ),
+            ],
           ),
         ),
         TextButton.icon(
           onPressed: onRefresh,
-          icon: const Icon(Icons.refresh_rounded, size: 14),
+          icon: refreshing
+              ? const SizedBox.square(
+                  dimension: 13,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Icon(Icons.refresh_rounded, size: 14),
           label: const Text(
             'Atualizar',
             style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800),
@@ -386,48 +433,84 @@ class _ClientRideHistoryHeader extends StatelessWidget {
 
 class _ClientRideHistoryCard extends StatelessWidget {
   final DriverRideModel ride;
-  final bool hasPendingCancellation;
-  final VoidCallback onCancel;
+  final VoidCallback onTrack;
+  final VoidCallback onDetails;
 
   const _ClientRideHistoryCard({
     required this.ride,
-    required this.hasPendingCancellation,
-    required this.onCancel,
+    required this.onTrack,
+    required this.onDetails,
   });
 
   @override
   Widget build(BuildContext context) {
+    final driver = ride.driver;
+    final vehicle = ride.assignedVehicle;
     return FretRideSummaryCard(
       rideId: ride.id,
+      eyebrow: ride.isCancellationReturn
+          ? 'DEVOLUÇÃO EM ANDAMENTO'
+          : 'CORRIDA EM ANDAMENTO',
+      title: ride.isCancellationReturn
+          ? 'Devolução da corrida #${ride.sourceRideId ?? ride.activeCancellation?.originalRideId ?? ride.id}'
+          : null,
       statusId: ride.statusId,
       createdAt: ride.createdAt,
       origin: ride.originLabel,
       destination: ride.destinationLabel,
       totalPrice: ride.totalPrice,
       packageWeight: ride.packageWeight,
-      footer:
-          ride.isCancellationReturn || ride.statusId < 1 || ride.statusId > 4
+      participantName: driver?.fullName,
+      participantInitials: driver?.initials,
+      participantRidesCount: driver?.completedRidesCount,
+      activeCancellationStatus: ride.activeCancellation?.phase,
+      cancellationNotice: fretCancellationNotice(
+        ride.activeCancellation?.phase,
+        isDriver: false,
+      ),
+      participantSubtitle: vehicle == null
           ? null
-          : SizedBox(
-              width: double.infinity,
-              child: OutlinedButton.icon(
-                onPressed: onCancel,
-                icon: const Icon(Icons.cancel_outlined),
-                label: Text(
-                  hasPendingCancellation
-                      ? 'Ver cancelamento'
-                      : 'Cancelar corrida',
-                ),
-                style: OutlinedButton.styleFrom(
-                  minimumSize: const Size.fromHeight(46),
-                  foregroundColor: FretColors.destructive700,
-                  side: const BorderSide(color: FretColors.destructive300),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
+          : '${vehicle.displayName} · ${vehicle.plate}',
+      footer: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          FilledButton(
+            onPressed: onTrack,
+            style: FilledButton.styleFrom(
+              minimumSize: const Size.fromHeight(46),
+              backgroundColor: FretColors.screenDark,
+              foregroundColor: FretColors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(13),
               ),
             ),
+            child: const Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  'Acompanhar corrida',
+                  style: TextStyle(fontWeight: FontWeight.w800),
+                ),
+                SizedBox(width: 4),
+                Icon(Icons.chevron_right_rounded, size: 16),
+              ],
+            ),
+          ),
+          TextButton(
+            onPressed: onDetails,
+            style: TextButton.styleFrom(
+              foregroundColor: FretColors.screenGold,
+              minimumSize: const Size.fromHeight(38),
+            ),
+            child: Text(
+              ride.hasPendingCancellation
+                  ? 'Ver detalhes e cancelamento'
+                  : 'Ver todos os detalhes',
+              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w800),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

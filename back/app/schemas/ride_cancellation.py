@@ -1,6 +1,6 @@
 from datetime import datetime
 from decimal import Decimal
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
@@ -54,8 +54,9 @@ class RideCancellationResponse(BaseModel):
     return_address: str | None = None
     return_address_complement: str | None = None
     return_reference_point: str | None = None
-    return_latitude: Decimal | None = None
-    return_longitude: Decimal | None = None
+    original_destination_address: str | None = None
+    original_destination_address_complement: str | None = None
+    original_destination_reference_point: str | None = None
     traveled_distance_km: Decimal | None = None
     return_distance_km: Decimal | None = None
     cancellation_charge: Decimal
@@ -64,6 +65,11 @@ class RideCancellationResponse(BaseModel):
     additional_charge_amount: Decimal
     financial_status: str
     return_ride_id: int | None = None
+    phase: str
+    quote_prepared_at: datetime | None = None
+    return_started_at: datetime | None = None
+    return_completed_at: datetime | None = None
+    distance_calculation_source: str | None = None
     driver_confirmed_at: datetime | None = None
     driver_acknowledged_at: datetime | None = None
     resolved_at: datetime | None = None
@@ -73,3 +79,14 @@ class RideCancellationResponse(BaseModel):
     has_cancellation_fee: bool
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class RideCancellationLogEventResponse(BaseModel):
+    event_type: str
+    created_at: datetime
+    details: dict[str, Any] = Field(default_factory=dict)
+
+
+class RideCancellationLogResponse(BaseModel):
+    cancellation: RideCancellationResponse
+    events: list[RideCancellationLogEventResponse]

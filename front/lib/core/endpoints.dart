@@ -21,6 +21,8 @@ abstract class Endpoints {
 
   static const String rides = '/rides';
   static String rideById(int rideId) => '$rides/$rideId';
+  static String ridePickupEstimate(int rideId) =>
+      '$rides/$rideId/pickup-estimate';
   static String ridesMe({
     String statusGroup = 'all',
     int limit = 20,
@@ -65,12 +67,16 @@ abstract class Endpoints {
 
   static const String driverCancellationAction =
       '/ride-cancellations/driver/me/action-required';
+  static String prepareCancellationDriverQuote(int cancellationId) =>
+      '/ride-cancellations/$cancellationId/driver-quote';
   static String confirmCancellationCargo(int cancellationId) =>
       '/ride-cancellations/$cancellationId/driver-confirm';
   static String decideRideCancellation(int cancellationId) =>
       '/ride-cancellations/$cancellationId/client-decision';
   static String acknowledgeRideCancellation(int cancellationId) =>
       '/ride-cancellations/$cancellationId/driver-acknowledge';
+  static String rideCancellationLog(int rideId) =>
+      '$rides/$rideId/cancellation-log';
 
   static const String rideOffers = '/offers';
   static String offersByDriver(int driverUserId) =>

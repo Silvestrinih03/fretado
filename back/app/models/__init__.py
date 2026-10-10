@@ -12,10 +12,12 @@ from app.models.pricing_policy import PricingPolicy
 from app.models.ride import Ride
 from app.models.ride_cancellation import RideCancellation
 from app.models.ride_cancellation_event import RideCancellationEvent
+from app.models.ride_conversation import RideConversation
 from app.models.ride_detail import RideDetail
 from app.models.ride_driver_reassignment import RideDriverReassignment
 from app.models.ride_driver_reassignment_event import RideDriverReassignmentEvent
 from app.models.ride_offer import RideOffer
+from app.models.ride_message import RideMessage
 from app.models.ride_offer_status import RideOfferStatus
 from app.models.ride_status import RideStatus
 from app.models.user import User
@@ -41,10 +43,12 @@ __all__ = [
     "Ride",
     "RideCancellation",
     "RideCancellationEvent",
+    "RideConversation",
     "RideDetail",
     "RideDriverReassignment",
     "RideDriverReassignmentEvent",
     "RideOffer",
+    "RideMessage",
     "RideOfferStatus",
     "RideStatus",
     "User",

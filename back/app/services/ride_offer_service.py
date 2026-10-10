@@ -20,6 +20,7 @@ from app.models.vehicle import Vehicle
 from app.models.vehicle_model import VehicleModel
 from app.models.vehicle_type import VehicleType
 from app.services.vehicle_pricing_profile_service import VehiclePricingProfileService
+from app.services.ride_chat_service import ensure_assignment_conversation
 
 
 PENDING = int(RideOfferStatusEnum.PENDENTE)
@@ -267,6 +268,7 @@ def accept_offer(db: Session, offer_id: int, driver_user_id: int) -> RideOffer:
         offer.status_id = ACCEPTED
         ride.driver_user_id = driver_user_id
         ride.status_id = WAITING_START
+        ensure_assignment_conversation(db, ride, offer)
         db.commit()
         db.refresh(offer)
     except Exception:

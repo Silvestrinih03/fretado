@@ -36,6 +36,7 @@ from app.schemas.ride import (
     RideUpdate,
 )
 from app.services.driver_earning_service import create_driver_earning
+from app.services.ride_chat_service import close_open_conversations_for_ride
 from app.services.ride_offer_service import create_offer, find_nearest_candidate
 from app.services.ride_quote_service import RideQuoteService
 from app.services.route_service import MapboxRouteService
@@ -394,6 +395,7 @@ def _advance(db: Session, ride_id: int, expected: RideStatusEnum, target: RideSt
             ride.started_at = datetime.now(timezone.utc)
         if target == RideStatusEnum.FINALIZADA:
             ride.finished_at = datetime.now(timezone.utc)
+            close_open_conversations_for_ride(db, ride.id, ride.finished_at)
             create_driver_earning(db, DriverEarningCreate(
                 driver_user_id=ride.driver_user_id, ride_id=ride.id,
             ), commit=False)

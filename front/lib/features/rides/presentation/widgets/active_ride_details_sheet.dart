@@ -4,6 +4,7 @@ import '../../../../app/design_system/design_system.dart';
 import '../../../../core/enums/home_profile.dart';
 import '../../../driver_operations/data/models/driver_operation_models.dart';
 import '../../../ride_cancellation/presentation/widgets/cancellation_log_timeline.dart';
+import '../../../ride_chat/presentation/widgets/ride_chat_access_button.dart';
 
 Future<void> showActiveRideDetailsSheet(
   BuildContext context, {
@@ -220,6 +221,7 @@ class _ActiveRideDetailsSheet extends StatelessWidget {
               ),
             ],
             const SizedBox(height: 14),
+            RideChatAccessButton(rideId: ride.id),
             if (onCancel != null) ...[
               const SizedBox(height: 8),
               OutlinedButton(

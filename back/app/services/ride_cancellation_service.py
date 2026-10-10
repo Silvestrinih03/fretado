@@ -32,6 +32,10 @@ from app.services.freight_pricing_service import FreightPricingService
 from app.services.geocoding_service import MapboxGeocodingService
 from app.services.pricing_policy_service import PricingPolicyService
 from app.services.route_service import MapboxRouteService
+from app.services.ride_chat_service import (
+    close_open_conversations_for_ride,
+    ensure_assignment_conversation,
+)
 from app.services.vehicle_pricing_profile_service import VehiclePricingProfileService
 
 
@@ -209,6 +213,7 @@ def request_cancellation(
         if not is_delivery:
             ride.status_id = int(RideStatusEnum.CANCELADA)
             ride.cancelled_at = now
+            close_open_conversations_for_ride(db, ride.id, now)
             _event(db, cancellation, client.id, "ride_cancelled", target_status, target_status)
             _event(
                 db,
@@ -431,6 +436,7 @@ def client_decision(
             return_ride = _create_return_ride(db, ride, cancellation, now)
             ride.status_id = int(RideStatusEnum.CANCELADA)
             ride.cancelled_at = now
+            close_open_conversations_for_ride(db, ride.id, now)
             cancellation.return_ride_id = return_ride.id
             cancellation.return_started_at = now
             cancellation.status_id = _status_id(db, COMPLETED)
@@ -661,15 +667,16 @@ def _create_return_ride(db, original, cancellation, now):
     )
     if accepted_offer is None:
         raise HTTPException(status_code=409, detail="Oferta aceita da corrida nao encontrada.")
-    db.add(
-        RideOffer(
-            ride_id=return_ride.id,
-            driver_user_id=accepted_offer.driver_user_id,
-            vehicle_id=accepted_offer.vehicle_id,
-            status_id=int(RideOfferStatusEnum.ACEITA),
-            expires_at=now,
-        )
+    return_offer = RideOffer(
+        ride_id=return_ride.id,
+        driver_user_id=accepted_offer.driver_user_id,
+        vehicle_id=accepted_offer.vehicle_id,
+        status_id=int(RideOfferStatusEnum.ACEITA),
+        expires_at=now,
     )
+    db.add(return_offer)
+    db.flush()
+    ensure_assignment_conversation(db, return_ride, return_offer)
     db.add(RideDetail(
         ride_id=return_ride.id,
         origin_address="Localizacao do motorista no cancelamento",

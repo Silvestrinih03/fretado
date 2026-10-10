@@ -20,6 +20,10 @@ from app.schemas.driver_reassignment import DriverReassignmentCreate, DriverReas
 from app.services.geocoding_service import MapboxGeocodingService
 from app.services.ride_offer_service import create_offer, find_nearest_candidate
 from app.services.route_service import MapboxRouteService
+from app.services.ride_chat_service import (
+    close_conversation_for_offer,
+    ensure_assignment_conversation,
+)
 
 
 ACTIVE_STATUSES = {
@@ -319,9 +323,11 @@ def confirm_cargo_receipt(
 
     try:
         outgoing_offer.status_id = CANCELLED
+        close_conversation_for_offer(db, outgoing_offer.id)
         ride.driver_user_id = driver.id
         reassignment.status = "completed"
         reassignment.completed_at = _now()
+        ensure_assignment_conversation(db, ride, incoming_offer)
         _event(
             db,
             reassignment,
@@ -492,6 +498,7 @@ def _release_before_pickup(db, ride, reassignment, candidate):
         reassignment_id=reassignment.id,
     )
     outgoing_offer.status_id = CANCELLED
+    close_conversation_for_offer(db, outgoing_offer.id)
     ride.driver_user_id = None
     ride.status_id = int(RideStatusEnum.AGUARDANDO_ACEITE)
     reassignment.incoming_driver_user_id = candidate.driver_user_id

@@ -5,6 +5,7 @@ import '../../../../core/endpoints.dart';
 import '../../../../core/services/http_service.dart';
 import '../../../driver_operations/data/models/driver_operation_models.dart';
 import '../../../ride_cancellation/presentation/widgets/cancellation_log_timeline.dart';
+import '../../../ride_chat/presentation/widgets/ride_chat_access_button.dart';
 import '../../data/models/ride_history_page_model.dart';
 
 class RideHistoryPage extends StatefulWidget {
@@ -666,6 +667,20 @@ class _HistorySummaryCard extends StatelessWidget {
                             ),
                           ],
                           const SizedBox(height: 16),
+                          RideChatAccessButton(
+                            rideId: rideId,
+                            labelOverride: linkedReturnRide == null
+                                ? null
+                                : 'Ver conversa da corrida original',
+                          ),
+                          if (linkedReturnRide != null) ...[
+                            const SizedBox(height: 8),
+                            RideChatAccessButton(
+                              rideId: linkedReturnRide!.id,
+                              labelOverride: 'Ver conversa da devolução',
+                            ),
+                          ],
+                          const SizedBox(height: 8),
                           TextButton(
                             onPressed: () => Navigator.pop(context),
                             child: const Text('Fechar'),

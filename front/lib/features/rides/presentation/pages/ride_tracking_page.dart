@@ -14,6 +14,7 @@ import '../../../ride_cancellation/data/models/ride_cancellation_models.dart';
 import '../../../ride_cancellation/data/repositories/ride_cancellation_repository_impl.dart';
 import '../../../ride_cancellation/domain/repositories/ride_cancellation_repository.dart';
 import '../../../ride_cancellation/presentation/widgets/client_cancellation_sheet.dart';
+import '../../../ride_chat/presentation/widgets/ride_chat_access_button.dart';
 import '../widgets/active_ride_details_sheet.dart';
 
 class RideTrackingPage extends StatefulWidget {
@@ -236,6 +237,11 @@ class _RideTrackingPageState extends State<RideTrackingPage> {
               : Column(
                   children: [
                     _TrackingHeader(onBack: _exit),
+                    if (ride != null)
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(20, 0, 20, 10),
+                        child: RideChatAccessButton(rideId: ride.id),
+                      ),
                     Expanded(
                       child: RefreshIndicator(
                         onRefresh: _load,
@@ -854,6 +860,8 @@ class _DriverFoundView extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 18),
+        RideChatAccessButton(rideId: ride.id),
+        const SizedBox(height: 9),
         FilledButton(
           onPressed: onContinue,
           style: FilledButton.styleFrom(

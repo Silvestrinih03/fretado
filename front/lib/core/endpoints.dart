@@ -66,6 +66,28 @@ abstract class Endpoints {
       '$rides/$rideId/cancellations/latest';
   static String createDriverReassignment(int rideId) =>
       '$rides/$rideId/driver-reassignments';
+  static String rideConversations(int rideId) =>
+      '$rides/$rideId/conversations';
+  static String rideConversationMessages(
+    int conversationId, {
+    int limit = 50,
+    int? beforeId,
+    int? afterId,
+  }) {
+    final query = <String, String>{
+      'limit': limit.toString(),
+      if (beforeId != null) 'before_id': beforeId.toString(),
+      if (afterId != null) 'after_id': afterId.toString(),
+    };
+    return Uri(
+      path: '/ride-conversations/$conversationId/messages',
+      queryParameters: query,
+    ).toString();
+  }
+  static String sendRideConversationMessage(int conversationId) =>
+      '/ride-conversations/$conversationId/messages';
+  static String readRideConversationMessages(int conversationId) =>
+      '/ride-conversations/$conversationId/read';
 
   static const String driverReassignmentAction =
       '/driver-reassignments/driver/me/action-required';

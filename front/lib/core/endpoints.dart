@@ -88,6 +88,24 @@ abstract class Endpoints {
       '/ride-conversations/$conversationId/messages';
   static String readRideConversationMessages(int conversationId) =>
       '/ride-conversations/$conversationId/read';
+  static String createRideRating(int rideId) => '$rides/$rideId/ratings';
+  static String myRideRating(int rideId) => '$rides/$rideId/ratings/me';
+  static String pendingRideRatings({int limit = 100, int? beforeId}) => Uri(
+    path: '/ride-ratings/me/pending',
+    queryParameters: {
+      'limit': limit.toString(),
+      if (beforeId != null) 'before_id': beforeId.toString(),
+    },
+  ).toString();
+  static String receivedRideRatings({int limit = 20, int? beforeId}) => Uri(
+    path: '/ride-ratings/me/received',
+    queryParameters: {
+      'limit': limit.toString(),
+      if (beforeId != null) 'before_id': beforeId.toString(),
+    },
+  ).toString();
+  static String userRatingSummary(int userId) =>
+      '$users/$userId/rating-summary';
 
   static const String driverReassignmentAction =
       '/driver-reassignments/driver/me/action-required';

@@ -10,6 +10,7 @@ import '../../../driver_operations/data/models/driver_operation_models.dart';
 import '../../../documents/presentation/pages/my_documents.dart';
 import '../../../vehicles/presentation/pages/my_vehicles.dart';
 import '../../../rides/presentation/pages/ride_tracking_page.dart';
+import '../../../ride_rating/presentation/pages/ride_rating_page.dart';
 import '../../../rides/presentation/widgets/active_ride_details_sheet.dart';
 import '../../../ride_cancellation/presentation/widgets/driver_cancellation_gate.dart';
 import '../../../driver_reassignment/presentation/widgets/driver_reassignment_flow.dart';
@@ -860,6 +861,15 @@ class _DriverRideInProgressSectionState
 
       _showMessage(message, isError: false);
 
+      if (ride.statusId == 4) {
+        await Navigator.of(context).push<bool>(
+          MaterialPageRoute<bool>(
+            builder: (_) => RideRatingPage(rideId: ride.id),
+          ),
+        );
+        if (!mounted) return;
+      }
+
       await _loadRides();
 
       if (ride.statusId == 4) {
@@ -1049,6 +1059,8 @@ class _DriverActiveRideCard extends StatelessWidget {
       participantName: client?.fullName,
       participantInitials: client?.initials,
       participantRidesCount: client?.completedRidesCount,
+      participantRatingAverage: client?.ratingAverage,
+      participantRatingCount: client?.ratingCount ?? 0,
       activeCancellationStatus: ride.activeCancellation?.phase,
       cancellationNotice:
           fretCancellationNotice(

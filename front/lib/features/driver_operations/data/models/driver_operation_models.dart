@@ -387,17 +387,25 @@ class RidePartyModel {
   final int id;
   final String fullName;
   final int completedRidesCount;
+  final double? ratingAverage;
+  final int ratingCount;
 
   const RidePartyModel({
     required this.id,
     required this.fullName,
     required this.completedRidesCount,
+    required this.ratingAverage,
+    required this.ratingCount,
   });
 
   factory RidePartyModel.fromJson(Map<String, dynamic> json) => RidePartyModel(
     id: _readInt(json['id']),
     fullName: _readString(json['full_name']),
     completedRidesCount: _readInt(json['completed_rides_count']),
+    ratingAverage: json['rating_average'] == null
+        ? null
+        : _readAmount(json['rating_average']),
+    ratingCount: _readInt(json['rating_count']),
   );
 
   String get initials {

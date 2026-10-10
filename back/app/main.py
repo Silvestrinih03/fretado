@@ -17,6 +17,7 @@ from app.api.routes.driver_location import router as driver_location_router
 from app.api.routes.ride_cancellation import router as ride_cancellation_router
 from app.api.routes.driver_reassignment import router as driver_reassignment_router
 from app.api.routes.ride_chat import router as ride_chat_router
+from app.api.routes.ride_rating import router as ride_rating_router
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
 
@@ -49,3 +50,4 @@ app.include_router(driver_location_router)
 app.include_router(ride_cancellation_router)
 app.include_router(driver_reassignment_router)
 app.include_router(ride_chat_router)
+app.include_router(ride_rating_router)

@@ -4,7 +4,7 @@ import json
 from datetime import datetime, timedelta, timezone
 
 from fastapi import HTTPException
-from sqlalchemy import and_, or_
+from sqlalchemy import and_, func, or_
 from sqlalchemy.orm import Session
 
 from app.enums.ride_history_status_group import RideHistoryStatusGroup
@@ -16,6 +16,7 @@ from app.models.ride_cancellation_event import RideCancellationEvent
 from app.models.ride_detail import RideDetail
 from app.models.ride_driver_reassignment import RideDriverReassignment
 from app.models.ride_offer import RideOffer
+from app.models.ride_rating import RideRating
 from app.models.driver_location import DriverLocation
 from app.models.cancellation_status import CancellationStatus
 from app.models.user import User
@@ -501,10 +502,16 @@ def _build_party_summary(db: Session, user_id: int | None):
         or_(Ride.client_user_id == user_id, Ride.driver_user_id == user_id),
         Ride.status_id == int(RideStatusEnum.FINALIZADA),
     ).count()
+    rating_average, rating_count = db.query(
+        func.avg(RideRating.score),
+        func.count(RideRating.id),
+    ).filter(RideRating.reviewee_user_id == user_id).one()
     return {
         "id": user_id,
         "full_name": f"{row.first_name} {row.last_name}".strip(),
         "completed_rides_count": completed_rides,
+        "rating_average": rating_average,
+        "rating_count": int(rating_count or 0),
     }
 
 

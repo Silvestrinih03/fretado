@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 
 import '../theme/fret_colors.dart';
 
-const String fretTemporaryRatingLabel = '4,8';
+String fretRatingLabel(double? average, int count) {
+  if (average == null || count == 0) return 'Novo';
+  return average.toStringAsFixed(1).replaceAll('.', ',');
+}
 
 class FretRideSummaryCard extends StatelessWidget {
   final int rideId;
@@ -19,6 +22,8 @@ class FretRideSummaryCard extends StatelessWidget {
   final String? participantSubtitle;
   final String? participantInitials;
   final int? participantRidesCount;
+  final double? participantRatingAverage;
+  final int participantRatingCount;
   final String? activeCancellationStatus;
   final String? cancellationNotice;
   final Widget? footer;
@@ -39,6 +44,8 @@ class FretRideSummaryCard extends StatelessWidget {
     this.participantSubtitle,
     this.participantInitials,
     this.participantRidesCount,
+    this.participantRatingAverage,
+    this.participantRatingCount = 0,
     this.activeCancellationStatus,
     this.cancellationNotice,
     this.footer,
@@ -122,6 +129,8 @@ class FretRideSummaryCard extends StatelessWidget {
                   subtitle: participantSubtitle,
                   initials: participantInitials,
                   ridesCount: participantRidesCount,
+                  ratingAverage: participantRatingAverage,
+                  ratingCount: participantRatingCount,
                 ),
               ],
               const SizedBox(height: 14),
@@ -268,11 +277,15 @@ class _FretParticipantSummary extends StatelessWidget {
   final String? subtitle;
   final String? initials;
   final int? ridesCount;
+  final double? ratingAverage;
+  final int ratingCount;
   const _FretParticipantSummary({
     required this.name,
     this.subtitle,
     this.initials,
     this.ridesCount,
+    this.ratingAverage,
+    this.ratingCount = 0,
   });
 
   @override
@@ -328,9 +341,9 @@ class _FretParticipantSummary extends StatelessWidget {
                   size: 12,
                 ),
                 const SizedBox(width: 2),
-                const Text(
-                  fretTemporaryRatingLabel,
-                  style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800),
+                Text(
+                  fretRatingLabel(ratingAverage, ratingCount),
+                  style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w800),
                 ),
               ],
             ),

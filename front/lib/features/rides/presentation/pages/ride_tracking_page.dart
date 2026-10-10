@@ -15,6 +15,7 @@ import '../../../ride_cancellation/data/repositories/ride_cancellation_repositor
 import '../../../ride_cancellation/domain/repositories/ride_cancellation_repository.dart';
 import '../../../ride_cancellation/presentation/widgets/client_cancellation_sheet.dart';
 import '../../../ride_chat/presentation/widgets/ride_chat_access_button.dart';
+import '../../../ride_rating/presentation/pages/ride_rating_page.dart';
 import '../widgets/active_ride_details_sheet.dart';
 
 class RideTrackingPage extends StatefulWidget {
@@ -50,6 +51,7 @@ class _RideTrackingPageState extends State<RideTrackingPage> {
   bool _isCancellationAction = false;
   bool _didHandleInitialCancellation = false;
   bool _acknowledgedDriverFound = false;
+  bool _didOfferRating = false;
 
   bool get _isClient => widget.profile == HomeProfileEnum.client;
 
@@ -96,6 +98,14 @@ class _RideTrackingPageState extends State<RideTrackingPage> {
       if (!mounted) return;
 
       if (ride.statusId >= 5) _timer?.cancel();
+      if (_isClient && ride.statusId == 5 && !_didOfferRating) {
+        _didOfferRating = true;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            _openRating(ride.id);
+          }
+        });
+      }
       if (_isClient &&
           widget.startCancellationFlow &&
           !_didHandleInitialCancellation &&
@@ -119,6 +129,15 @@ class _RideTrackingPageState extends State<RideTrackingPage> {
         setState(() => _error = 'Não foi possível atualizar a corrida.');
       }
     }
+  }
+
+  Future<void> _openRating(int rideId) async {
+    await Navigator.of(context).push<bool>(
+      MaterialPageRoute<bool>(
+        builder: (_) => RideRatingPage(rideId: rideId),
+      ),
+    );
+    if (mounted) await _load();
   }
 
   Future<void> _refreshPickupEstimateIfNeeded(DriverRideModel ride) async {
@@ -666,9 +685,9 @@ class _TrackingPartyCard extends StatelessWidget {
                         size: 12,
                       ),
                       const SizedBox(width: 3),
-                      const Text(
-                        fretTemporaryRatingLabel,
-                        style: TextStyle(
+                      Text(
+                        fretRatingLabel(party.ratingAverage, party.ratingCount),
+                        style: const TextStyle(
                           fontSize: 10,
                           fontWeight: FontWeight.w800,
                         ),
@@ -797,9 +816,9 @@ class _DriverFoundView extends StatelessWidget {
                             size: 12,
                           ),
                           const SizedBox(width: 3),
-                          const Text(
-                            fretTemporaryRatingLabel,
-                            style: TextStyle(
+                          Text(
+                            fretRatingLabel(driver.ratingAverage, driver.ratingCount),
+                            style: const TextStyle(
                               fontSize: 10,
                               fontWeight: FontWeight.w800,
                             ),

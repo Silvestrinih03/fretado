@@ -6,6 +6,9 @@ import '../../../../core/services/http_service.dart';
 import '../../../driver_operations/data/models/driver_operation_models.dart';
 import '../../../ride_cancellation/presentation/widgets/cancellation_log_timeline.dart';
 import '../../../ride_chat/presentation/widgets/ride_chat_access_button.dart';
+import '../../../ride_rating/data/models/ride_rating_models.dart';
+import '../../../ride_rating/data/ride_rating_repository.dart';
+import '../../../ride_rating/presentation/widgets/ride_rating_access_button.dart';
 import '../../data/models/ride_history_page_model.dart';
 
 class RideHistoryPage extends StatefulWidget {
@@ -27,7 +30,11 @@ class _RideHistoryPageState extends State<RideHistoryPage> {
 
   late final HttpService _httpService;
   late final ScrollController _scrollController;
+  late final RideRatingRepository _ratingRepository;
   final List<DriverRideModel> _rides = <DriverRideModel>[];
+  final Map<int, PendingRideRatingModel> _pendingRatings =
+      <int, PendingRideRatingModel>{};
+  final Set<int> _submittedRatingRideIds = <int>{};
 
   int _selectedFilterIndex = 0;
   int _requestVersion = 0;
@@ -42,6 +49,7 @@ class _RideHistoryPageState extends State<RideHistoryPage> {
   void initState() {
     super.initState();
     _httpService = HttpService();
+    _ratingRepository = RideRatingRepository(_httpService);
     _scrollController = ScrollController()..addListener(_onScroll);
     _loadFirstPage();
   }
@@ -95,10 +103,26 @@ class _RideHistoryPageState extends State<RideHistoryPage> {
 
     try {
       final page = await _loadPage(null);
+      PendingRideRatingsPageModel? pendingPage;
+      try {
+        pendingPage = await _ratingRepository.pending();
+      } catch (_) {
+        pendingPage = null;
+      }
       if (!mounted || requestVersion != _requestVersion) return;
+      final loadedPendingPage = pendingPage;
 
       setState(() {
         _rides.addAll(page.items);
+        if (loadedPendingPage != null) {
+          _pendingRatings
+            ..clear()
+            ..addEntries(
+              loadedPendingPage.items.map(
+                (item) => MapEntry(item.rideId, item),
+              ),
+            );
+        }
         _nextCursor = page.nextCursor;
         _hasMore = page.hasMore;
         _isInitialLoading = false;
@@ -224,7 +248,25 @@ class _RideHistoryPageState extends State<RideHistoryPage> {
         separatorBuilder: (_, __) => const SizedBox(height: 12),
         itemBuilder: (context, index) {
           if (index < _rides.length) {
-            return _HistoryRideCard(ride: _rides[index]);
+            final ride = _rides[index];
+            final ratingRideId = _ratingRideId(ride);
+            return _HistoryRideCard(
+              ride: ride,
+              ratingRideId: ratingRideId,
+              ratingPending:
+                  ratingRideId != null && _pendingRatings.containsKey(ratingRideId),
+              ratingSubmitted:
+                  ratingRideId != null &&
+                  _submittedRatingRideIds.contains(ratingRideId),
+              onRatingChanged: ratingRideId == null
+                  ? null
+                  : () {
+                      setState(() {
+                        _pendingRatings.remove(ratingRideId);
+                        _submittedRatingRideIds.add(ratingRideId);
+                      });
+                    },
+            );
           }
           if (_isLoadingMore) {
             return const Padding(
@@ -389,10 +431,28 @@ class _HistoryFilterChip extends StatelessWidget {
   }
 }
 
+int? _ratingRideId(DriverRideModel ride) {
+  final linkedReturn = ride.linkedReturnRide;
+  if (linkedReturn != null && linkedReturn.statusId == 5) {
+    return linkedReturn.id;
+  }
+  return ride.statusId == 5 ? ride.id : null;
+}
+
 class _HistoryRideCard extends StatelessWidget {
   final DriverRideModel ride;
+  final int? ratingRideId;
+  final bool ratingPending;
+  final bool ratingSubmitted;
+  final VoidCallback? onRatingChanged;
 
-  const _HistoryRideCard({required this.ride});
+  const _HistoryRideCard({
+    required this.ride,
+    required this.ratingRideId,
+    required this.ratingPending,
+    required this.ratingSubmitted,
+    required this.onRatingChanged,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -406,6 +466,10 @@ class _HistoryRideCard extends StatelessWidget {
       packageWeight: ride.packageWeight,
       cancellation: ride.cancellation,
       linkedReturnRide: ride.linkedReturnRide,
+      ratingRideId: ratingRideId,
+      ratingPending: ratingPending,
+      ratingSubmitted: ratingSubmitted,
+      onRatingChanged: onRatingChanged,
       assignmentLabel: ride.wasDriverWithdrawal
           ? 'Desistência do motorista'
           : null,
@@ -519,6 +583,10 @@ class _HistorySummaryCard extends StatelessWidget {
   final RideActiveCancellationModel? cancellation;
   final RideLinkedReturnModel? linkedReturnRide;
   final String? assignmentLabel;
+  final int? ratingRideId;
+  final bool ratingPending;
+  final bool ratingSubmitted;
+  final VoidCallback? onRatingChanged;
 
   const _HistorySummaryCard({
     required this.rideId,
@@ -531,6 +599,10 @@ class _HistorySummaryCard extends StatelessWidget {
     required this.cancellation,
     required this.linkedReturnRide,
     required this.assignmentLabel,
+    required this.ratingRideId,
+    required this.ratingPending,
+    required this.ratingSubmitted,
+    required this.onRatingChanged,
   });
 
   @override
@@ -680,6 +752,15 @@ class _HistorySummaryCard extends StatelessWidget {
                               labelOverride: 'Ver conversa da devolução',
                             ),
                           ],
+                          if (ratingRideId != null) ...[
+                            const SizedBox(height: 8),
+                            RideRatingAccessButton(
+                              rideId: ratingRideId!,
+                              knownPending: ratingPending,
+                              submitted: ratingSubmitted,
+                              onChanged: onRatingChanged,
+                            ),
+                          ],
                           const SizedBox(height: 8),
                           TextButton(
                             onPressed: () => Navigator.pop(context),
@@ -710,6 +791,16 @@ class _HistorySummaryCard extends StatelessWidget {
               ),
             ],
           ),
+          if (ratingRideId != null &&
+              (ratingPending || ratingSubmitted)) ...[
+            const SizedBox(height: 10),
+            RideRatingAccessButton(
+              rideId: ratingRideId!,
+              knownPending: ratingPending,
+              submitted: ratingSubmitted,
+              onChanged: onRatingChanged,
+            ),
+          ],
         ],
       ),
     );

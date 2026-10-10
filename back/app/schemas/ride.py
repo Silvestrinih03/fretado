@@ -127,6 +127,8 @@ class RidePartySummary(BaseModel):
     id: int
     full_name: str
     completed_rides_count: int = Field(default=0, ge=0)
+    rating_average: Decimal | None = None
+    rating_count: int = Field(default=0, ge=0)
 
 
 class RideAssignedVehicleSummary(BaseModel):

@@ -463,6 +463,8 @@ class _ClientRideHistoryCard extends StatelessWidget {
       participantName: driver?.fullName,
       participantInitials: driver?.initials,
       participantRidesCount: driver?.completedRidesCount,
+      participantRatingAverage: driver?.ratingAverage,
+      participantRatingCount: driver?.ratingCount ?? 0,
       activeCancellationStatus: ride.activeCancellation?.phase,
       cancellationNotice:
           fretCancellationNotice(

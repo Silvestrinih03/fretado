@@ -615,9 +615,9 @@ class _PartyDetailsCard extends StatelessWidget {
                       size: 12,
                     ),
                     const SizedBox(width: 3),
-                    const Text(
-                      fretTemporaryRatingLabel,
-                      style: TextStyle(
+                    Text(
+                      fretRatingLabel(party.ratingAverage, party.ratingCount),
+                      style: const TextStyle(
                         color: FretColors.white,
                         fontSize: 10,
                         fontWeight: FontWeight.w800,

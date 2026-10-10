@@ -10,6 +10,7 @@ CREATE TABLE ride_offers (
     driver_user_id BIGINT NOT NULL,
     vehicle_id BIGINT NOT NULL,
     status_id BIGINT NOT NULL,
+    purpose VARCHAR(30) NOT NULL DEFAULT 'standard',
 
     expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
 
@@ -37,7 +38,10 @@ CREATE TABLE ride_offers (
         ON DELETE RESTRICT,
 
     CONSTRAINT chk_ride_offer_expiration
-        CHECK (expires_at > created_at)
+        CHECK (expires_at > created_at),
+
+    CONSTRAINT chk_ride_offer_purpose
+        CHECK (purpose IN ('standard', 'cargo_transfer'))
 );
 
 CREATE INDEX idx_ride_offers_ride_status

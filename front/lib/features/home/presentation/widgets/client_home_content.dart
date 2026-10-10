@@ -308,7 +308,7 @@ class _ClientRideInProgressSectionState
       ride: ride,
       profile: HomeProfileEnum.client,
       onTrack: () => _openTracking(ride),
-      onCancel: ride.isCancellationReturn
+      onCancel: ride.isCancellationReturn || ride.hasActiveDriverReassignment
           ? null
           : () => _openCancellation(ride),
     );
@@ -464,10 +464,12 @@ class _ClientRideHistoryCard extends StatelessWidget {
       participantInitials: driver?.initials,
       participantRidesCount: driver?.completedRidesCount,
       activeCancellationStatus: ride.activeCancellation?.phase,
-      cancellationNotice: fretCancellationNotice(
-        ride.activeCancellation?.phase,
-        isDriver: false,
-      ),
+      cancellationNotice:
+          fretCancellationNotice(
+            ride.activeCancellation?.phase,
+            isDriver: false,
+          ) ??
+          _clientReassignmentNotice(ride.activeDriverReassignment),
       participantSubtitle: vehicle == null
           ? null
           : '${vehicle.displayName} · ${vehicle.plate}',
@@ -513,6 +515,24 @@ class _ClientRideHistoryCard extends StatelessWidget {
       ),
     );
   }
+}
+
+String? _clientReassignmentNotice(DriverReassignmentModel? reassignment) {
+  if (reassignment == null) return null;
+  final isPrePickup = reassignment.isPrePickupWithdrawal;
+  return switch (reassignment.status) {
+    'searching' || 'awaiting_replacement' =>
+      isPrePickup
+          ? 'Estamos buscando outro motorista. A corrida permanece com o motorista atual até uma nova oferta ser criada.'
+          : 'Estamos buscando outro motorista para continuar sua entrega.',
+    'awaiting_handoff' =>
+      'A carga será transferida para outro motorista. O motorista atual permanece responsável até a confirmação.',
+    'replacement_unavailable' =>
+      isPrePickup
+          ? 'Nenhum substituto disponível. A corrida permanece com o motorista atual.'
+          : 'A busca por outro motorista continua. O motorista atual permanece responsável pela carga.',
+    _ => null,
+  };
 }
 
 class _RideHistoryStateCard extends StatelessWidget {

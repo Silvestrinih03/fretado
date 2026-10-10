@@ -114,7 +114,15 @@ class DriverOfferController extends ChangeNotifier with WidgetsBindingObserver {
 
       final ride = await repository.getRideById(offer.rideId);
       if (_disposed || revision != _revision) return;
-      if (ride.statusId != 1 || ride.driverUserId != null) {
+      final validTransfer =
+          offer.isCargoTransfer &&
+          ride.statusId == 4 &&
+          offer.reassignment?.status == 'awaiting_replacement';
+      final validStandard =
+          !offer.isCargoTransfer &&
+          ride.statusId == 1 &&
+          ride.driverUserId == null;
+      if (!validStandard && !validTransfer) {
         pending = null;
         error = null;
         state = DriverOfferState.idle;
@@ -124,7 +132,11 @@ class DriverOfferController extends ChangeNotifier with WidgetsBindingObserver {
 
       double distanceKm;
       bool approximate;
-      if (cachedPending != null) {
+      if (offer.isCargoTransfer &&
+          offer.reassignment?.incomingDistanceKm != null) {
+        distanceKm = offer.reassignment!.incomingDistanceKm!;
+        approximate = false;
+      } else if (cachedPending != null) {
         distanceKm = cachedPending.distanceKm;
         approximate = cachedPending.distanceIsApproximate;
       } else {

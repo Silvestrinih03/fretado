@@ -6,6 +6,8 @@ from sqlalchemy.orm import Session
 from app.models.driver_location import DriverLocation
 from app.schemas.driver_location import DriverLocationUpdateRequest
 from app.core.config import settings
+from app.services.driver_reassignment_service import offer_pending_reassignment
+from app.services.ride_offer_service import offer_waiting_ride_to_driver
 
 
 def utc_now() -> datetime:
@@ -43,8 +45,14 @@ def update_driver_location(
     location.location_recorded_at = utc_now()
     location.last_seen_at = utc_now()
 
-    db.commit()
-    db.refresh(location)
+    try:
+        if offer_pending_reassignment(db) is None:
+            offer_waiting_ride_to_driver(db, driver_user_id)
+        db.commit()
+        db.refresh(location)
+    except Exception:
+        db.rollback()
+        raise
 
     return location
 
@@ -87,8 +95,14 @@ def set_driver_online(
 
     db.flush()
 
-    db.commit()
-    db.refresh(location)
+    try:
+        if offer_pending_reassignment(db) is None:
+            offer_waiting_ride_to_driver(db, driver_user_id)
+        db.commit()
+        db.refresh(location)
+    except Exception:
+        db.rollback()
+        raise
 
     return location
 

@@ -14,6 +14,7 @@ from app.models.ride import Ride
 from app.models.ride_cancellation import RideCancellation
 from app.models.ride_cancellation_event import RideCancellationEvent
 from app.models.ride_detail import RideDetail
+from app.models.ride_driver_reassignment import RideDriverReassignment
 from app.models.ride_offer import RideOffer
 from app.models.user import User
 from app.models.vehicle import Vehicle
@@ -58,7 +59,18 @@ def cancellation_preview(
     is_return_ride = db.query(RideCancellation.id).filter(
         RideCancellation.return_ride_id == ride.id,
     ).first() is not None
-    allowed = ride.status_id in CANCELLABLE_STATUSES and not is_return_ride
+    has_active_reassignment = db.query(RideDriverReassignment.id).filter(
+        RideDriverReassignment.ride_id == ride.id,
+        RideDriverReassignment.status.in_([
+            "searching", "awaiting_replacement", "awaiting_handoff",
+            "replacement_unavailable",
+        ]),
+    ).first() is not None
+    allowed = (
+        ride.status_id in CANCELLABLE_STATUSES
+        and not is_return_ride
+        and not has_active_reassignment
+    )
     flow = {
         int(RideStatusEnum.AGUARDANDO_ACEITE): "immediate_full_refund",
         int(RideStatusEnum.AGUARDANDO_INICIO): "reason_full_refund",
@@ -107,6 +119,14 @@ def request_cancellation(
             return _response(db, previous)
     if ride.status_id not in CANCELLABLE_STATUSES:
         raise HTTPException(status_code=409, detail="Esta corrida nao pode mais ser cancelada.")
+    active_reassignment = db.query(RideDriverReassignment.id).filter(
+        RideDriverReassignment.ride_id == ride.id,
+        RideDriverReassignment.status.in_([
+            "searching", "awaiting_replacement", "awaiting_handoff", "replacement_unavailable",
+        ]),
+    ).first()
+    if active_reassignment is not None:
+        raise HTTPException(status_code=409, detail="Aguarde a troca de motorista ser concluida.")
 
     active = _active_cancellation(db, ride.id, lock=True)
     if active is not None:

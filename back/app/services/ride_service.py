@@ -14,6 +14,7 @@ from app.models.ride import Ride
 from app.models.ride_cancellation import RideCancellation
 from app.models.ride_cancellation_event import RideCancellationEvent
 from app.models.ride_detail import RideDetail
+from app.models.ride_driver_reassignment import RideDriverReassignment
 from app.models.ride_offer import RideOffer
 from app.models.driver_location import DriverLocation
 from app.models.cancellation_status import CancellationStatus
@@ -114,7 +115,9 @@ def build_full_response(db: Session, ride: Ride) -> RideFullResponse:
     ).first()
     client = _build_party_summary(db, ride.client_user_id)
     driver = _build_party_summary(db, ride.driver_user_id)
-    assigned_vehicle = _build_assigned_vehicle_summary(db, ride.id)
+    assigned_vehicle = _build_assigned_vehicle_summary(
+        db, ride.id, ride.driver_user_id,
+    )
     cancellation_summary = _build_cancellation_summary(db, ride)
     active_cancellation = _active_cancellation_summary(cancellation_summary)
     linked_return_ride = _build_linked_return_summary(db, ride.id)
@@ -123,7 +126,8 @@ def build_full_response(db: Session, ride: Ride) -> RideFullResponse:
            if field not in {
                "details", "required_vehicle_type_name", "ride_purpose", "source_ride_id",
                "client", "driver", "assigned_vehicle", "active_cancellation",
-               "cancellation", "linked_return_ride",
+               "cancellation", "linked_return_ride", "active_driver_reassignment",
+               "driver_assignment_status",
            }},
         details=detail,
         required_vehicle_type_name=category.type if category else None,
@@ -135,6 +139,8 @@ def build_full_response(db: Session, ride: Ride) -> RideFullResponse:
         active_cancellation=active_cancellation,
         cancellation=cancellation_summary,
         linked_return_ride=linked_return_ride,
+        active_driver_reassignment=_active_driver_reassignment(db, ride.id),
+        driver_assignment_status=None,
     )
 
 
@@ -217,12 +223,27 @@ def get_rides_for_user(
     if user.user_type_id == int(UserTypeEnum.CLIENT):
         query = query.filter(Ride.client_user_id == user.id)
     elif user.user_type_id == int(UserTypeEnum.DRIVER):
-        query = query.filter(Ride.driver_user_id == user.id)
+        reassigned_ride_ids = db.query(RideDriverReassignment.ride_id).filter(
+            RideDriverReassignment.outgoing_driver_user_id == user.id,
+        )
+        query = query.filter(
+            or_(Ride.driver_user_id == user.id, Ride.id.in_(reassigned_ride_ids))
+        )
     else:
         raise HTTPException(status_code=403, detail="Tipo de usuario nao permitido.")
 
     status_ids = _status_ids_for_group(status_group)
-    query = query.filter(Ride.status_id.in_(status_ids))
+    if user.user_type_id == int(UserTypeEnum.DRIVER) and status_group == RideHistoryStatusGroup.INTERRUPTED:
+        withdrawn_ride_ids = db.query(RideDriverReassignment.ride_id).filter(
+            RideDriverReassignment.outgoing_driver_user_id == user.id,
+            RideDriverReassignment.kind == "pre_pickup_withdrawal",
+            RideDriverReassignment.status == "completed",
+        )
+        query = query.filter(
+            or_(Ride.status_id.in_(status_ids), Ride.id.in_(withdrawn_ride_ids))
+        )
+    else:
+        query = query.filter(Ride.status_id.in_(status_ids))
     return_ride_ids = db.query(RideCancellation.return_ride_id).filter(
         RideCancellation.return_ride_id.is_not(None),
     )
@@ -248,7 +269,13 @@ def get_rides_for_user(
     has_more = len(rows) > limit
     page_rows = rows[:limit]
     items = [
-        _build_full_response_from_row(db, ride, detail, vehicle_type_name)
+        _build_full_response_from_row(
+            db,
+            ride,
+            detail,
+            vehicle_type_name,
+            viewer_driver_id=user.id if user.user_type_id == int(UserTypeEnum.DRIVER) else None,
+        )
         for ride, detail, vehicle_type_name in page_rows
     ]
     next_cursor = None
@@ -293,6 +320,14 @@ def ensure_ride_access(db: Session, ride_id: int, user: User, driver_only: bool 
                 RideOffer.driver_user_id == user.id,
                 RideOffer.status_id == 1,
             ).first() is not None
+        if not allowed and user.user_type_id == int(UserTypeEnum.DRIVER):
+            allowed = db.query(RideDriverReassignment.id).filter(
+                RideDriverReassignment.ride_id == ride_id,
+                or_(
+                    RideDriverReassignment.outgoing_driver_user_id == user.id,
+                    RideDriverReassignment.incoming_driver_user_id == user.id,
+                ),
+            ).first() is not None
     if not allowed:
         raise HTTPException(status_code=403, detail="Acesso a corrida nao permitido.")
 
@@ -329,6 +364,20 @@ def _advance(db: Session, ride_id: int, expected: RideStatusEnum, target: RideSt
         return build_full_response(db, ride)
     if ride.status_id != int(expected):
         raise HTTPException(status_code=409, detail="A corrida mudou de estado. Atualize a tela.")
+    active_reassignment = db.query(RideDriverReassignment.id).filter(
+        RideDriverReassignment.ride_id == ride.id,
+        RideDriverReassignment.status.in_([
+            "searching",
+            "awaiting_replacement",
+            "awaiting_handoff",
+            "replacement_unavailable",
+        ]),
+    ).first()
+    if active_reassignment is not None:
+        raise HTTPException(
+            status_code=409,
+            detail="Conclua ou cancele a troca de motorista antes de avancar a corrida.",
+        )
     if target == RideStatusEnum.FINALIZADA:
         active_cancellation = db.query(RideCancellation.id).filter(
             RideCancellation.ride_id == ride.id,
@@ -402,6 +451,7 @@ def _build_full_response_from_row(
     ride: Ride,
     detail: RideDetail | None,
     vehicle_type_name: str | None,
+    viewer_driver_id: int | None = None,
 ) -> RideFullResponse:
     return_cancellation = db.query(RideCancellation).filter(
         RideCancellation.return_ride_id == ride.id,
@@ -414,7 +464,8 @@ def _build_full_response_from_row(
             if field not in {
                 "details", "required_vehicle_type_name", "ride_purpose", "source_ride_id",
                 "client", "driver", "assigned_vehicle", "active_cancellation",
-                "cancellation", "linked_return_ride",
+                "cancellation", "linked_return_ride", "active_driver_reassignment",
+                "driver_assignment_status",
             }
         },
         details=detail,
@@ -423,10 +474,14 @@ def _build_full_response_from_row(
         source_ride_id=return_cancellation.ride_id if return_cancellation else None,
         client=_build_party_summary(db, ride.client_user_id),
         driver=_build_party_summary(db, ride.driver_user_id),
-        assigned_vehicle=_build_assigned_vehicle_summary(db, ride.id),
+        assigned_vehicle=_build_assigned_vehicle_summary(
+            db, ride.id, ride.driver_user_id,
+        ),
         active_cancellation=_active_cancellation_summary(cancellation_summary),
         cancellation=cancellation_summary,
         linked_return_ride=_build_linked_return_summary(db, ride.id),
+        active_driver_reassignment=_active_driver_reassignment(db, ride.id),
+        driver_assignment_status=_driver_assignment_status(db, ride.id, viewer_driver_id),
     )
 
 
@@ -451,13 +506,20 @@ def _build_party_summary(db: Session, user_id: int | None):
     }
 
 
-def _build_assigned_vehicle_summary(db: Session, ride_id: int):
+def _build_assigned_vehicle_summary(
+    db: Session,
+    ride_id: int,
+    driver_user_id: int | None,
+):
+    if driver_user_id is None:
+        return None
     row = (
         db.query(Vehicle, VehicleModel)
         .join(RideOffer, RideOffer.vehicle_id == Vehicle.id)
         .join(VehicleModel, Vehicle.vehicle_model_id == VehicleModel.id)
         .filter(
             RideOffer.ride_id == ride_id,
+            RideOffer.driver_user_id == driver_user_id,
             RideOffer.status_id == int(RideOfferStatusEnum.ACEITA),
         )
         .order_by(RideOffer.updated_at.desc(), RideOffer.id.desc())
@@ -537,6 +599,44 @@ def _active_cancellation_summary(summary):
     }:
         return summary
     return None
+
+
+def _active_driver_reassignment(db: Session, ride_id: int):
+    return (
+        db.query(RideDriverReassignment)
+        .filter(
+            RideDriverReassignment.ride_id == ride_id,
+            RideDriverReassignment.status.in_([
+                "searching",
+                "awaiting_replacement",
+                "awaiting_handoff",
+                "replacement_unavailable",
+            ]),
+        )
+        .order_by(RideDriverReassignment.id.desc())
+        .first()
+    )
+
+
+def _driver_assignment_status(db: Session, ride_id: int, driver_id: int | None):
+    if driver_id is None:
+        return None
+    row = (
+        db.query(RideDriverReassignment)
+        .filter(
+            RideDriverReassignment.ride_id == ride_id,
+            RideDriverReassignment.outgoing_driver_user_id == driver_id,
+        )
+        .order_by(RideDriverReassignment.id.desc())
+        .first()
+    )
+    if row is None:
+        return "active"
+    if row.kind == "pre_pickup_withdrawal" and row.status == "completed":
+        return "withdrawn"
+    if row.status == "completed":
+        return "transferred"
+    return "active"
 
 
 def _build_linked_return_summary(db: Session, original_ride_id: int):

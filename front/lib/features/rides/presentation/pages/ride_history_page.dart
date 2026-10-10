@@ -405,6 +405,9 @@ class _HistoryRideCard extends StatelessWidget {
       packageWeight: ride.packageWeight,
       cancellation: ride.cancellation,
       linkedReturnRide: ride.linkedReturnRide,
+      assignmentLabel: ride.wasDriverWithdrawal
+          ? 'Desistência do motorista'
+          : null,
     );
   }
 }
@@ -514,6 +517,7 @@ class _HistorySummaryCard extends StatelessWidget {
   final double packageWeight;
   final RideActiveCancellationModel? cancellation;
   final RideLinkedReturnModel? linkedReturnRide;
+  final String? assignmentLabel;
 
   const _HistorySummaryCard({
     required this.rideId,
@@ -525,6 +529,7 @@ class _HistorySummaryCard extends StatelessWidget {
     required this.packageWeight,
     required this.cancellation,
     required this.linkedReturnRide,
+    required this.assignmentLabel,
   });
 
   @override
@@ -586,7 +591,7 @@ class _HistorySummaryCard extends StatelessWidget {
               _HistoryStatusPill(
                 statusId: statusId,
                 label: linkedReturnRide == null
-                    ? null
+                    ? assignmentLabel
                     : linkedReturnRide!.statusId == 5
                     ? 'Cancelada · devolução concluída'
                     : 'Cancelada · devolução em andamento',
@@ -638,7 +643,7 @@ class _HistorySummaryCard extends StatelessWidget {
                           _HistoryStatusPill(
                             statusId: statusId,
                             label: linkedReturnRide == null
-                                ? null
+                                ? assignmentLabel
                                 : linkedReturnRide!.statusId == 5
                                 ? 'Cancelada · devolução concluída'
                                 : 'Cancelada · devolução em andamento',

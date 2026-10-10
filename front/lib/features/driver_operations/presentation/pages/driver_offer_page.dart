@@ -29,6 +29,8 @@ class DriverOfferPage extends StatelessWidget {
       }
 
       final ride = pending.ride;
+      final isTransfer = pending.offer.isCargoTransfer;
+      final reassignment = pending.offer.reassignment;
       final isActing = controller.isActing;
 
       return PopScope(
@@ -44,9 +46,11 @@ class DriverOfferPage extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        'NOVA SOLICITAÇÃO',
-                        style: TextStyle(
+                      Text(
+                        isTransfer
+                            ? 'TRANSFERÊNCIA DE CARGA'
+                            : 'NOVA SOLICITAÇÃO',
+                        style: const TextStyle(
                           color: FretColors.brandGoldDark,
                           fontSize: 12,
                           fontWeight: FontWeight.w800,
@@ -106,7 +110,9 @@ class DriverOfferPage extends StatelessWidget {
                     padding: const EdgeInsets.fromLTRB(24, 18, 24, 24),
                     children: [
                       _EarningsCard(
-                        value: ride.driverNetValue,
+                        value: isTransfer
+                            ? reassignment?.incomingNetValue ?? 0
+                            : ride.driverNetValue,
                         distanceKm: pending.distanceKm,
                         approximate: pending.distanceIsApproximate,
                         weightKg: ride.packageWeight,
@@ -114,8 +120,14 @@ class DriverOfferPage extends StatelessWidget {
                       ),
                       const SizedBox(height: 16),
                       _RouteCard(
-                        origin: ride.originLabel,
+                        origin: isTransfer
+                            ? reassignment?.handoffAddress ??
+                                  'Ponto de transferência definido pelo motorista'
+                            : ride.originLabel,
                         destination: ride.destinationLabel,
+                        title: isTransfer
+                            ? 'Trecho após a transferência'
+                            : 'Rota da entrega',
                       ),
                       const SizedBox(height: 16),
                       const _SelectionNotice(),
@@ -212,9 +224,13 @@ class DriverOfferPage extends StatelessWidget {
                                   color: FretColors.brandBlack,
                                 ),
                               )
-                            : const Text(
-                                'Aceitar corrida',
-                                style: TextStyle(fontWeight: FontWeight.w800),
+                            : Text(
+                                isTransfer
+                                    ? 'Aceitar transferência'
+                                    : 'Aceitar corrida',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w800,
+                                ),
                               ),
                       ),
                     ),
@@ -331,8 +347,13 @@ class _OfferMetric extends StatelessWidget {
 class _RouteCard extends StatelessWidget {
   final String origin;
   final String destination;
+  final String title;
 
-  const _RouteCard({required this.origin, required this.destination});
+  const _RouteCard({
+    required this.origin,
+    required this.destination,
+    required this.title,
+  });
 
   @override
   Widget build(BuildContext context) => Container(
@@ -345,9 +366,9 @@ class _RouteCard extends StatelessWidget {
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Rota da entrega',
-          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800),
+        Text(
+          title,
+          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800),
         ),
         const SizedBox(height: 16),
         IntrinsicHeight(

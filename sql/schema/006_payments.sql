@@ -18,7 +18,7 @@ CREATE TABLE driver_earnings (
     id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
 
     driver_user_id BIGINT NOT NULL,
-    ride_id BIGINT NOT NULL UNIQUE,
+    ride_id BIGINT NOT NULL,
 
     gross_value DECIMAL(10,2) NOT NULL,
     app_fee_value DECIMAL(10,2) NOT NULL,
@@ -47,7 +47,11 @@ CREATE TABLE driver_earnings (
             earning_type IN (
                 'ride_completion',
                 'cancellation_fee',
-                'cancellation_return'
+                'cancellation_return',
+                'ride_transfer_segment'
             )
         )
 );
+
+CREATE UNIQUE INDEX uq_driver_earnings_ride_driver
+ON driver_earnings (ride_id, driver_user_id);

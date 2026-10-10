@@ -64,6 +64,17 @@ abstract class Endpoints {
       '$rides/$rideId/cancellations';
   static String latestRideCancellation(int rideId) =>
       '$rides/$rideId/cancellations/latest';
+  static String createDriverReassignment(int rideId) =>
+      '$rides/$rideId/driver-reassignments';
+
+  static const String driverReassignmentAction =
+      '/driver-reassignments/driver/me/action-required';
+  static String retryDriverReassignment(int reassignmentId) =>
+      '/driver-reassignments/$reassignmentId/retry';
+  static String cancelDriverReassignment(int reassignmentId) =>
+      '/driver-reassignments/$reassignmentId/cancel';
+  static String confirmDriverReassignmentReceipt(int reassignmentId) =>
+      '/driver-reassignments/$reassignmentId/confirm-receipt';
 
   static const String driverCancellationAction =
       '/ride-cancellations/driver/me/action-required';

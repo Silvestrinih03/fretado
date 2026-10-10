@@ -12,6 +12,7 @@ class DriverHomeShell extends StatefulWidget {
   final int userId;
   final DriverAvailabilityController availabilityController;
   final int cancellationRefreshVersion;
+  final int reassignmentRefreshVersion;
 
   const DriverHomeShell({
     super.key,
@@ -19,6 +20,7 @@ class DriverHomeShell extends StatefulWidget {
     required this.userId,
     required this.availabilityController,
     this.cancellationRefreshVersion = 0,
+    this.reassignmentRefreshVersion = 0,
   });
 
   @override
@@ -95,6 +97,8 @@ class _DriverHomeShellState extends State<DriverHomeShell>
                     refreshVersion: _homeRefreshVersion,
                     cancellationRefreshVersion:
                         widget.cancellationRefreshVersion,
+                    reassignmentRefreshVersion:
+                        widget.reassignmentRefreshVersion,
                     onHistoryTap: () => _selectTab(1),
                     onWalletTap: () => _selectTab(2),
                   ),

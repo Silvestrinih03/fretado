@@ -7,6 +7,7 @@ import '../../../../core/enums/home_profile.dart';
 import '../../../../core/services/http_service.dart';
 import '../../../driver_operations/data/datasources/driver_operations_datasource.dart';
 import '../../../driver_operations/data/models/driver_operation_models.dart';
+import '../../../driver_reassignment/presentation/widgets/driver_reassignment_flow.dart';
 import '../../../home/presentation/pages/home_page.dart';
 import '../../../ride_cancellation/data/datasources/ride_cancellation_datasource.dart';
 import '../../../ride_cancellation/data/models/ride_cancellation_models.dart';
@@ -183,10 +184,32 @@ class _RideTrackingPageState extends State<RideTrackingPage> {
       ride: ride,
       profile: widget.profile,
       onTrack: () {},
-      onCancel: _isClient && !ride.isCancellationReturn
+      onCancel:
+          _isClient &&
+              !ride.isCancellationReturn &&
+              !ride.hasActiveDriverReassignment
           ? () => _openCancellationFlow()
           : null,
+      onDriverReassignment:
+          !_isClient &&
+              !ride.isCancellationReturn &&
+              (ride.statusId == 2 || ride.statusId == 3 || ride.statusId == 4)
+          ? () => _openDriverReassignment(ride)
+          : null,
     );
+  }
+
+  Future<void> _openDriverReassignment(DriverRideModel ride) async {
+    if (ride.hasActiveDriverReassignment) {
+      await showDriverReassignmentStatusSheet(
+        context,
+        reassignment: ride.activeDriverReassignment!,
+        userId: widget.userId,
+      );
+    } else {
+      await showDriverReassignmentRequestSheet(context, ride: ride);
+    }
+    if (mounted) await _load();
   }
 
   @override
@@ -275,10 +298,15 @@ class _RideTrackingPageState extends State<RideTrackingPage> {
           valueLabel: _isClient ? 'VALOR' : 'VOCÊ RECEBE',
           packageWeight: ride.packageWeight,
           activeCancellationStatus: ride.activeCancellation?.phase,
-          cancellationNotice: fretCancellationNotice(
-            ride.activeCancellation?.phase,
-            isDriver: !_isClient,
-          ),
+          cancellationNotice:
+              fretCancellationNotice(
+                ride.activeCancellation?.phase,
+                isDriver: !_isClient,
+              ) ??
+              _trackingReassignmentNotice(
+                ride.activeDriverReassignment,
+                isDriver: !_isClient,
+              ),
           footer: OutlinedButton(
             onPressed: _openDetails,
             style: OutlinedButton.styleFrom(
@@ -362,10 +390,12 @@ class _TrackingHero extends StatelessWidget {
     final isClient = profile == HomeProfileEnum.client;
     final waiting = ride.statusId == 1;
     final cancellationStatus = ride.activeCancellation?.phase;
-    final cancellationNotice = fretCancellationNotice(
-      cancellationStatus,
-      isDriver: !isClient,
-    );
+    final cancellationNotice =
+        fretCancellationNotice(cancellationStatus, isDriver: !isClient) ??
+        _trackingReassignmentNotice(
+          ride.activeDriverReassignment,
+          isDriver: !isClient,
+        );
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
@@ -916,3 +946,34 @@ String? _vehicleLabel(RideAssignedVehicleModel? vehicle) =>
 
 String _formatMoney(double value) =>
     'R\$ ${value.toStringAsFixed(2).replaceAll('.', ',')}';
+
+String? _trackingReassignmentNotice(
+  DriverReassignmentModel? reassignment, {
+  required bool isDriver,
+}) {
+  if (reassignment == null) return null;
+  final isPrePickup = reassignment.isPrePickupWithdrawal;
+  return switch (reassignment.status) {
+    'searching' || 'awaiting_replacement' =>
+      isDriver
+          ? isPrePickup
+                ? 'Estamos procurando outro motorista. Esta corrida continua com você.'
+                : 'Estamos procurando outro motorista. Você continua responsável pela carga.'
+          : isPrePickup
+          ? 'A corrida permanece com o motorista atual até uma nova oferta ser criada.'
+          : 'Estamos buscando outro motorista para continuar a entrega.',
+    'awaiting_handoff' =>
+      isDriver
+          ? 'O motorista substituto está a caminho do ponto de transferência.'
+          : 'A transferência está em andamento; o motorista atual segue responsável até a confirmação.',
+    'replacement_unavailable' =>
+      isDriver
+          ? isPrePickup
+                ? 'Nenhum motorista disponível. Você continua responsável pela corrida.'
+                : 'Nenhum motorista disponível. Você continua responsável pela entrega.'
+          : isPrePickup
+          ? 'Nenhum substituto disponível. A corrida permanece com o motorista atual.'
+          : 'A busca por outro motorista continuará assim que houver disponibilidade.',
+    _ => null,
+  };
+}

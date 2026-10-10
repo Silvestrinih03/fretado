@@ -13,6 +13,8 @@ from app.models.ride import Ride
 from app.models.ride_cancellation import RideCancellation
 from app.models.ride_cancellation_event import RideCancellationEvent
 from app.models.ride_detail import RideDetail
+from app.models.ride_driver_reassignment import RideDriverReassignment
+from app.models.ride_driver_reassignment_event import RideDriverReassignmentEvent
 from app.models.ride_offer import RideOffer
 from app.models.ride_offer_status import RideOfferStatus
 from app.models.ride_status import RideStatus
@@ -40,6 +42,8 @@ __all__ = [
     "RideCancellation",
     "RideCancellationEvent",
     "RideDetail",
+    "RideDriverReassignment",
+    "RideDriverReassignmentEvent",
     "RideOffer",
     "RideOfferStatus",
     "RideStatus",

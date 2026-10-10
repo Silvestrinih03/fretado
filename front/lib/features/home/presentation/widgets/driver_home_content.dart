@@ -12,6 +12,7 @@ import '../../../vehicles/presentation/pages/my_vehicles.dart';
 import '../../../rides/presentation/pages/ride_tracking_page.dart';
 import '../../../rides/presentation/widgets/active_ride_details_sheet.dart';
 import '../../../ride_cancellation/presentation/widgets/driver_cancellation_gate.dart';
+import '../../../driver_reassignment/presentation/widgets/driver_reassignment_flow.dart';
 import '../controllers/driver_availability_controller.dart';
 
 class DriverHomeContent extends StatefulWidget {
@@ -20,6 +21,7 @@ class DriverHomeContent extends StatefulWidget {
   final DriverAvailabilityController availabilityController;
   final int refreshVersion;
   final int cancellationRefreshVersion;
+  final int reassignmentRefreshVersion;
   final VoidCallback onHistoryTap;
   final VoidCallback onWalletTap;
 
@@ -30,6 +32,7 @@ class DriverHomeContent extends StatefulWidget {
     required this.availabilityController,
     this.refreshVersion = 0,
     this.cancellationRefreshVersion = 0,
+    this.reassignmentRefreshVersion = 0,
     required this.onHistoryTap,
     required this.onWalletTap,
   });
@@ -107,6 +110,7 @@ class _DriverHomeContentState extends State<DriverHomeContent> {
           userId: widget.userId,
           refreshVersion: _refreshVersion,
           cancellationRefreshVersion: widget.cancellationRefreshVersion,
+          reassignmentRefreshVersion: widget.reassignmentRefreshVersion,
           onRideFinished: _reloadHomeData,
         ),
         const SizedBox(height: 10),
@@ -715,12 +719,14 @@ class _DriverRideInProgressSection extends StatefulWidget {
   final int userId;
   final int refreshVersion;
   final int cancellationRefreshVersion;
+  final int reassignmentRefreshVersion;
   final VoidCallback onRideFinished;
 
   const _DriverRideInProgressSection({
     required this.userId,
     required this.refreshVersion,
     required this.cancellationRefreshVersion,
+    required this.reassignmentRefreshVersion,
     required this.onRideFinished,
   });
 
@@ -753,7 +759,9 @@ class _DriverRideInProgressSectionState
       unawaited(_loadRides(initial: true));
     } else if (oldWidget.refreshVersion != widget.refreshVersion ||
         oldWidget.cancellationRefreshVersion !=
-            widget.cancellationRefreshVersion) {
+            widget.cancellationRefreshVersion ||
+        oldWidget.reassignmentRefreshVersion !=
+            widget.reassignmentRefreshVersion) {
       unawaited(_loadRides());
     }
   }
@@ -806,6 +814,28 @@ class _DriverRideInProgressSectionState
   Future<void> _manualRefresh() async {
     await _loadRides();
     if (mounted) await DriverCancellationGate.checkNow(context);
+    if (mounted) await DriverReassignmentGate.checkNow(context);
+  }
+
+  Future<void> _requestReassignment(DriverRideModel ride) async {
+    if (ride.hasActiveDriverReassignment) {
+      await showDriverReassignmentStatusSheet(
+        context,
+        reassignment: ride.activeDriverReassignment!,
+        userId: widget.userId,
+        onChanged: () => unawaited(_loadRides()),
+      );
+      return;
+    }
+    final changed = await showDriverReassignmentRequestSheet(
+      context,
+      ride: ride,
+    );
+    if (changed && mounted) {
+      await _loadRides();
+      widget.onRideFinished();
+      if (mounted) await DriverReassignmentGate.checkNow(context);
+    }
   }
 
   Future<void> _advanceRide(DriverRideModel ride) async {
@@ -879,6 +909,7 @@ class _DriverRideInProgressSectionState
       ride: ride,
       profile: HomeProfileEnum.driver,
       onTrack: () => _openTracking(ride),
+      onDriverReassignment: () => _requestReassignment(ride),
     );
   }
 
@@ -968,6 +999,7 @@ class _DriverRideInProgressSectionState
                 onAdvance: () => _advanceRide(ride),
                 onTrack: () => _openTracking(ride),
                 onDetails: () => _openDetails(ride),
+                onReassignment: () => _requestReassignment(ride),
               ),
             ),
           ),
@@ -982,6 +1014,7 @@ class _DriverActiveRideCard extends StatelessWidget {
   final VoidCallback onAdvance;
   final VoidCallback onTrack;
   final VoidCallback onDetails;
+  final VoidCallback onReassignment;
 
   const _DriverActiveRideCard({
     required this.ride,
@@ -989,6 +1022,7 @@ class _DriverActiveRideCard extends StatelessWidget {
     required this.onAdvance,
     required this.onTrack,
     required this.onDetails,
+    required this.onReassignment,
   });
 
   @override
@@ -1016,10 +1050,12 @@ class _DriverActiveRideCard extends StatelessWidget {
       participantInitials: client?.initials,
       participantRidesCount: client?.completedRidesCount,
       activeCancellationStatus: ride.activeCancellation?.phase,
-      cancellationNotice: fretCancellationNotice(
-        ride.activeCancellation?.phase,
-        isDriver: true,
-      ),
+      cancellationNotice:
+          fretCancellationNotice(
+            ride.activeCancellation?.phase,
+            isDriver: true,
+          ) ??
+          _driverReassignmentNotice(ride.activeDriverReassignment),
       participantSubtitle: client == null
           ? null
           : 'Cliente · ${client.completedRidesCount} corridas',
@@ -1037,7 +1073,9 @@ class _DriverActiveRideCard extends StatelessWidget {
             ),
             const SizedBox(height: 8),
           ],
-          if (actionLabel != null && actionIcon != null) ...[
+          if (actionLabel != null &&
+              actionIcon != null &&
+              !ride.hasActiveDriverReassignment) ...[
             ElevatedButton.icon(
               onPressed: isBusy ? null : onAdvance,
               icon: isBusy
@@ -1081,10 +1119,58 @@ class _DriverActiveRideCard extends StatelessWidget {
               ],
             ),
           ),
+          if (!ride.isCancellationReturn &&
+              (ride.statusId == 2 ||
+                  ride.statusId == 3 ||
+                  ride.statusId == 4)) ...[
+            const SizedBox(height: 8),
+            OutlinedButton(
+              onPressed: isBusy ? null : onReassignment,
+              style: OutlinedButton.styleFrom(
+                minimumSize: const Size.fromHeight(44),
+                foregroundColor: FretColors.destructive700,
+                side: const BorderSide(color: FretColors.destructive200),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(13),
+                ),
+              ),
+              child: Text(
+                ride.hasActiveDriverReassignment
+                    ? ride.activeDriverReassignment!.isPrePickupWithdrawal
+                          ? 'Ver busca por outro motorista'
+                          : 'Ver transferência de carga'
+                    : ride.statusId == 4
+                    ? 'Não consigo concluir a entrega'
+                    : 'Desistir da corrida',
+              ),
+            ),
+          ],
         ],
       ),
     );
   }
+}
+
+String? _driverReassignmentNotice(DriverReassignmentModel? reassignment) {
+  if (reassignment == null) return null;
+  final isPrePickup = reassignment.isPrePickupWithdrawal;
+  return switch (reassignment.status) {
+    'searching' =>
+      isPrePickup
+          ? 'Procurando outro motorista. Esta corrida e sua oferta continuam com você.'
+          : 'Procurando outro motorista. Você continua responsável pela carga.',
+    'awaiting_replacement' =>
+      isPrePickup
+          ? 'Um motorista está avaliando a nova oferta.'
+          : 'Um motorista está avaliando a transferência.',
+    'awaiting_handoff' =>
+      'O novo motorista está a caminho do ponto de transferência.',
+    'replacement_unavailable' =>
+      isPrePickup
+          ? 'Nenhum motorista disponível. Você continua responsável pela corrida.'
+          : 'Nenhum motorista disponível. Você continua responsável pela entrega.',
+    _ => null,
+  };
 }
 
 class _DriverRideStateCard extends StatelessWidget {

@@ -7,6 +7,7 @@ import '../controllers/driver_availability_controller.dart';
 import '../widgets/client_home_shell.dart';
 import '../widgets/driver_home_shell.dart';
 import '../../../ride_cancellation/presentation/widgets/driver_cancellation_gate.dart';
+import '../../../driver_reassignment/presentation/widgets/driver_reassignment_flow.dart';
 
 class HomePage extends StatefulWidget {
   final HomeProfileEnum profile;
@@ -30,6 +31,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   DriverAvailabilityController? _driverAvailabilityController;
   int? _driverAvailabilityUserId;
   int _cancellationRefreshVersion = 0;
+  int _reassignmentRefreshVersion = 0;
 
   @override
   void initState() {
@@ -90,16 +92,23 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
           return ClientHomeShell(userName: firstName, userId: resolvedUserId);
         }
 
-        return DriverCancellationGate(
-          availabilityController: driverAvailability!,
-          onCancellationChanged: () {
-            if (mounted) setState(() => _cancellationRefreshVersion++);
+        return DriverReassignmentGate(
+          userId: resolvedUserId,
+          onChanged: () {
+            if (mounted) setState(() => _reassignmentRefreshVersion++);
           },
-          child: DriverHomeShell(
-            userName: firstName,
-            userId: resolvedUserId,
-            availabilityController: driverAvailability,
-            cancellationRefreshVersion: _cancellationRefreshVersion,
+          child: DriverCancellationGate(
+            availabilityController: driverAvailability!,
+            onCancellationChanged: () {
+              if (mounted) setState(() => _cancellationRefreshVersion++);
+            },
+            child: DriverHomeShell(
+              userName: firstName,
+              userId: resolvedUserId,
+              availabilityController: driverAvailability,
+              cancellationRefreshVersion: _cancellationRefreshVersion,
+              reassignmentRefreshVersion: _reassignmentRefreshVersion,
+            ),
           ),
         );
       },

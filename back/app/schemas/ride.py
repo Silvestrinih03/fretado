@@ -5,6 +5,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator, model_valida
 
 from app.enums.delivery_classification import DeliveryClassificationEnum
 from app.schemas.ride_detail import RideDetailResponse
+from app.schemas.driver_reassignment import DriverReassignmentSummary
 
 
 class RideGeocodeResult(BaseModel):
@@ -179,6 +180,8 @@ class RideFullResponse(RideResponse):
     active_cancellation: RideActiveCancellationSummary | None = None
     cancellation: RideActiveCancellationSummary | None = None
     linked_return_ride: RideLinkedReturnSummary | None = None
+    active_driver_reassignment: DriverReassignmentSummary | None = None
+    driver_assignment_status: str | None = None
 
 
 class RidePickupEstimateResponse(BaseModel):

@@ -8,7 +8,7 @@ class DriverEarning(Base):
 
     id = Column(BigInteger, primary_key=True, index=True)
     driver_user_id = Column(BigInteger, ForeignKey("users.id"), nullable=False)
-    ride_id = Column(BigInteger, ForeignKey("rides.id"), nullable=False, unique=True)
+    ride_id = Column(BigInteger, ForeignKey("rides.id"), nullable=False)
     gross_value = Column(Numeric(10, 2), nullable=False)
     app_fee_value = Column(Numeric(10, 2), nullable=False)
     net_value = Column(Numeric(10, 2), nullable=False)

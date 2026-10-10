@@ -95,6 +95,8 @@ class DriverRideModel {
   final RideActiveCancellationModel? activeCancellation;
   final RideActiveCancellationModel? cancellation;
   final RideLinkedReturnModel? linkedReturnRide;
+  final DriverReassignmentModel? activeDriverReassignment;
+  final String? driverAssignmentStatus;
 
   DriverRideModel.fromJson(Map<String, dynamic> json)
     : id = _readInt(json['id']),
@@ -150,11 +152,23 @@ class DriverRideModel {
           ? RideLinkedReturnModel.fromJson(
               Map<String, dynamic>.from(json['linked_return_ride'] as Map),
             )
-          : null;
+          : null,
+      activeDriverReassignment = json['active_driver_reassignment'] is Map
+          ? DriverReassignmentModel.fromJson(
+              Map<String, dynamic>.from(
+                json['active_driver_reassignment'] as Map,
+              ),
+            )
+          : null,
+      driverAssignmentStatus = _readNullableString(
+        json['driver_assignment_status'],
+      );
 
   bool get isActive => statusId >= 1 && statusId <= 4;
   bool get hasPendingCancellation => activeCancellation != null;
   bool get isCancellationReturn => ridePurpose == 'cancellation_return';
+  bool get hasActiveDriverReassignment => activeDriverReassignment != null;
+  bool get wasDriverWithdrawal => driverAssignmentStatus == 'withdrawn';
   String get vehicleCategoryLabel =>
       requiredVehicleTypeName ?? 'Categoria #$requiredVehicleTypeId';
   String get originLabel => details?.originLabel ?? 'Coleta não informada';
@@ -173,6 +187,81 @@ class DriverRideModel {
     7 => 'NÃO ATENDIDA',
     _ => 'STATUS $statusId',
   };
+}
+
+class DriverReassignmentModel {
+  final int id;
+  final int rideId;
+  final String kind;
+  final String status;
+  final String reason;
+  final int outgoingDriverUserId;
+  final int? incomingDriverUserId;
+  final String? handoffAddress;
+  final double? handoffLatitude;
+  final double? handoffLongitude;
+  final double? outgoingDistanceKm;
+  final double? incomingDistanceKm;
+  final double? outgoingNetValue;
+  final double? incomingNetValue;
+  final DateTime? acceptedAt;
+  final DateTime? completedAt;
+
+  const DriverReassignmentModel({
+    required this.id,
+    required this.rideId,
+    required this.kind,
+    required this.status,
+    required this.reason,
+    required this.outgoingDriverUserId,
+    required this.incomingDriverUserId,
+    required this.handoffAddress,
+    required this.handoffLatitude,
+    required this.handoffLongitude,
+    required this.outgoingDistanceKm,
+    required this.incomingDistanceKm,
+    required this.outgoingNetValue,
+    required this.incomingNetValue,
+    required this.acceptedAt,
+    required this.completedAt,
+  });
+
+  factory DriverReassignmentModel.fromJson(Map<String, dynamic> json) =>
+      DriverReassignmentModel(
+        id: _readInt(json['id']),
+        rideId: _readInt(json['ride_id']),
+        kind: _readString(json['kind']),
+        status: _readString(json['status']),
+        reason: _readString(json['reason']),
+        outgoingDriverUserId: _readInt(json['outgoing_driver_user_id']),
+        incomingDriverUserId: _readNullableInt(json['incoming_driver_user_id']),
+        handoffAddress: _readNullableString(json['handoff_address']),
+        handoffLatitude: json['handoff_latitude'] == null
+            ? null
+            : _readDouble(json['handoff_latitude']),
+        handoffLongitude: json['handoff_longitude'] == null
+            ? null
+            : _readDouble(json['handoff_longitude']),
+        outgoingDistanceKm: json['outgoing_distance_km'] == null
+            ? null
+            : _readDouble(json['outgoing_distance_km']),
+        incomingDistanceKm: json['incoming_distance_km'] == null
+            ? null
+            : _readDouble(json['incoming_distance_km']),
+        outgoingNetValue: json['outgoing_net_value'] == null
+            ? null
+            : _readAmount(json['outgoing_net_value']),
+        incomingNetValue: json['incoming_net_value'] == null
+            ? null
+            : _readAmount(json['incoming_net_value']),
+        acceptedAt: _readDateTime(json['accepted_at']),
+        completedAt: _readDateTime(json['completed_at']),
+      );
+
+  bool get isPrePickupWithdrawal => kind == 'pre_pickup_withdrawal';
+  bool get isDeliveryTransfer => kind == 'delivery_transfer';
+  bool get isAwaitingHandoff => status == 'awaiting_handoff';
+  bool get isReplacementUnavailable => status == 'replacement_unavailable';
 }
 
 class RideActiveCancellationModel {
@@ -376,6 +465,9 @@ class RideOfferModel {
   final DateTime expiresAt;
   final DateTime createdAt;
   final DateTime? updatedAt;
+  final String purpose;
+  final int? reassignmentId;
+  final DriverReassignmentModel? reassignment;
 
   RideOfferModel.fromJson(Map<String, dynamic> json)
     : id = _readInt(json['id']),
@@ -391,10 +483,18 @@ class RideOfferModel {
       createdAt =
           _readDateTime(json['created_at']) ??
           (throw const FormatException('Oferta sem data de criação válida.')),
-      updatedAt = _readDateTime(json['updated_at']);
+      updatedAt = _readDateTime(json['updated_at']),
+      purpose = _readNullableString(json['purpose']) ?? 'standard',
+      reassignmentId = _readNullableInt(json['reassignment_id']),
+      reassignment = json['reassignment'] is Map
+          ? DriverReassignmentModel.fromJson(
+              Map<String, dynamic>.from(json['reassignment'] as Map),
+            )
+          : null;
 
   bool get isPending => statusId == 1;
   bool get isExpired => statusId == 4;
+  bool get isCargoTransfer => purpose == 'cargo_transfer';
 
   String get statusLabel => switch (statusId) {
     1 => 'PENDENTE',

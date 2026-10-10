@@ -3,6 +3,7 @@ from sqlalchemy import (
     Column,
     DateTime,
     ForeignKey,
+    String,
 )
 from sqlalchemy.sql import func
 
@@ -70,4 +71,11 @@ class RideOffer(Base):
         server_default=func.now(),
         onupdate=func.now(),
         nullable=False,
+    )
+
+    purpose = Column(String(30), nullable=False, default="standard")
+    reassignment_id = Column(
+        BigInteger,
+        ForeignKey("ride_driver_reassignments.id", ondelete="CASCADE"),
+        nullable=True,
     )

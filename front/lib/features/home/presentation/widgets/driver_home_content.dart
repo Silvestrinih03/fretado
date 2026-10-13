@@ -744,6 +744,8 @@ class _DriverRideInProgressSectionState
   bool _refreshing = false;
   Object? _loadError;
   int? _rideInActionId;
+  Completer<void>? _loadCycle;
+  bool _reloadQueued = false;
 
   @override
   void initState() {
@@ -774,6 +776,33 @@ class _DriverRideInProgressSectionState
   }
 
   Future<void> _loadRides({bool initial = false}) async {
+    if (!mounted) return;
+
+    final activeCycle = _loadCycle;
+    if (activeCycle != null) {
+      _reloadQueued = true;
+      return activeCycle.future;
+    }
+
+    final cycle = Completer<void>();
+    _loadCycle = cycle;
+    var nextLoadIsInitial = initial;
+
+    try {
+      do {
+        _reloadQueued = false;
+        await _fetchRides(initial: nextLoadIsInitial);
+        nextLoadIsInitial = false;
+      } while (mounted && _reloadQueued);
+    } finally {
+      if (identical(_loadCycle, cycle)) {
+        _loadCycle = null;
+      }
+      if (!cycle.isCompleted) cycle.complete();
+    }
+  }
+
+  Future<void> _fetchRides({required bool initial}) async {
     if (!mounted) return;
     setState(() {
       if (initial) {

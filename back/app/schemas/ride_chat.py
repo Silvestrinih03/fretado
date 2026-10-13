@@ -16,6 +16,7 @@ class RideConversationSummary(BaseModel):
     other_participant: ChatParticipantSummary
     is_current: bool
     can_send: bool
+    has_messages: bool
     unread_count: int
     closed_at: datetime | None = None
     created_at: datetime

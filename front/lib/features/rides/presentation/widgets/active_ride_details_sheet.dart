@@ -5,14 +5,20 @@ import '../../../../core/enums/home_profile.dart';
 import '../../../driver_operations/data/models/driver_operation_models.dart';
 import '../../../ride_cancellation/presentation/widgets/cancellation_log_timeline.dart';
 import '../../../ride_chat/presentation/widgets/ride_chat_access_button.dart';
+import '../../../ride_rating/presentation/widgets/ride_rating_access_button.dart';
 
 Future<void> showActiveRideDetailsSheet(
   BuildContext context, {
   required DriverRideModel ride,
   required HomeProfileEnum profile,
-  required VoidCallback onTrack,
+  VoidCallback? onTrack,
+  String? trackLabel,
   VoidCallback? onCancel,
   VoidCallback? onDriverReassignment,
+  int? ratingRideId,
+  bool ratingPending = false,
+  bool ratingSubmitted = false,
+  VoidCallback? onRatingChanged,
 }) {
   return showModalBottomSheet<void>(
     context: context,
@@ -23,10 +29,13 @@ Future<void> showActiveRideDetailsSheet(
     builder: (sheetContext) => _ActiveRideDetailsSheet(
       ride: ride,
       profile: profile,
-      onTrack: () {
-        Navigator.of(sheetContext).pop();
-        onTrack();
-      },
+      onTrack: onTrack == null
+          ? null
+          : () {
+              Navigator.of(sheetContext).pop();
+              onTrack();
+            },
+      trackLabel: trackLabel,
       onCancel: onCancel == null
           ? null
           : () {
@@ -39,6 +48,10 @@ Future<void> showActiveRideDetailsSheet(
               Navigator.of(sheetContext).pop();
               onDriverReassignment();
             },
+      ratingRideId: ratingRideId,
+      ratingPending: ratingPending,
+      ratingSubmitted: ratingSubmitted,
+      onRatingChanged: onRatingChanged,
     ),
   );
 }
@@ -46,16 +59,26 @@ Future<void> showActiveRideDetailsSheet(
 class _ActiveRideDetailsSheet extends StatelessWidget {
   final DriverRideModel ride;
   final HomeProfileEnum profile;
-  final VoidCallback onTrack;
+  final VoidCallback? onTrack;
+  final String? trackLabel;
   final VoidCallback? onCancel;
   final VoidCallback? onDriverReassignment;
+  final int? ratingRideId;
+  final bool ratingPending;
+  final bool ratingSubmitted;
+  final VoidCallback? onRatingChanged;
 
   const _ActiveRideDetailsSheet({
     required this.ride,
     required this.profile,
     required this.onTrack,
+    required this.trackLabel,
     required this.onCancel,
     required this.onDriverReassignment,
+    required this.ratingRideId,
+    required this.ratingPending,
+    required this.ratingSubmitted,
+    required this.onRatingChanged,
   });
 
   @override
@@ -64,7 +87,8 @@ class _ActiveRideDetailsSheet extends StatelessWidget {
     final party = isDriver ? ride.client : ride.driver;
     final vehicle = ride.assignedVehicle;
     final details = ride.details;
-    final cancellationStatus = ride.activeCancellation?.phase;
+    final cancellationStatus =
+        ride.activeCancellation?.phase ?? ride.cancellation?.phase;
     final cancellationNotice =
         fretCancellationNotice(cancellationStatus, isDriver: isDriver) ??
         _reassignmentNotice(ride.activeDriverReassignment, isDriver);
@@ -221,7 +245,36 @@ class _ActiveRideDetailsSheet extends StatelessWidget {
               ),
             ],
             const SizedBox(height: 14),
-            RideChatAccessButton(rideId: ride.id),
+            if (onTrack != null) ...[
+              FretPrimaryButton(
+                label: trackLabel ?? 'ACOMPANHAR CORRIDA',
+                onPressed: onTrack,
+                trailingIcon: Icons.route_outlined,
+              ),
+              const SizedBox(height: 8),
+            ],
+            RideChatAccessButton(
+              rideId: ride.id,
+              labelOverride: ride.linkedReturnRide == null
+                  ? null
+                  : 'Ver conversa da corrida original',
+            ),
+            if (ride.linkedReturnRide != null) ...[
+              const SizedBox(height: 8),
+              RideChatAccessButton(
+                rideId: ride.linkedReturnRide!.id,
+                labelOverride: 'Ver conversa da devolução',
+              ),
+            ],
+            if (ratingRideId != null) ...[
+              const SizedBox(height: 8),
+              RideRatingAccessButton(
+                rideId: ratingRideId!,
+                knownPending: ratingPending,
+                submitted: ratingSubmitted,
+                onChanged: onRatingChanged,
+              ),
+            ],
             if (onCancel != null) ...[
               const SizedBox(height: 8),
               OutlinedButton(

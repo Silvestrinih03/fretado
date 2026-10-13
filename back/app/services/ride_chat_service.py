@@ -249,6 +249,9 @@ def _conversation_summary(db, ride, conversation, viewer_id):
         },
         is_current=can_send,
         can_send=can_send,
+        has_messages=db.query(RideMessage.id).filter(
+            RideMessage.conversation_id == conversation.id,
+        ).first() is not None,
         unread_count=_unread_count(db, conversation.id, viewer_id),
         closed_at=conversation.closed_at,
         created_at=conversation.created_at,

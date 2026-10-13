@@ -24,6 +24,7 @@ class RideConversationModel {
   final RideChatParticipant otherParticipant;
   final bool isCurrent;
   final bool canSend;
+  final bool hasMessages;
   final int unreadCount;
   final DateTime? closedAt;
   final DateTime createdAt;
@@ -35,6 +36,7 @@ class RideConversationModel {
     required this.otherParticipant,
     required this.isCurrent,
     required this.canSend,
+    required this.hasMessages,
     required this.unreadCount,
     required this.closedAt,
     required this.createdAt,
@@ -50,6 +52,7 @@ class RideConversationModel {
         ),
         isCurrent: json['is_current'] == true,
         canSend: json['can_send'] == true,
+        hasMessages: json['has_messages'] == true,
         unreadCount: _int(json['unread_count']),
         closedAt: _date(json['closed_at']),
         createdAt: _date(json['created_at']) ?? DateTime.now(),
@@ -102,9 +105,11 @@ class RideChatMessagePage {
       RideChatMessagePage(
         items: (json['items'] as List<dynamic>? ?? const [])
             .whereType<Map>()
-            .map((item) => RideChatMessageModel.fromJson(
-                  Map<String, dynamic>.from(item),
-                ))
+            .map(
+              (item) => RideChatMessageModel.fromJson(
+                Map<String, dynamic>.from(item),
+              ),
+            )
             .toList(),
         hasMore: json['has_more'] == true,
         nextBeforeId: _nullableInt(json['next_before_id']),

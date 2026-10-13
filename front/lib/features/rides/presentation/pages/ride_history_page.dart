@@ -1,22 +1,33 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../../../app/design_system/design_system.dart';
 import '../../../../core/endpoints.dart';
+import '../../../../core/enums/home_profile.dart';
 import '../../../../core/services/http_service.dart';
 import '../../../driver_operations/data/models/driver_operation_models.dart';
-import '../../../ride_cancellation/presentation/widgets/cancellation_log_timeline.dart';
-import '../../../ride_chat/presentation/widgets/ride_chat_access_button.dart';
+import '../../../driver_reassignment/presentation/widgets/driver_reassignment_flow.dart';
+import '../../../ride_cancellation/data/datasources/ride_cancellation_datasource.dart';
+import '../../../ride_cancellation/data/repositories/ride_cancellation_repository_impl.dart';
+import '../../../ride_cancellation/presentation/widgets/client_cancellation_sheet.dart';
 import '../../../ride_rating/data/models/ride_rating_models.dart';
 import '../../../ride_rating/data/ride_rating_repository.dart';
 import '../../../ride_rating/presentation/widgets/ride_rating_access_button.dart';
 import '../../data/models/ride_history_page_model.dart';
+import '../widgets/active_ride_details_sheet.dart';
+import 'ride_tracking_page.dart';
 
 class RideHistoryPage extends StatefulWidget {
+  final int userId;
+  final HomeProfileEnum profile;
   final bool showBackButton;
   final int refreshVersion;
 
   const RideHistoryPage({
     super.key,
+    required this.userId,
+    required this.profile,
     this.showBackButton = true,
     this.refreshVersion = 0,
   });
@@ -26,11 +37,12 @@ class RideHistoryPage extends StatefulWidget {
 }
 
 class _RideHistoryPageState extends State<RideHistoryPage> {
-  static const int _pageSize = 20;
+  static const int _pageSize = 5;
 
   late final HttpService _httpService;
   late final ScrollController _scrollController;
   late final RideRatingRepository _ratingRepository;
+  late final RideCancellationRepositoryImpl _cancellationRepository;
   final List<DriverRideModel> _rides = <DriverRideModel>[];
   final Map<int, PendingRideRatingModel> _pendingRatings =
       <int, PendingRideRatingModel>{};
@@ -50,6 +62,9 @@ class _RideHistoryPageState extends State<RideHistoryPage> {
     super.initState();
     _httpService = HttpService();
     _ratingRepository = RideRatingRepository(_httpService);
+    _cancellationRepository = RideCancellationRepositoryImpl(
+      RideCancellationDatasource(_httpService),
+    );
     _scrollController = ScrollController()..addListener(_onScroll);
     _loadFirstPage();
   }
@@ -99,40 +114,43 @@ class _RideHistoryPageState extends State<RideHistoryPage> {
       _isLoadingMore = false;
       _initialError = null;
       _loadMoreError = null;
+      _pendingRatings.clear();
     });
 
     try {
       final page = await _loadPage(null);
-      PendingRideRatingsPageModel? pendingPage;
-      try {
-        pendingPage = await _ratingRepository.pending();
-      } catch (_) {
-        pendingPage = null;
-      }
       if (!mounted || requestVersion != _requestVersion) return;
-      final loadedPendingPage = pendingPage;
 
       setState(() {
         _rides.addAll(page.items);
-        if (loadedPendingPage != null) {
-          _pendingRatings
-            ..clear()
-            ..addEntries(
-              loadedPendingPage.items.map(
-                (item) => MapEntry(item.rideId, item),
-              ),
-            );
-        }
         _nextCursor = page.nextCursor;
         _hasMore = page.hasMore;
         _isInitialLoading = false;
       });
+      unawaited(_loadPendingRatings(requestVersion));
     } catch (_) {
       if (!mounted || requestVersion != _requestVersion) return;
       setState(() {
         _initialError = 'Não foi possível carregar';
         _isInitialLoading = false;
       });
+    }
+  }
+
+  Future<void> _loadPendingRatings(int requestVersion) async {
+    try {
+      final pendingPage = await _ratingRepository.pending();
+      if (!mounted || requestVersion != _requestVersion) return;
+
+      setState(() {
+        _pendingRatings
+          ..clear()
+          ..addEntries(
+            pendingPage.items.map((item) => MapEntry(item.rideId, item)),
+          );
+      });
+    } catch (_) {
+      // A listagem continua disponível mesmo se as avaliações falharem.
     }
   }
 
@@ -176,6 +194,94 @@ class _RideHistoryPageState extends State<RideHistoryPage> {
     if (_selectedFilterIndex == index) return;
     _selectedFilterIndex = index;
     _loadFirstPage();
+  }
+
+  Future<void> _openTracking(DriverRideModel ride, int rideId) async {
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => RideTrackingPage(
+          rideId: rideId,
+          userId: widget.userId,
+          vehicleCategory: ride.vehicleCategoryLabel,
+          profile: widget.profile,
+        ),
+      ),
+    );
+    if (mounted) await _loadFirstPage();
+  }
+
+  Future<void> _openClientCancellation(DriverRideModel ride) async {
+    final result = await showClientCancellationFlow(
+      context,
+      ride: ride,
+      repository: _cancellationRepository,
+    );
+    if (mounted && result != null) await _loadFirstPage();
+  }
+
+  Future<void> _openDriverReassignment(DriverRideModel ride) async {
+    if (ride.hasActiveDriverReassignment) {
+      await showDriverReassignmentStatusSheet(
+        context,
+        reassignment: ride.activeDriverReassignment!,
+        userId: widget.userId,
+      );
+      if (mounted) await _loadFirstPage();
+      return;
+    }
+
+    final changed = await showDriverReassignmentRequestSheet(
+      context,
+      ride: ride,
+    );
+    if (changed && mounted) await _loadFirstPage();
+  }
+
+  void _openDetails({
+    required DriverRideModel ride,
+    required int? ratingRideId,
+    required bool ratingPending,
+    required bool ratingSubmitted,
+    required VoidCallback? onRatingChanged,
+  }) {
+    final linkedReturn = ride.linkedReturnRide;
+    final linkedReturnIsActive =
+        linkedReturn != null &&
+        linkedReturn.statusId >= 1 &&
+        linkedReturn.statusId <= 4;
+    final trackingRideId = ride.isActive
+        ? ride.id
+        : linkedReturnIsActive
+        ? linkedReturn.id
+        : null;
+    final isClient = widget.profile == HomeProfileEnum.client;
+
+    showActiveRideDetailsSheet(
+      context,
+      ride: ride,
+      profile: widget.profile,
+      onTrack: trackingRideId == null
+          ? null
+          : () => _openTracking(ride, trackingRideId),
+      trackLabel: linkedReturnIsActive
+          ? 'ACOMPANHAR DEVOLUÇÃO'
+          : 'ACOMPANHAR CORRIDA',
+      onCancel:
+          isClient &&
+              ride.isActive &&
+              !ride.isCancellationReturn &&
+              !ride.hasActiveDriverReassignment
+          ? () => _openClientCancellation(ride)
+          : null,
+      onDriverReassignment:
+          !isClient && ride.isActive && !ride.isCancellationReturn
+          ? () => _openDriverReassignment(ride)
+          : null,
+      ratingRideId: ratingRideId,
+      ratingPending: ratingPending,
+      ratingSubmitted: ratingSubmitted,
+      onRatingChanged: onRatingChanged,
+    );
   }
 
   @override
@@ -254,7 +360,8 @@ class _RideHistoryPageState extends State<RideHistoryPage> {
               ride: ride,
               ratingRideId: ratingRideId,
               ratingPending:
-                  ratingRideId != null && _pendingRatings.containsKey(ratingRideId),
+                  ratingRideId != null &&
+                  _pendingRatings.containsKey(ratingRideId),
               ratingSubmitted:
                   ratingRideId != null &&
                   _submittedRatingRideIds.contains(ratingRideId),
@@ -266,6 +373,24 @@ class _RideHistoryPageState extends State<RideHistoryPage> {
                         _submittedRatingRideIds.add(ratingRideId);
                       });
                     },
+              onDetails: () => _openDetails(
+                ride: ride,
+                ratingRideId: ratingRideId,
+                ratingPending:
+                    ratingRideId != null &&
+                    _pendingRatings.containsKey(ratingRideId),
+                ratingSubmitted:
+                    ratingRideId != null &&
+                    _submittedRatingRideIds.contains(ratingRideId),
+                onRatingChanged: ratingRideId == null
+                    ? null
+                    : () {
+                        setState(() {
+                          _pendingRatings.remove(ratingRideId);
+                          _submittedRatingRideIds.add(ratingRideId);
+                        });
+                      },
+              ),
             );
           }
           if (_isLoadingMore) {
@@ -445,6 +570,7 @@ class _HistoryRideCard extends StatelessWidget {
   final bool ratingPending;
   final bool ratingSubmitted;
   final VoidCallback? onRatingChanged;
+  final VoidCallback onDetails;
 
   const _HistoryRideCard({
     required this.ride,
@@ -452,6 +578,7 @@ class _HistoryRideCard extends StatelessWidget {
     required this.ratingPending,
     required this.ratingSubmitted,
     required this.onRatingChanged,
+    required this.onDetails,
   });
 
   @override
@@ -470,6 +597,7 @@ class _HistoryRideCard extends StatelessWidget {
       ratingPending: ratingPending,
       ratingSubmitted: ratingSubmitted,
       onRatingChanged: onRatingChanged,
+      onDetails: onDetails,
       assignmentLabel: ride.wasDriverWithdrawal
           ? 'Desistência do motorista'
           : null,
@@ -587,6 +715,7 @@ class _HistorySummaryCard extends StatelessWidget {
   final bool ratingPending;
   final bool ratingSubmitted;
   final VoidCallback? onRatingChanged;
+  final VoidCallback onDetails;
 
   const _HistorySummaryCard({
     required this.rideId,
@@ -603,6 +732,7 @@ class _HistorySummaryCard extends StatelessWidget {
     required this.ratingPending,
     required this.ratingSubmitted,
     required this.onRatingChanged,
+    required this.onDetails,
   });
 
   @override
@@ -694,83 +824,7 @@ class _HistorySummaryCard extends StatelessWidget {
               ),
               const Spacer(),
               TextButton(
-                onPressed: () => showModalBottomSheet<void>(
-                  context: context,
-                  isScrollControlled: true,
-                  backgroundColor: FretColors.screenBackground,
-                  builder: (context) => SafeArea(
-                    child: SingleChildScrollView(
-                      padding: const EdgeInsets.all(20),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Corrida #$rideId',
-                            style: const TextStyle(
-                              fontSize: 22,
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          _HistoryStatusPill(
-                            statusId: statusId,
-                            label: linkedReturnRide == null
-                                ? assignmentLabel
-                                : linkedReturnRide!.statusId == 5
-                                ? 'Cancelada · devolução concluída'
-                                : 'Cancelada · devolução em andamento',
-                          ),
-                          const SizedBox(height: 16),
-                          Text('Data: ${_formatDate(createdAt)}'),
-                          const SizedBox(height: 12),
-                          Text('Origem: $origin'),
-                          const SizedBox(height: 12),
-                          Text('Destino: $destination'),
-                          const SizedBox(height: 12),
-                          Text('Valor: ${_formatMoney(totalPrice)}'),
-                          Text('Peso: ${_formatNumber(packageWeight)} kg'),
-                          if (linkedReturnRide != null) ...[
-                            const SizedBox(height: 18),
-                            _LinkedReturnDetails(
-                              originalRideId: rideId,
-                              linkedReturn: linkedReturnRide!,
-                              cancellation: cancellation,
-                            ),
-                          ],
-                          const SizedBox(height: 16),
-                          RideChatAccessButton(
-                            rideId: rideId,
-                            labelOverride: linkedReturnRide == null
-                                ? null
-                                : 'Ver conversa da corrida original',
-                          ),
-                          if (linkedReturnRide != null) ...[
-                            const SizedBox(height: 8),
-                            RideChatAccessButton(
-                              rideId: linkedReturnRide!.id,
-                              labelOverride: 'Ver conversa da devolução',
-                            ),
-                          ],
-                          if (ratingRideId != null) ...[
-                            const SizedBox(height: 8),
-                            RideRatingAccessButton(
-                              rideId: ratingRideId!,
-                              knownPending: ratingPending,
-                              submitted: ratingSubmitted,
-                              onChanged: onRatingChanged,
-                            ),
-                          ],
-                          const SizedBox(height: 8),
-                          TextButton(
-                            onPressed: () => Navigator.pop(context),
-                            child: const Text('Fechar'),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
+                onPressed: onDetails,
                 style: TextButton.styleFrom(
                   padding: EdgeInsets.zero,
                   minimumSize: const Size(0, 34),
@@ -791,8 +845,7 @@ class _HistorySummaryCard extends StatelessWidget {
               ),
             ],
           ),
-          if (ratingRideId != null &&
-              (ratingPending || ratingSubmitted)) ...[
+          if (ratingRideId != null && (ratingPending || ratingSubmitted)) ...[
             const SizedBox(height: 10),
             RideRatingAccessButton(
               rideId: ratingRideId!,
@@ -903,82 +956,6 @@ class _LinkedReturnSummary extends StatelessWidget {
             'devolução: ${_formatDistance(cancellation!.returnDistanceKm)}',
             style: const TextStyle(color: FretColors.screenMuted, fontSize: 9),
           ),
-        ],
-      ],
-    ),
-  );
-}
-
-class _LinkedReturnDetails extends StatelessWidget {
-  final int originalRideId;
-  final RideLinkedReturnModel linkedReturn;
-  final RideActiveCancellationModel? cancellation;
-
-  const _LinkedReturnDetails({
-    required this.originalRideId,
-    required this.linkedReturn,
-    required this.cancellation,
-  });
-
-  @override
-  Widget build(BuildContext context) => Container(
-    width: double.infinity,
-    padding: const EdgeInsets.all(14),
-    decoration: BoxDecoration(
-      color: FretColors.attention050,
-      borderRadius: BorderRadius.circular(14),
-      border: Border.all(color: FretColors.attention200),
-    ),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'JORNADA DO CANCELAMENTO',
-          style: TextStyle(
-            color: FretColors.attention800,
-            fontSize: 9,
-            fontWeight: FontWeight.w900,
-          ),
-        ),
-        const SizedBox(height: 9),
-        Text('Corrida original: #$originalRideId'),
-        Text('Corrida de devolução: #${linkedReturn.id}'),
-        const SizedBox(height: 8),
-        Text(
-          'Entrega original: ${_cancellationAddress(cancellation, original: true)}',
-        ),
-        Text('Destino da devolução: ${linkedReturn.destination}'),
-        const SizedBox(height: 8),
-        Text(
-          'Distância até o cancelamento: '
-          '${_formatDistance(cancellation?.traveledDistanceKm)}',
-        ),
-        Text(
-          'Distância da devolução: '
-          '${_formatDistance(cancellation?.returnDistanceKm)}',
-        ),
-        const SizedBox(height: 8),
-        Text('Valor da devolução: ${_formatMoney(linkedReturn.totalPrice)}'),
-        if (cancellation != null) ...[
-          Text(
-            'Valor retido: ${_formatMoney(cancellation!.cancellationCharge)}',
-          ),
-          Text('Reembolso: ${_formatMoney(cancellation!.refundAmount)}'),
-          Text(
-            'Cobrança adicional: '
-            '${_formatMoney(cancellation!.additionalChargeAmount)}',
-          ),
-          const SizedBox(height: 12),
-          const Text(
-            'EVENTOS',
-            style: TextStyle(
-              color: FretColors.screenMuted,
-              fontSize: 9,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-          const SizedBox(height: 6),
-          CancellationLogTimeline(rideId: originalRideId),
         ],
       ],
     ),
@@ -1202,29 +1179,6 @@ String _formatNumber(double value) {
 String _formatDistance(double? value) => value == null
     ? 'Indisponível'
     : '${value.toStringAsFixed(1).replaceAll('.', ',')} km';
-
-String _cancellationAddress(
-  RideActiveCancellationModel? cancellation, {
-  required bool original,
-}) {
-  if (cancellation == null) return 'Não informada';
-  final values = original
-      ? [
-          cancellation.originalDestinationAddress,
-          cancellation.originalDestinationAddressComplement,
-          cancellation.originalDestinationReferencePoint,
-        ]
-      : [
-          cancellation.returnAddress,
-          cancellation.returnAddressComplement,
-          cancellation.returnReferencePoint,
-        ];
-  final result = values
-      .whereType<String>()
-      .where((value) => value.trim().isNotEmpty)
-      .join(' · ');
-  return result.isEmpty ? 'Não informada' : result;
-}
 
 String _formatDate(DateTime? value) {
   if (value == null) return '';

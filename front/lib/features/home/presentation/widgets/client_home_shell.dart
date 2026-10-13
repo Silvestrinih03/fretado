@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../app/design_system/design_system.dart';
+import '../../../../core/enums/home_profile.dart';
 import '../../../payments/presentation/pages/my_payment_methods_page.dart';
 import '../../../profile/presentation/pages/client_profile_page.dart';
 import '../../../rides/presentation/pages/ride_history_page.dart';
@@ -88,7 +89,11 @@ class _ClientHomeShellState extends State<ClientHomeShell>
             ),
           ),
           _visitedTabs[1]
-              ? const RideHistoryPage(showBackButton: false)
+              ? RideHistoryPage(
+                  userId: widget.userId,
+                  profile: HomeProfileEnum.client,
+                  showBackButton: false,
+                )
               : const SizedBox.shrink(),
           _visitedTabs[2]
               ? MyPaymentMethodsPage(

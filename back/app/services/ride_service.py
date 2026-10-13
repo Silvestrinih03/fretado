@@ -297,17 +297,42 @@ def get_ride_by_id(db: Session, ride_id: int):
     return build_full_response(db, ride)
 
 
-def get_rides_in_progress_by_user_id(db: Session, user_id: int):
-    user = db.query(User).filter(User.id == user_id).first()
-    if not user:
-        raise HTTPException(status_code=404, detail="Usuario nao encontrado.")
+def get_rides_in_progress_for_user(db: Session, user: User):
+    active_status_ids = (
+        int(RideStatusEnum.AGUARDANDO_ACEITE),
+        int(RideStatusEnum.AGUARDANDO_INICIO),
+        int(RideStatusEnum.A_CAMINHO_COLETA),
+        int(RideStatusEnum.A_CAMINHO_ENTREGA),
+    )
+    query = (
+        db.query(Ride, RideDetail, VehicleType.type)
+        .outerjoin(RideDetail, RideDetail.ride_id == Ride.id)
+        .outerjoin(VehicleType, VehicleType.id == Ride.required_vehicle_type_id)
+        .filter(Ride.status_id.in_(active_status_ids))
+    )
+
     if user.user_type_id == int(UserTypeEnum.CLIENT):
-        rides = get_rides_by_client_user_id(db, user_id)
+        query = query.filter(Ride.client_user_id == user.id)
     elif user.user_type_id == int(UserTypeEnum.DRIVER):
-        rides = get_rides_by_driver_user_id(db, user_id)
+        query = query.filter(Ride.driver_user_id == user.id)
     else:
         raise HTTPException(status_code=400, detail="Tipo de usuario invalido.")
-    return [ride for ride in rides if ride.status_id in (1, 2, 3, 4)]
+
+    rows = query.order_by(Ride.created_at.desc(), Ride.id.desc()).all()
+    return [
+        _build_full_response_from_row(
+            db,
+            ride,
+            detail,
+            vehicle_type_name,
+            viewer_driver_id=(
+                user.id
+                if user.user_type_id == int(UserTypeEnum.DRIVER)
+                else None
+            ),
+        )
+        for ride, detail, vehicle_type_name in rows
+    ]
 
 
 def ensure_ride_access(db: Session, ride_id: int, user: User, driver_only: bool = False):

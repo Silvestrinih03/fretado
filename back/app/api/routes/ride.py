@@ -24,7 +24,7 @@ from app.services.ride_service import (
     get_rides_by_client_user_id,
     get_rides_by_driver_user_id,
     get_rides_for_user,
-    get_rides_in_progress_by_user_id,
+    get_rides_in_progress_for_user,
     get_pickup_estimate,
     start_ride,
     update_ride,
@@ -224,9 +224,9 @@ def get_in_progress_by_user(
 ):
     _ensure_same_user(current_user, user_id)
 
-    return get_rides_in_progress_by_user_id(
+    return get_rides_in_progress_for_user(
         db=db,
-        user_id=user_id,
+        user=current_user,
     )
 
 

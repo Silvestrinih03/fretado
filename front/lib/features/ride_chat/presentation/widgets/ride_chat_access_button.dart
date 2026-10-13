@@ -92,20 +92,25 @@ class _RideChatAccessButtonState extends State<RideChatAccessButton>
 
   @override
   Widget build(BuildContext context) {
-    if (_conversations.isEmpty) return const SizedBox.shrink();
+    final conversations = _conversations
+        .where((item) => item.canSend || item.hasMessages)
+        .toList(growable: false);
+    if (conversations.isEmpty) return const SizedBox.shrink();
     RideConversationModel? current;
-    for (final item in _conversations) {
+    for (final item in conversations) {
       if (item.isCurrent) {
         current = item;
         break;
       }
     }
-    final unread = current?.unreadCount ?? 0;
+    final unread =
+        current?.unreadCount ??
+        conversations.fold<int>(0, (total, item) => total + item.unreadCount);
     final defaultLabel = current != null
         ? 'Conversar com ${_isClient ? 'motorista' : 'cliente'}'
-        : _conversations.length > 1
-            ? 'Ver conversas'
-            : 'Ver conversa';
+        : conversations.length > 1
+        ? 'Ver conversas'
+        : 'Ver conversa';
     final label = widget.labelOverride ?? defaultLabel;
     return FilledButton(
       onPressed: _open,

@@ -10,6 +10,8 @@ abstract class Endpoints {
 
   static const String register = '/register';
 
+  static const String fcmTokens = '/fcm-tokens';
+
   static const String users = '/users';
   static String userById(int userId) => '$users/$userId';
 

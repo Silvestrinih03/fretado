@@ -22,6 +22,7 @@ from app.models.ride_message import RideMessage
 from app.models.ride_offer_status import RideOfferStatus
 from app.models.ride_status import RideStatus
 from app.models.user import User
+from app.models.user_fcm_token import UserFcmToken
 from app.models.user_card import UserCard
 from app.models.user_profile import UserProfile
 from app.models.user_type import UserType
@@ -54,6 +55,7 @@ __all__ = [
     "RideOfferStatus",
     "RideStatus",
     "User",
+    "UserFcmToken",
     "UserCard",
     "UserProfile",
     "UserType",

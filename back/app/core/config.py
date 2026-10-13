@@ -68,5 +68,6 @@ class Settings:
         "RESEND_API_URL",
         "https://api.resend.com/emails",
     )
+    FIREBASE_CREDENTIALS_JSON: str = os.getenv("FIREBASE_CREDENTIALS_JSON", "")
 
 settings = Settings()

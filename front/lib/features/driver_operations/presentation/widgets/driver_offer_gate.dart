@@ -48,7 +48,12 @@ class _DriverOfferGateState extends State<DriverOfferGate> {
       return;
     }
     _session.addListener(_handleSessionChanged);
+    driverOfferRefreshSignal.addListener(_handlePushOfferRefresh);
     unawaited(_loadSession());
+  }
+
+  void _handlePushOfferRefresh() {
+    unawaited(_controller?.refresh(forceDetails: true));
   }
 
   Future<void> _loadSession() async {
@@ -114,6 +119,7 @@ class _DriverOfferGateState extends State<DriverOfferGate> {
   void dispose() {
     if (widget.controllerOverride == null) {
       _session.removeListener(_handleSessionChanged);
+      driverOfferRefreshSignal.removeListener(_handlePushOfferRefresh);
       _disposeController();
     }
     super.dispose();

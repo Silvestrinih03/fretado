@@ -1,5 +1,6 @@
 import '../../../services/http_service.dart';
 import '../../../services/session/session_storage.dart';
+import '../../../services/push_notifications/push_notification_service.dart';
 import '../data/datasources/myself_datasource.dart';
 import '../models/myself_user_model.dart';
 import '../repositories/myself_repository.dart';
@@ -54,7 +55,11 @@ class MyselfService {
   }
 
   Future<void> logout() async {
-    await _sessionStorage.clearSession();
+    try {
+      await PushNotificationService.instance.unregisterForLogout();
+    } finally {
+      await _sessionStorage.clearSession();
+    }
   }
 
   Future<MyselfUserModel> getMyself(int userId) {

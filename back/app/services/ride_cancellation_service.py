@@ -37,6 +37,7 @@ from app.services.ride_chat_service import (
     ensure_assignment_conversation,
 )
 from app.services.vehicle_pricing_profile_service import VehiclePricingProfileService
+from app.services.push_notification_service import PushEvent, queue_push_notification
 
 
 MONEY = Decimal("0.01")
@@ -181,6 +182,21 @@ def request_cancellation(
     try:
         db.add(cancellation)
         db.flush()
+        if ride.driver_user_id is not None:
+            queue_push_notification(
+                db,
+                PushEvent(
+                    recipient_user_id=ride.driver_user_id,
+                    event_type="cancellation_requested",
+                    event_id=f"cancellation:{cancellation.id}:requested",
+                    title="Cancelamento solicitado",
+                    body=f"O cliente solicitou o cancelamento da corrida #{ride.id}.",
+                    data={
+                        "ride_id": str(ride.id),
+                        "cancellation_id": str(cancellation.id),
+                    },
+                ),
+            )
         _event(
             db,
             cancellation,

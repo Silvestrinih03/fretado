@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "202558333697",
+    "project_id": "fretado-14de3",
+    "storage_bucket": "fretado-14de3.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:202558333697:android:a0a27f532b8fcc345af100",
+        "android_client_info": {
+          "package_name": "com.example.front"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCAN52dVHmyzNiQ-WabtE-U9TyzgXMXGZs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:202558333697:android:520333d37f3c0aaf5af100",
+        "android_client_info": {
+          "package_name": "com.fretado.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCAN52dVHmyzNiQ-WabtE-U9TyzgXMXGZs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -21,6 +21,7 @@ from app.schemas.ride_chat import (
     RideMessageResponse,
     RideMessagesReadResponse,
 )
+from app.services.push_notification_service import PushEvent, queue_push_notification
 
 
 ACTIVE_CHAT_STATUSES = {
@@ -162,6 +163,28 @@ def send_message(
     )
     try:
         db.add(message)
+        db.flush()
+        recipient_user_id = (
+            conversation.driver_user_id
+            if user.id == conversation.client_user_id
+            else conversation.client_user_id
+        )
+        sender_role = "cliente" if user.id == conversation.client_user_id else "motorista"
+        queue_push_notification(
+            db,
+            PushEvent(
+                recipient_user_id=recipient_user_id,
+                event_type="chat_message",
+                event_id=f"message:{message.id}",
+                title=f"Nova mensagem do {sender_role}",
+                body="Voce recebeu uma nova mensagem.",
+                data={
+                    "ride_id": str(conversation.ride_id),
+                    "conversation_id": str(conversation.id),
+                    "message_id": str(message.id),
+                },
+            ),
+        )
         db.commit()
         db.refresh(message)
     except IntegrityError:

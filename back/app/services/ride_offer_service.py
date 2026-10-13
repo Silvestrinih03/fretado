@@ -21,6 +21,7 @@ from app.models.vehicle_model import VehicleModel
 from app.models.vehicle_type import VehicleType
 from app.services.vehicle_pricing_profile_service import VehiclePricingProfileService
 from app.services.ride_chat_service import ensure_assignment_conversation
+from app.services.push_notification_service import PushEvent, queue_push_notification
 
 
 PENDING = int(RideOfferStatusEnum.PENDENTE)
@@ -204,6 +205,17 @@ def create_offer(
     )
     db.add(offer)
     db.flush()
+    queue_push_notification(
+        db,
+        PushEvent(
+            recipient_user_id=offer.driver_user_id,
+            event_type="ride_offer",
+            event_id=f"offer:{offer.id}",
+            title="Nova oferta de corrida",
+            body="Uma nova corrida esta disponivel para voce.",
+            data={"ride_id": str(offer.ride_id), "offer_id": str(offer.id)},
+        ),
+    )
     return offer
 
 
@@ -269,6 +281,17 @@ def accept_offer(db: Session, offer_id: int, driver_user_id: int) -> RideOffer:
         ride.driver_user_id = driver_user_id
         ride.status_id = WAITING_START
         ensure_assignment_conversation(db, ride, offer)
+        queue_push_notification(
+            db,
+            PushEvent(
+                recipient_user_id=ride.client_user_id,
+                event_type="ride_accepted",
+                event_id=f"ride:{ride.id}:accepted:{offer.id}",
+                title="Corrida aceita",
+                body=f"Um motorista aceitou a corrida #{ride.id}.",
+                data={"ride_id": str(ride.id), "offer_id": str(offer.id)},
+            ),
+        )
         db.commit()
         db.refresh(offer)
     except Exception:

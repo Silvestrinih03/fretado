@@ -1,4 +1,4 @@
-package com.example.front
+package com.fretado.app
 
 import io.flutter.embedding.android.FlutterActivity
 

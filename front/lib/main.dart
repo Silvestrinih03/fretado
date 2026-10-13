@@ -1,16 +1,37 @@
+import 'dart:async';
+
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import 'app/design_system/design_system.dart';
 import 'core/enums/home_profile.dart';
 import 'core/navigation/app_navigator.dart';
 import 'core/services/myself/services/myself_service.dart';
+import 'core/services/push_notifications/push_notification_service.dart';
 import 'features/auth/presentation/pages/login_page.dart';
 import 'features/auth/presentation/pages/reset_password_page.dart';
 import 'features/driver_operations/presentation/widgets/driver_offer_gate.dart';
 import 'features/home/presentation/pages/home_page.dart';
 
-void main() {
+@pragma('vm:entry-point')
+Future<void> firebaseMessagingBackgroundHandler(RemoteMessage _) async {
+  await Firebase.initializeApp();
+}
+
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  final isAndroid =
+      !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
+  if (isAndroid) {
+    await Firebase.initializeApp();
+    FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+  }
   runApp(const FretadoApp());
+  if (isAndroid) {
+    unawaited(PushNotificationService.instance.initialize());
+  }
 }
 
 class FretadoApp extends StatelessWidget {

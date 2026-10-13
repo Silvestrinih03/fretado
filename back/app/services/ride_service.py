@@ -41,6 +41,7 @@ from app.services.ride_chat_service import close_open_conversations_for_ride
 from app.services.ride_offer_service import create_offer, find_nearest_candidate
 from app.services.ride_quote_service import RideQuoteService
 from app.services.route_service import MapboxRouteService
+from app.services.push_notification_service import PushEvent, queue_push_notification
 
 
 def calculate_ride_price(db: Session, payload: RideQuoteRequest) -> RideQuoteResponse:
@@ -417,6 +418,35 @@ def _advance(db: Session, ride_id: int, expected: RideStatusEnum, target: RideSt
             )
     try:
         ride.status_id = int(target)
+        notification = {
+            RideStatusEnum.A_CAMINHO_COLETA: (
+                "driver_en_route",
+                "Motorista a caminho",
+                "O motorista esta a caminho da coleta.",
+            ),
+            RideStatusEnum.A_CAMINHO_ENTREGA: (
+                "pickup_completed",
+                "Coleta finalizada",
+                "Sua carga esta a caminho do destino.",
+            ),
+            RideStatusEnum.FINALIZADA: (
+                "delivery_completed",
+                "Entrega concluida",
+                f"A corrida #{ride.id} foi concluida.",
+            ),
+        }[target]
+        event_type, title, body = notification
+        queue_push_notification(
+            db,
+            PushEvent(
+                recipient_user_id=ride.client_user_id,
+                event_type=event_type,
+                event_id=f"ride:{ride.id}:status:{int(target)}",
+                title=title,
+                body=body,
+                data={"ride_id": str(ride.id)},
+            ),
+        )
         if target == RideStatusEnum.A_CAMINHO_COLETA:
             ride.started_at = datetime.now(timezone.utc)
         if target == RideStatusEnum.FINALIZADA:

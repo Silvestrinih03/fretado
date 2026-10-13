@@ -237,6 +237,13 @@ def list_received_ratings(
 def get_user_rating_summary(db: Session, user_id: int) -> UserRatingSummaryResponse:
     if db.query(User.id).filter(User.id == user_id).first() is None:
         raise HTTPException(status_code=404, detail="Usuario nao encontrado.")
+    return build_user_rating_summary(db, user_id)
+
+
+def build_user_rating_summary(
+    db: Session,
+    user_id: int,
+) -> UserRatingSummaryResponse:
     average, count = db.query(
         func.avg(RideRating.score),
         func.count(RideRating.id),

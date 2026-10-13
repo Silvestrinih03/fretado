@@ -7,6 +7,7 @@ from app.models.ride import Ride
 from app.enums.ride_status_enum import RideStatusEnum
 from app.enums.user_type import UserTypeEnum
 from app.schemas.user import UpdateUserRequest, UserProfileResponse
+from app.services.ride_rating_service import build_user_rating_summary
 
 router = APIRouter(prefix="/users", tags=["Users"])
 
@@ -21,6 +22,26 @@ def _completed_rides_count(db: Session, user: User) -> int:
         owner == user.id,
         Ride.status_id == RideStatusEnum.FINALIZADA,
     ).count()
+
+
+def _profile_response(
+    db: Session,
+    user: User,
+    profile: UserProfile,
+) -> UserProfileResponse:
+    rating = build_user_rating_summary(db, user.id)
+    return UserProfileResponse(
+        first_name=profile.first_name,
+        last_name=profile.last_name,
+        email=user.email,
+        cpf=user.cpf,
+        birth_date=profile.birth_date,
+        phone=profile.phone,
+        user_type_id=user.user_type_id,
+        completed_rides_count=_completed_rides_count(db, user),
+        rating_average=rating.rating_average,
+        rating_count=rating.rating_count,
+    )
 
 @router.get("/{user_id}", response_model=UserProfileResponse, status_code=status.HTTP_200_OK)
 def get_user_by_id(user_id: int, db: Session = Depends(get_db)):
@@ -39,16 +60,7 @@ def get_user_by_id(user_id: int, db: Session = Depends(get_db)):
 
     user, profile = result
 
-    return UserProfileResponse(
-        first_name=profile.first_name,
-        last_name=profile.last_name,
-        email=user.email,
-        cpf=user.cpf,
-        birth_date=profile.birth_date,
-        phone=profile.phone,
-        user_type_id=user.user_type_id,
-        completed_rides_count=_completed_rides_count(db, user),
-    )
+    return _profile_response(db, user, profile)
 
 @router.patch("/{user_id}", response_model=UserProfileResponse, status_code=status.HTTP_200_OK)
 def update_user_by_id(
@@ -100,13 +112,4 @@ def update_user_by_id(
     db.refresh(user)
     db.refresh(profile)
 
-    return UserProfileResponse(
-        first_name=profile.first_name,
-        last_name=profile.last_name,
-        email=user.email,
-        cpf=user.cpf,
-        birth_date=profile.birth_date,
-        phone=profile.phone,
-        user_type_id=user.user_type_id,
-        completed_rides_count=_completed_rides_count(db, user),
-    )
+    return _profile_response(db, user, profile)

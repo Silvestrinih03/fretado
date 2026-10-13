@@ -7,6 +7,8 @@ class MyselfUserModel {
   final String? birthDate;
   final String? phone;
   final int completedRidesCount;
+  final double? ratingAverage;
+  final int ratingCount;
 
   const MyselfUserModel({
     required this.firstName,
@@ -17,6 +19,8 @@ class MyselfUserModel {
     this.birthDate,
     this.phone,
     this.completedRidesCount = 0,
+    this.ratingAverage,
+    this.ratingCount = 0,
   });
 
   factory MyselfUserModel.fromJson(Map<String, dynamic> json) {
@@ -29,6 +33,8 @@ class MyselfUserModel {
       birthDate: _readString(json['birth_date']),
       phone: _readString(json['phone']),
       completedRidesCount: _readInt(json['completed_rides_count']) ?? 0,
+      ratingAverage: _readDouble(json['rating_average']),
+      ratingCount: _readInt(json['rating_count']) ?? 0,
     );
   }
 
@@ -49,6 +55,16 @@ class MyselfUserModel {
     }
     if (value is String) {
       return int.tryParse(value);
+    }
+    return null;
+  }
+
+  static double? _readDouble(dynamic value) {
+    if (value is num) {
+      return value.toDouble();
+    }
+    if (value is String) {
+      return double.tryParse(value.replaceAll(',', '.'));
     }
     return null;
   }

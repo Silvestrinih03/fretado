@@ -1,4 +1,5 @@
 from datetime import date
+from decimal import Decimal
 from typing import Optional
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
@@ -11,6 +12,8 @@ class UserProfileResponse(BaseModel):
     phone: Optional[str] = None
     user_type_id: int
     completed_rides_count: int = Field(default=0, ge=0)
+    rating_average: Decimal | None = None
+    rating_count: int = Field(default=0, ge=0)
 
     model_config = ConfigDict(from_attributes=True)
 

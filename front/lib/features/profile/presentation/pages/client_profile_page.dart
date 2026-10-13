@@ -120,8 +120,10 @@ class _UserProfilePageState extends State<UserProfilePage> {
                     IntrinsicHeight(child: Row(children: [
                       Expanded(child: _ProfileStatistic(value: '${user.completedRidesCount}', label: 'Corridas realizadas')),
                       const VerticalDivider(width: 1, color: FretColors.screenBorder),
-                      // Temporary until membership dates are provided by the API.
-                      const Expanded(child: _ProfileStatistic(value: '2026', label: 'Membro desde')),
+                      Expanded(child: _ProfileRatingStatistic(
+                        average: user.ratingAverage,
+                        count: user.ratingCount,
+                      )),
                     ])),
                   ]));
               },
@@ -177,6 +179,68 @@ class _ProfileStatistic extends StatelessWidget {
     const SizedBox(height: 2),
     Text(label, textAlign: TextAlign.center, style: const TextStyle(fontSize: 11, color: FretColors.screenMuted)),
   ]);
+}
+
+class _ProfileRatingStatistic extends StatelessWidget {
+  final double? average;
+  final int count;
+
+  const _ProfileRatingStatistic({required this.average, required this.count});
+
+  bool get _hasRatings => average != null && count > 0;
+
+  String get _averageLabel => _hasRatings
+      ? average!.toStringAsFixed(1).replaceAll('.', ',')
+      : 'Novo';
+
+  String get _countLabel => count == 0
+      ? 'Sem avaliações'
+      : count == 1
+      ? '1 avaliação'
+      : '$count avaliações';
+
+  String get _semanticLabel => _hasRatings
+      ? 'Avaliação $_averageLabel de 5, baseada em $_countLabel'
+      : 'Novo perfil, sem avaliações';
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+    label: _semanticLabel,
+    child: ExcludeSemantics(
+      child: Column(children: [
+        Row(mainAxisSize: MainAxisSize.min, children: [
+          Container(
+            width: 28,
+            height: 28,
+            decoration: BoxDecoration(
+              color: FretColors.screenGold.withValues(alpha: 0.14),
+              borderRadius: BorderRadius.circular(9),
+            ),
+            child: const Icon(
+              Icons.star_rounded,
+              size: 17,
+              color: FretColors.screenGold,
+            ),
+          ),
+          const SizedBox(width: 7),
+          Text(
+            _averageLabel,
+            style: const TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w800,
+              color: FretColors.screenDark,
+            ),
+          ),
+        ]),
+        const SizedBox(height: 2),
+        Text(
+          _countLabel,
+          textAlign: TextAlign.center,
+          style: const TextStyle(fontSize: 11, color: FretColors.screenMuted),
+        ),
+      ]),
+    ),
+  );
 }
 
 class _ProfileActionTile extends StatelessWidget {

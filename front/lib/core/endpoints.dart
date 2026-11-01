@@ -69,8 +69,7 @@ abstract class Endpoints {
       '$rides/$rideId/cancellations/latest';
   static String createDriverReassignment(int rideId) =>
       '$rides/$rideId/driver-reassignments';
-  static String rideConversations(int rideId) =>
-      '$rides/$rideId/conversations';
+  static String rideConversations(int rideId) => '$rides/$rideId/conversations';
   static String rideConversationMessages(
     int conversationId, {
     int limit = 50,
@@ -87,6 +86,7 @@ abstract class Endpoints {
       queryParameters: query,
     ).toString();
   }
+
   static String sendRideConversationMessage(int conversationId) =>
       '/ride-conversations/$conversationId/messages';
   static String readRideConversationMessages(int conversationId) =>
@@ -142,7 +142,8 @@ abstract class Endpoints {
 
   static const String driverLocations = '/driver-locations';
   static const String driverLocationMe = '$driverLocations/me';
-  static const String driverLocationMeEligibility = '$driverLocations/me/eligibility';
+  static const String driverLocationMeEligibility =
+      '$driverLocations/me/eligibility';
   static const String driverLocationMeOnline = '$driverLocations/me/online';
   static const String driverLocationMeOffline = '$driverLocations/me/offline';
   static const String driverLocationMeLocation = '$driverLocations/me/location';
@@ -174,6 +175,19 @@ abstract class Endpoints {
       '$vehicleTypes/$vehicleTypeId';
 
   static const String vehicleCatalog = '/vehicle-catalog';
+  static String vehicleCatalogBrandsPage({int page = 1}) =>
+      '$vehicleCatalog/brands/page?page=$page';
+  static String vehicleCatalogModelsPage({
+    required String brandId,
+    int page = 1,
+  }) =>
+      '$vehicleCatalog/models/page?brand_id=${Uri.encodeQueryComponent(brandId)}&page=$page';
+  static String vehicleCatalogVersionsPage({
+    required String brandId,
+    required String modelId,
+    int page = 1,
+  }) =>
+      '$vehicleCatalog/versions/page?brand_id=${Uri.encodeQueryComponent(brandId)}&model_id=${Uri.encodeQueryComponent(modelId)}&page=$page';
   static String vehicleCatalogBrands() => '$vehicleCatalog/brands';
   static String vehicleCatalogModels({required String brandId}) =>
       '$vehicleCatalog/models?brand_id=${Uri.encodeQueryComponent(brandId)}';

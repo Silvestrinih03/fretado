@@ -25,7 +25,6 @@ class FillVehicleBrandData extends StatelessWidget {
             store.selectedBrand,
             true,
             store.selectBrand,
-            store.loadBrands,
           ),
           const SizedBox(height: 16),
           _catalogField(
@@ -34,7 +33,6 @@ class FillVehicleBrandData extends StatelessWidget {
             store.selectedModel,
             store.selectedBrand != null,
             store.selectModel,
-            store.loadModels,
           ),
           const SizedBox(height: 16),
           _catalogField(
@@ -43,14 +41,13 @@ class FillVehicleBrandData extends StatelessWidget {
             store.selectedVersion,
             store.selectedModel != null,
             store.selectVersion,
-            store.loadVersions,
           ),
           const SizedBox(height: 16),
           DropdownButtonFormField<int>(
             key: ValueKey(
               'year:${store.selectedVersion}:${store.selectedYear}',
             ),
-            value: store.selectedYear,
+            initialValue: store.selectedYear,
             isExpanded: true,
             decoration: const InputDecoration(labelText: 'Ano'),
             items: store.years
@@ -81,7 +78,6 @@ class FillVehicleBrandData extends StatelessWidget {
     String? value,
     bool enabled,
     ValueChanged<String?> onChanged,
-    VoidCallback onRetry,
   ) {
     final loading = store.isLoading(level);
     final error = store.error(level);
@@ -91,7 +87,7 @@ class FillVehicleBrandData extends StatelessWidget {
       children: [
         DropdownButtonFormField<String>(
           key: ValueKey('$level:$value'),
-          value: value,
+          initialValue: value,
           isExpanded: true,
           decoration: InputDecoration(labelText: label),
           items: options
@@ -116,10 +112,16 @@ class FillVehicleBrandData extends StatelessWidget {
           const SizedBox(height: 8),
           Text(error),
           TextButton(
-            onPressed: loading ? null : onRetry,
+            onPressed: loading ? null : () => store.retry(level),
             child: const Text('Tentar novamente'),
           ),
         ],
+        if (error == null && store.hasMore(level))
+          TextButton.icon(
+            onPressed: loading ? null : () => store.loadMore(level),
+            icon: const Icon(Icons.expand_more_rounded),
+            label: Text(loading ? 'Carregando...' : 'Carregar mais opções'),
+          ),
       ],
     );
   }

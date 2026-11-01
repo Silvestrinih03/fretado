@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 
 import '../../data/models/register_vehicle_model.dart';
 import '../../data/models/vehicle_catalog_option_model.dart';
+import '../../data/models/vehicle_catalog_page_model.dart';
 import '../../data/models/vehicle_type_model.dart';
 import '../../data/repositories/register_vehicle_repository.dart';
 import '../../data/repositories/vehicle_catalog_repository.dart';
@@ -40,6 +41,11 @@ class RegisterVehicleStore extends ChangeNotifier {
   final Map<String, bool> _loading = {};
   final Map<String, String?> _errors = {};
   final Map<String, int> _requests = {};
+  final Map<String, int> _nextPages = {};
+  final Map<String, bool> _hasMore = {};
+  final Map<String, bool> _retryAppend = {};
+
+  bool hasMore(String level) => _hasMore[level] ?? false;
 
   List<VehicleCatalogOptionModel> options(String level) =>
       List.unmodifiable(_options[level]!);
@@ -89,6 +95,9 @@ class RegisterVehicleStore extends ChangeNotifier {
     _options[level] = [];
     _loading[level] = false;
     _errors[level] = null;
+    _nextPages[level] = 1;
+    _hasMore[level] = false;
+    _retryAppend[level] = false;
   }
 
   void selectBrand(String? value) {
@@ -122,11 +131,16 @@ class RegisterVehicleStore extends ChangeNotifier {
     _notify();
   }
 
-  Future<void> loadBrands() => _load('brands', _catalogRepository.listBrands);
+  Future<void> loadBrands() =>
+      _load('brands', (page) => _catalogRepository.listBrandsPage(page: page));
+
   Future<void> loadModels() async {
     final brand = selectedBrand;
     if (brand == null) return;
-    await _load('models', () => _catalogRepository.listModels(brandId: brand));
+    await _load(
+      'models',
+      (page) => _catalogRepository.listModelsPage(brandId: brand, page: page),
+    );
   }
 
   Future<void> loadVersions() async {
@@ -135,27 +149,84 @@ class RegisterVehicleStore extends ChangeNotifier {
     if (brand == null || model == null) return;
     await _load(
       'versions',
-      () => _catalogRepository.listVersions(brandId: brand, modelId: model),
+      (page) => _catalogRepository.listVersionsPage(
+        brandId: brand,
+        modelId: model,
+        page: page,
+      ),
     );
+  }
+
+  Future<void> loadMore(String level) async {
+    if (isLoading(level) || !hasMore(level)) return;
+    final brand = selectedBrand;
+    final model = selectedModel;
+    if (level == 'brands') {
+      await _load(
+        level,
+        (page) => _catalogRepository.listBrandsPage(page: page),
+        append: true,
+      );
+    } else if (level == 'models' && brand != null) {
+      await _load(
+        level,
+        (page) => _catalogRepository.listModelsPage(brandId: brand, page: page),
+        append: true,
+      );
+    } else if (level == 'versions' && brand != null && model != null) {
+      await _load(
+        level,
+        (page) => _catalogRepository.listVersionsPage(
+          brandId: brand,
+          modelId: model,
+          page: page,
+        ),
+        append: true,
+      );
+    }
+  }
+
+  Future<void> retry(String level) async {
+    if (_retryAppend[level] == true) {
+      await loadMore(level);
+    } else if (level == 'brands') {
+      await loadBrands();
+    } else if (level == 'models') {
+      await loadModels();
+    } else if (level == 'versions') {
+      await loadVersions();
+    }
   }
 
   Future<void> _load(
     String level,
-    Future<List<VehicleCatalogOptionModel>> Function() request,
-  ) async {
+    Future<VehicleCatalogPageModel> Function(int page) request, {
+    bool append = false,
+  }) async {
+    if (isLoading(level)) return;
     final token = (_requests[level] ?? 0) + 1;
     _requests[level] = token;
     _loading[level] = true;
     _errors[level] = null;
     _notify();
     try {
-      final result = await request();
+      final result = await request(append ? (_nextPages[level] ?? 1) : 1);
       if (_disposed || _requests[level] != token) return;
-      _options[level] = result;
-      if (result.isEmpty)
+      final merged = <String, VehicleCatalogOptionModel>{
+        if (append)
+          for (final item in _options[level]!) item.value: item,
+        for (final item in result.items) item.value: item,
+      };
+      _options[level] = merged.values.toList();
+      _nextPages[level] = result.page + 1;
+      _hasMore[level] = result.hasMore;
+      _retryAppend[level] = false;
+      if (_options[level]!.isEmpty) {
         _errors[level] = 'Nenhuma opção disponível no catálogo.';
+      }
     } catch (e) {
       if (_disposed || _requests[level] != token) return;
+      _retryAppend[level] = append;
       _errors[level] = e is VehicleCatalogRepositoryException
           ? e.message
           : 'Não foi possível carregar o catálogo. Tente novamente.';
@@ -174,7 +245,7 @@ class RegisterVehicleStore extends ChangeNotifier {
     final plate = normalizePlate(value ?? '');
     if (plate.isEmpty) return 'Informe a placa.';
     if (!RegExp(r'^[A-Z]{3}[0-9][A-Z0-9][0-9]{2}$').hasMatch(plate)) {
-      return 'Informe uma placa v?lida, como ABC1234 ou ABC1D23.';
+      return 'Informe uma placa válida, como ABC1234 ou ABC1D23.';
     }
     return null;
   }
@@ -191,6 +262,7 @@ class RegisterVehicleStore extends ChangeNotifier {
         selectedBrand == null ||
         selectedModel == null ||
         versionId == null ||
+        versionId == 0 ||
         !years.contains(selectedYear)) {
       registerVehicleError = 'Selecione tipo, marca, modelo, versão e ano.';
     } else if (validatePlate(plate) != null) {
@@ -224,7 +296,7 @@ class RegisterVehicleStore extends ChangeNotifier {
       return false;
     } catch (_) {
       registerVehicleError =
-          'N?o foi poss?vel cadastrar o ve?culo. Tente novamente.';
+          'Não foi possível cadastrar o veículo. Tente novamente.';
       return false;
     } finally {
       isRegisteringVehicle = false;

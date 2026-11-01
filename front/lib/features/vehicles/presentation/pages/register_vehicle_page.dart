@@ -72,7 +72,7 @@ class _RegisterVehiclePageState extends State<RegisterVehiclePage> {
       final messenger = ScaffoldMessenger.of(context);
       Navigator.of(context).pop(true);
       messenger.showSnackBar(
-        const SnackBar(content: Text('Ve?culo cadastrado com sucesso.')),
+        const SnackBar(content: Text('Veículo cadastrado com sucesso.')),
       );
     } else {
       showFretErrorPopup(

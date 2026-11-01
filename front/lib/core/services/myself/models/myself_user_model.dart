@@ -6,6 +6,7 @@ class MyselfUserModel {
   final int? userTypeId;
   final String? birthDate;
   final String? phone;
+  final String? avatarUrl;
   final int completedRidesCount;
   final double? ratingAverage;
   final int ratingCount;
@@ -18,6 +19,7 @@ class MyselfUserModel {
     this.userTypeId,
     this.birthDate,
     this.phone,
+    this.avatarUrl,
     this.completedRidesCount = 0,
     this.ratingAverage,
     this.ratingCount = 0,
@@ -32,6 +34,7 @@ class MyselfUserModel {
       userTypeId: _readInt(json['user_type_id']),
       birthDate: _readString(json['birth_date']),
       phone: _readString(json['phone']),
+      avatarUrl: _readString(json['avatar_url']),
       completedRidesCount: _readInt(json['completed_rides_count']) ?? 0,
       ratingAverage: _readDouble(json['rating_average']),
       ratingCount: _readInt(json['rating_count']) ?? 0,

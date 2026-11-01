@@ -14,6 +14,7 @@ abstract class Endpoints {
 
   static const String users = '/users';
   static String userById(int userId) => '$users/$userId';
+  static String userAvatar(int userId) => '$users/$userId/avatar';
 
   static const String vehicles = '/vehicles';
   static String vehiclesByUser(int userId) => '$vehicles/user/$userId';

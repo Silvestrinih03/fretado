@@ -7,11 +7,15 @@ import '../../../../core/services/myself/models/myself_user_model.dart';
 import '../../../../core/services/myself/services/myself_service.dart';
 import '../../data/datasources/profile_datasource.dart';
 import '../../data/repositories/profile_repository_impl.dart';
+import '../../data/services/avatar_image_picker.dart';
 import '../controllers/profile_controller.dart';
 import '../widgets/profile_widgets.dart';
+import '../widgets/editable_profile_avatar.dart';
 
 class UserDataPage extends StatefulWidget {
-  const UserDataPage({super.key});
+  final AvatarImagePicker? avatarPicker;
+  final ProfileController? profileController;
+  const UserDataPage({super.key, this.avatarPicker, this.profileController});
 
   @override
   State<UserDataPage> createState() => _UserDataPageState();
@@ -26,13 +30,13 @@ class _UserDataPageState extends State<UserDataPage> {
   final TextEditingController _birthDateController = TextEditingController();
   final TextEditingController _phoneController = TextEditingController();
 
-
   late final int _userId;
   late Future<MyselfUserModel> _userFuture;
   late final HttpService _httpService;
   late final ProfileController _profileController;
   bool _didFillControllers = false;
   bool _isSaving = false;
+  bool _isUpdatingAvatar = false;
   bool _userLoaded = false;
   AutovalidateMode _autovalidateMode = AutovalidateMode.disabled;
 
@@ -44,11 +48,11 @@ class _UserDataPageState extends State<UserDataPage> {
 
     _userFuture = _loadUser();
     _httpService = HttpService();
-    _profileController = ProfileController(
-      ProfileRepositoryImpl(
-        ProfileDatasource(_httpService),
-      ),
-    );
+    _profileController =
+        widget.profileController ??
+        ProfileController(
+          ProfileRepositoryImpl(ProfileDatasource(_httpService)),
+        );
   }
 
   Future<MyselfUserModel> _loadUser() async {
@@ -62,12 +66,21 @@ class _UserDataPageState extends State<UserDataPage> {
     final now = DateTime.now();
     DateTime initial = DateTime(now.year - 18, now.month, now.day);
     if (digits.length == 8) {
-      final parsed = DateTime(int.parse(digits.substring(4)),
-        int.parse(digits.substring(2, 4)), int.parse(digits.substring(0, 2)));
-      if (!parsed.isAfter(now) && !parsed.isBefore(DateTime(1900))) initial = parsed;
+      final parsed = DateTime(
+        int.parse(digits.substring(4)),
+        int.parse(digits.substring(2, 4)),
+        int.parse(digits.substring(0, 2)),
+      );
+      if (!parsed.isAfter(now) && !parsed.isBefore(DateTime(1900))) {
+        initial = parsed;
+      }
     }
-    final selected = await showDatePicker(context: context, initialDate: initial,
-      firstDate: DateTime(1900), lastDate: now);
+    final selected = await showDatePicker(
+      context: context,
+      initialDate: initial,
+      firstDate: DateTime(1900),
+      lastDate: now,
+    );
     if (selected != null && mounted) {
       _birthDateController.text = _formatBirthDate(selected.toIso8601String());
     }
@@ -104,7 +117,7 @@ class _UserDataPageState extends State<UserDataPage> {
   }
 
   Future<void> _save() async {
-    if (_isSaving) {
+    if (_isSaving || _isUpdatingAvatar) {
       return;
     }
 
@@ -155,73 +168,171 @@ class _UserDataPageState extends State<UserDataPage> {
   @override
   Widget build(BuildContext context) => Scaffold(
     backgroundColor: FretColors.screenBackground,
-    body: SafeArea(child: Column(children: [
-      const ProfileHeader(title: 'Dados pessoais'),
-      Expanded(child: FutureBuilder<MyselfUserModel>(
-        future: _userFuture,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState != ConnectionState.done) {
-            return const Center(child: CircularProgressIndicator(color: FretColors.screenGold));
-          }
-          if (snapshot.hasError || !snapshot.hasData) {
-            return Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
-              const Text('Não foi possível carregar seus dados.'),
-              TextButton(onPressed: () => setState(() { _userFuture = _loadUser(); }),
-                child: const Text('Tentar novamente')),
-            ]));
-          }
-          _fillControllers(snapshot.data!);
-          final type = RegisterAccountTypeApiMapper.fromUserTypeId(
-            snapshot.data!.userTypeId ?? MyselfService().currentUserTypeId ?? 1).displayName;
-          return Form(
-            key: _formKey, autovalidateMode: _autovalidateMode,
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(20, 4, 20, 20),
-              child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                AnimatedBuilder(
-                  animation: Listenable.merge([_firstNameController, _lastNameController, _emailController]),
-                  builder: (context, _) {
-                    final name = '${_firstNameController.text} ${_lastNameController.text}'.trim();
-                    return Row(children: [
-                      ProfileAvatar(name: name, size: 68),
-                      const SizedBox(width: 16),
-                      Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                        Text(name, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: FretColors.screenDark)),
-                        const SizedBox(height: 3),
-                        Text('$type · ${_emailController.text}',
-                          style: const TextStyle(fontSize: 12, color: FretColors.screenMuted)),
-                      ])),
-                    ]);
-                  },
-                ),
-                const SizedBox(height: 22),
-                Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Expanded(child: ProfileField(label: 'Nome', controller: _firstNameController,
-                    validator: (value) => _validateRequiredField(value, 'nome'))),
-                  const SizedBox(width: 10),
-                  Expanded(child: ProfileField(label: 'Sobrenome', controller: _lastNameController,
-                    validator: (value) => _validateRequiredField(value, 'sobrenome'))),
-                ]),
-                const SizedBox(height: 14),
-                ProfileField(label: 'E-mail', controller: _emailController,
-                  keyboardType: TextInputType.emailAddress, validator: _validateEmail),
-                const SizedBox(height: 14),
-                ProfileField(label: 'CPF', controller: _cpfController, readOnly: true, icon: Icons.check_rounded),
-                const SizedBox(height: 14),
-                ProfileField(label: 'Data de nascimento', controller: _birthDateController,
-                  keyboardType: TextInputType.datetime, icon: Icons.calendar_today_outlined,
-                  onIconTap: _selectBirthDate, validator: _validateOptionalBirthDate),
-                const SizedBox(height: 14),
-                ProfileField(label: 'Telefone', controller: _phoneController,
-                  keyboardType: TextInputType.phone, validator: _validateOptionalPhone),
-              ]),
+    body: SafeArea(
+      child: Column(
+        children: [
+          const ProfileHeader(title: 'Dados pessoais'),
+          Expanded(
+            child: FutureBuilder<MyselfUserModel>(
+              future: _userFuture,
+              builder: (context, snapshot) {
+                if (snapshot.connectionState != ConnectionState.done) {
+                  return const Center(
+                    child: CircularProgressIndicator(
+                      color: FretColors.screenGold,
+                    ),
+                  );
+                }
+                if (snapshot.hasError || !snapshot.hasData) {
+                  return Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Text('Não foi possível carregar seus dados.'),
+                        TextButton(
+                          onPressed: () => setState(() {
+                            _userFuture = _loadUser();
+                          }),
+                          child: const Text('Tentar novamente'),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+                _fillControllers(snapshot.data!);
+                final type = RegisterAccountTypeApiMapper.fromUserTypeId(
+                  snapshot.data!.userTypeId ??
+                      MyselfService().currentUserTypeId ??
+                      1,
+                ).displayName;
+                return Form(
+                  key: _formKey,
+                  autovalidateMode: _autovalidateMode,
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.fromLTRB(20, 4, 20, 20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        AnimatedBuilder(
+                          animation: Listenable.merge([
+                            _firstNameController,
+                            _lastNameController,
+                            _emailController,
+                          ]),
+                          builder: (context, _) {
+                            final name =
+                                '${_firstNameController.text} ${_lastNameController.text}'
+                                    .trim();
+                            return Row(
+                              children: [
+                                EditableProfileAvatar(
+                                  userId: _userId,
+                                  name: name,
+                                  size: 68,
+                                  avatarUrl: snapshot.data!.avatarUrl,
+                                  picker: widget.avatarPicker,
+                                  controller: _profileController,
+                                  enabled: !_isSaving,
+                                  onBusyChanged: (busy) =>
+                                      setState(() => _isUpdatingAvatar = busy),
+                                ),
+                                const SizedBox(width: 16),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        name,
+                                        style: const TextStyle(
+                                          fontSize: 17,
+                                          fontWeight: FontWeight.w700,
+                                          color: FretColors.screenDark,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 3),
+                                      Text(
+                                        '$type · ${_emailController.text}',
+                                        style: const TextStyle(
+                                          fontSize: 12,
+                                          color: FretColors.screenMuted,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            );
+                          },
+                        ),
+                        const SizedBox(height: 22),
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              child: ProfileField(
+                                label: 'Nome',
+                                controller: _firstNameController,
+                                validator: (value) =>
+                                    _validateRequiredField(value, 'nome'),
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: ProfileField(
+                                label: 'Sobrenome',
+                                controller: _lastNameController,
+                                validator: (value) =>
+                                    _validateRequiredField(value, 'sobrenome'),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 14),
+                        ProfileField(
+                          label: 'E-mail',
+                          controller: _emailController,
+                          keyboardType: TextInputType.emailAddress,
+                          validator: _validateEmail,
+                        ),
+                        const SizedBox(height: 14),
+                        ProfileField(
+                          label: 'CPF',
+                          controller: _cpfController,
+                          readOnly: true,
+                          icon: Icons.check_rounded,
+                        ),
+                        const SizedBox(height: 14),
+                        ProfileField(
+                          label: 'Data de nascimento',
+                          controller: _birthDateController,
+                          keyboardType: TextInputType.datetime,
+                          icon: Icons.calendar_today_outlined,
+                          onIconTap: _selectBirthDate,
+                          validator: _validateOptionalBirthDate,
+                        ),
+                        const SizedBox(height: 14),
+                        ProfileField(
+                          label: 'Telefone',
+                          controller: _phoneController,
+                          keyboardType: TextInputType.phone,
+                          validator: _validateOptionalPhone,
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
             ),
-          );
-        },
-      )),
-      ProfileSaveBar(label: 'Salvar alterações', isLoading: _isSaving,
-        onPressed: _userLoaded ? _save : null),
-    ])),
+          ),
+          ProfileSaveBar(
+            label: 'Salvar alterações',
+            isLoading: _isSaving,
+            onPressed: _userLoaded && !_isUpdatingAvatar ? _save : null,
+          ),
+        ],
+      ),
+    ),
   );
 }
 

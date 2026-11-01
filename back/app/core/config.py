@@ -41,6 +41,9 @@ class Settings:
         "https://fretado.pages.dev/#/reset-password",
     )
     DATABASE_URL: str = os.getenv("DATABASE_URL", "")
+    SUPABASE_URL: str = os.getenv("SUPABASE_URL", "").rstrip("/")
+    SUPABASE_SERVICE_ROLE_KEY: str = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "")
+    SUPABASE_AVATARS_BUCKET: str = os.getenv("SUPABASE_AVATARS_BUCKET", "avatars")
     CORS_ALLOW_ORIGINS: list[str] = _split_csv(os.getenv("CORS_ALLOW_ORIGINS", ""))
     CORS_ALLOW_ORIGIN_REGEX: str | None = (
         os.getenv("CORS_ALLOW_ORIGIN_REGEX") or DEFAULT_CORS_ALLOW_ORIGIN_REGEX

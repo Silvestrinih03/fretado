@@ -23,6 +23,7 @@ CREATE TABLE user_profiles (
     last_name VARCHAR(100) NOT NULL,
     birth_date DATE,
     phone VARCHAR(20),
+    avatar_path VARCHAR(512),
 
     CONSTRAINT fk_user_profiles_user
         FOREIGN KEY (user_id)

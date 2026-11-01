@@ -1,5 +1,7 @@
 import 'dart:convert';
+import 'dart:typed_data';
 import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart';
 
 import '../config/app_environment.dart';
 import '../navigation/app_navigator.dart';
@@ -63,10 +65,7 @@ class HttpService {
     final requestHeaders = await _jsonHeaders(headers, authenticated);
     final http.Response response;
     try {
-      response = await _client.get(
-        uri,
-        headers: requestHeaders,
-      );
+      response = await _client.get(uri, headers: requestHeaders);
     } catch (e) {
       throw HttpServiceException(
         message:
@@ -216,6 +215,58 @@ class HttpService {
       return path;
     }
     return '/$path';
+  }
+
+  Future<Map<String, dynamic>> putMultipart(
+    String path, {
+    required Uint8List bytes,
+    required String filename,
+    required String contentType,
+  }) async {
+    final request = http.MultipartRequest(
+      'PUT',
+      Uri.parse('$baseUrl${_normalizePath(path)}'),
+    );
+    final token = await _savedAccessToken();
+    if (token != null && token.isNotEmpty) {
+      request.headers['Authorization'] = 'Bearer $token';
+    }
+    request.files.add(
+      http.MultipartFile.fromBytes(
+        'file',
+        bytes,
+        filename: filename,
+        contentType: MediaType.parse(contentType),
+      ),
+    );
+    final http.Response response;
+    try {
+      response = await http.Response.fromStream(
+        await _client.send(request).timeout(const Duration(seconds: 60)),
+      ).timeout(const Duration(seconds: 60));
+    } catch (_) {
+      throw const HttpServiceException(
+        message:
+            'Não foi possível enviar a foto. Verifique sua conexão e tente novamente.',
+      );
+    }
+    final Map<String, dynamic> data;
+    try {
+      data = _parseResponseBody(response.body);
+    } on FormatException {
+      await _handleAuthFailure(response.statusCode, true);
+      throw HttpServiceException(
+        message: 'O servidor não conseguiu processar a foto. Tente novamente.',
+        statusCode: response.statusCode,
+      );
+    }
+    if (response.statusCode >= 200 && response.statusCode < 300) return data;
+    await _handleAuthFailure(response.statusCode, true);
+    throw HttpServiceException(
+      message: _extractErrorMessage(data),
+      statusCode: response.statusCode,
+      data: data,
+    );
   }
 
   static Future<Map<String, String>> _jsonHeaders(

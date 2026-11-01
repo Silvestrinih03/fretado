@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:front/core/services/myself/models/myself_user_model.dart';
 import 'package:front/core/services/myself/repositories/myself_repository.dart';
 import 'package:front/core/services/myself/services/myself_service.dart';
 import 'package:front/features/profile/presentation/pages/client_profile_page.dart';
+import 'package:front/features/profile/presentation/pages/driver_profile_page.dart';
 import 'package:front/features/profile/presentation/pages/user_data_page.dart';
 import 'package:front/features/profile/presentation/pages/change_password_popup.dart';
 import 'package:front/features/profile/presentation/widgets/profile_widgets.dart';
@@ -20,6 +22,15 @@ class _MyselfRepository implements MyselfRepository {
 }
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+  setUp(() {
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+      .setMockMethodCallHandler(const MethodChannel('plugins.flutter.io/image_picker'), (call) async => null);
+  });
+  tearDown(() {
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+      .setMockMethodCallHandler(const MethodChannel('plugins.flutter.io/image_picker'), null);
+  });
   final repository = _MyselfRepository();
   MyselfService(repository: repository).currentUserId = 1;
 
@@ -31,7 +42,7 @@ void main() {
     await tester.pumpWidget(const MaterialApp(home: ClientProfilePage(userId: 1)));
     await tester.pumpAndSettle();
     expect(find.text('3'), findsOneWidget);
-    expect(find.text('2026'), findsOneWidget);
+    expect(find.text('Sem avaliações'), findsOneWidget);
     expect(find.text('Ajuda e suporte'), findsOneWidget);
     await tester.tap(find.text('Dados pessoais'));
     await tester.pumpAndSettle();
@@ -50,6 +61,14 @@ void main() {
     final user = MyselfUserModel.fromJson({'completed_rides_count': 7});
     expect(user.completedRidesCount, 7);
     expect(MyselfUserModel.fromJson({}).completedRidesCount, 0);
+  });
+
+  testWidgets('driver uses the same editable profile avatar', (tester) async {
+    await tester.pumpWidget(const MaterialApp(home: DriverProfilePage(userId: 1)));
+    await tester.pumpAndSettle();
+    expect(find.text('Motorista'), findsOneWidget);
+    expect(tester.widget<ProfileAvatar>(find.byType(ProfileAvatar)).onTap, isNotNull);
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('security screen validates empty form and toggles each password independently', (tester) async {

@@ -1,12 +1,26 @@
 import '../../../../core/services/myself/models/myself_user_model.dart';
 import '../../data/models/change_password_model.dart';
 import '../../data/models/update_user_model.dart';
+import '../../data/models/avatar_image.dart';
 import '../../data/repositories/profile_repository.dart';
 
 class ProfileController {
   final ProfileRepository _repository;
 
   const ProfileController(this._repository);
+
+  Future<MyselfUserModel> uploadAvatar({
+    required int userId,
+    required AvatarImage image,
+  }) {
+    if (image.bytes.isEmpty || image.bytes.length > maxAvatarBytes) {
+      throw const ProfileControllerException('Selecione uma foto de até 5 MB.');
+    }
+    return _repository.uploadAvatar(userId: userId, image: image);
+  }
+
+  Future<MyselfUserModel> removeAvatar({required int userId}) =>
+      _repository.removeAvatar(userId: userId);
 
   Future<void> changePassword({
     required int userId,

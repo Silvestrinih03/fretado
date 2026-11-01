@@ -50,6 +50,10 @@
 			<key>NSAllowsArbitraryLoads</key>
 			<true/>
 		</dict>
+		<key>NSCameraUsageDescription</key>
+		<string>Usamos a câmera para tirar sua foto de perfil.</string>
+		<key>NSPhotoLibraryUsageDescription</key>
+		<string>Usamos suas fotos para escolher uma imagem de perfil.</string>
 		<key>NSLocationWhenInUseUsageDescription</key>
 		<string>Usamos sua localizacao para mostrar sua disponibilidade como motorista.</string>
 		<key>UIStatusBarHidden</key>

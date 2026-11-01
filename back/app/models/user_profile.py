@@ -15,3 +15,4 @@ class UserProfile(Base):
     last_name = Column(String(100), nullable=False)
     birth_date = Column(Date, nullable=True)
     phone = Column(String(20), nullable=True)
+    avatar_path = Column(String(512), nullable=True)

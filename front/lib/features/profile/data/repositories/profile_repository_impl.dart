@@ -2,12 +2,34 @@ import '../../../../core/services/myself/models/myself_user_model.dart';
 import '../datasources/profile_datasource.dart';
 import '../models/change_password_model.dart';
 import '../models/update_user_model.dart';
+import '../models/avatar_image.dart';
 import 'profile_repository.dart';
 
 class ProfileRepositoryImpl implements ProfileRepository {
   final ProfileDatasource _datasource;
 
   const ProfileRepositoryImpl(this._datasource);
+
+  @override
+  Future<MyselfUserModel> uploadAvatar({
+    required int userId,
+    required AvatarImage image,
+  }) async {
+    try {
+      return await _datasource.uploadAvatar(userId: userId, image: image);
+    } on ProfileDatasourceException catch (e) {
+      throw ProfileRepositoryException(e.message);
+    }
+  }
+
+  @override
+  Future<MyselfUserModel> removeAvatar({required int userId}) async {
+    try {
+      return await _datasource.removeAvatar(userId: userId);
+    } on ProfileDatasourceException catch (e) {
+      throw ProfileRepositoryException(e.message);
+    }
+  }
 
   @override
   Future<void> changePassword({

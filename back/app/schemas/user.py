@@ -10,6 +10,7 @@ class UserProfileResponse(BaseModel):
     cpf: str
     birth_date: Optional[date] = None
     phone: Optional[str] = None
+    avatar_url: Optional[str] = None
     user_type_id: int
     completed_rides_count: int = Field(default=0, ge=0)
     rating_average: Decimal | None = None

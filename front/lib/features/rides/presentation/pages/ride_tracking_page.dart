@@ -133,9 +133,7 @@ class _RideTrackingPageState extends State<RideTrackingPage> {
 
   Future<void> _openRating(int rideId) async {
     await Navigator.of(context).push<bool>(
-      MaterialPageRoute<bool>(
-        builder: (_) => RideRatingPage(rideId: rideId),
-      ),
+      MaterialPageRoute<bool>(builder: (_) => RideRatingPage(rideId: rideId)),
     );
     if (mounted) await _load();
   }
@@ -653,7 +651,12 @@ class _TrackingPartyCard extends StatelessWidget {
         const SizedBox(height: 12),
         Row(
           children: [
-            _Avatar(initials: party.initials, size: 48),
+            FretAvatar(
+              imageUrl: party.avatarUrl,
+              initials: party.initials,
+              size: 48,
+              borderColor: const Color(0x885C4B15),
+            ),
             const SizedBox(width: 11),
             Expanded(
               child: Column(
@@ -784,7 +787,12 @@ class _DriverFoundView extends StatelessWidget {
             ),
             child: Row(
               children: [
-                _Avatar(initials: driver.initials, size: 54),
+                FretAvatar(
+                  imageUrl: driver.avatarUrl,
+                  initials: driver.initials,
+                  size: 54,
+                  borderColor: const Color(0x885C4B15),
+                ),
                 const SizedBox(width: 13),
                 Expanded(
                   child: Column(
@@ -817,7 +825,10 @@ class _DriverFoundView extends StatelessWidget {
                           ),
                           const SizedBox(width: 3),
                           Text(
-                            fretRatingLabel(driver.ratingAverage, driver.ratingCount),
+                            fretRatingLabel(
+                              driver.ratingAverage,
+                              driver.ratingCount,
+                            ),
                             style: const TextStyle(
                               fontSize: 10,
                               fontWeight: FontWeight.w800,
@@ -940,30 +951,6 @@ class _FoundMetric extends StatelessWidget {
           ),
         ),
       ],
-    ),
-  );
-}
-
-class _Avatar extends StatelessWidget {
-  final String initials;
-  final double size;
-  const _Avatar({required this.initials, required this.size});
-  @override
-  Widget build(BuildContext context) => Container(
-    width: size,
-    height: size,
-    alignment: Alignment.center,
-    decoration: BoxDecoration(
-      color: FretColors.screenDark,
-      shape: BoxShape.circle,
-      border: Border.all(color: const Color(0x885C4B15)),
-    ),
-    child: Text(
-      initials,
-      style: const TextStyle(
-        color: FretColors.screenGold,
-        fontWeight: FontWeight.w900,
-      ),
     ),
   );
 }

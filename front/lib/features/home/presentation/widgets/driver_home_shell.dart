@@ -7,6 +7,7 @@ import '../../../profile/presentation/pages/driver_profile_page.dart';
 import '../../../rides/presentation/pages/ride_history_page.dart';
 import '../controllers/driver_availability_controller.dart';
 import 'driver_home_content.dart';
+import 'home_profile_avatar.dart';
 
 class DriverHomeShell extends StatefulWidget {
   final String userName;
@@ -87,6 +88,7 @@ class _DriverHomeShellState extends State<DriverHomeShell>
             child: Column(
               children: [
                 _DriverHomeHeader(
+                  userId: widget.userId,
                   availabilityController: widget.availabilityController,
                   onProfileTap: () => _selectTab(3),
                 ),
@@ -128,6 +130,7 @@ class _DriverHomeShellState extends State<DriverHomeShell>
         ],
       ),
       bottomNavigationBar: _DriverBottomNavigation(
+        userId: widget.userId,
         currentIndex: _selectedIndex,
         onTap: _selectTab,
       ),
@@ -136,10 +139,12 @@ class _DriverHomeShellState extends State<DriverHomeShell>
 }
 
 class _DriverHomeHeader extends StatelessWidget {
+  final int userId;
   final DriverAvailabilityController availabilityController;
   final VoidCallback onProfileTap;
 
   const _DriverHomeHeader({
+    required this.userId,
     required this.availabilityController,
     required this.onProfileTap,
   });
@@ -186,6 +191,7 @@ class _DriverHomeHeader extends StatelessWidget {
                 tooltip: 'Perfil',
                 onPressed: onProfileTap,
                 icon: _DriverHeaderAvatar(
+                  userId: userId,
                   isOnline: availabilityController.isOnline,
                   showStatus: availabilityController.hasLoadedStatus,
                 ),
@@ -200,28 +206,24 @@ class _DriverHomeHeader extends StatelessWidget {
 }
 
 class _DriverHeaderAvatar extends StatelessWidget {
+  final int userId;
   final bool isOnline;
   final bool showStatus;
 
-  const _DriverHeaderAvatar({required this.isOnline, required this.showStatus});
+  const _DriverHeaderAvatar({
+    required this.userId,
+    required this.isOnline,
+    required this.showStatus,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Stack(
       clipBehavior: Clip.none,
       children: [
-        Container(
-          width: 34,
-          height: 34,
-          decoration: BoxDecoration(
-            color: FretColors.brandBlack,
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: const Icon(
-            Icons.person_outline_rounded,
-            color: FretColors.white,
-            size: 19,
-          ),
+        HomeProfileAvatar(
+          userId: userId,
+          borderRadius: BorderRadius.circular(12),
         ),
         if (showStatus)
           Positioned(
@@ -243,10 +245,12 @@ class _DriverHeaderAvatar extends StatelessWidget {
 }
 
 class _DriverBottomNavigation extends StatelessWidget {
+  final int userId;
   final int currentIndex;
   final ValueChanged<int> onTap;
 
   const _DriverBottomNavigation({
+    required this.userId,
     required this.currentIndex,
     required this.onTap,
   });
@@ -293,7 +297,16 @@ class _DriverBottomNavigation extends StatelessWidget {
                               : Colors.transparent,
                         ),
                         const SizedBox(height: 12),
-                        Icon(icons[index], size: 22, color: color),
+                        if (index == 3)
+                          HomeProfileAvatar(
+                            userId: userId,
+                            size: 22,
+                            iconSize: 22,
+                            backgroundColor: Colors.transparent,
+                            foregroundColor: color,
+                          )
+                        else
+                          Icon(icons[index], size: 22, color: color),
                         const SizedBox(height: 5),
                         Text(
                           labels[index],

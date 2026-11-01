@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../theme/fret_colors.dart';
+import 'fret_avatar.dart';
 
 String fretRatingLabel(double? average, int count) {
   if (average == null || count == 0) return 'Novo';
@@ -21,6 +22,7 @@ class FretRideSummaryCard extends StatelessWidget {
   final String? participantName;
   final String? participantSubtitle;
   final String? participantInitials;
+  final String? participantAvatarUrl;
   final int? participantRidesCount;
   final double? participantRatingAverage;
   final int participantRatingCount;
@@ -43,6 +45,7 @@ class FretRideSummaryCard extends StatelessWidget {
     this.participantName,
     this.participantSubtitle,
     this.participantInitials,
+    this.participantAvatarUrl,
     this.participantRidesCount,
     this.participantRatingAverage,
     this.participantRatingCount = 0,
@@ -128,6 +131,7 @@ class FretRideSummaryCard extends StatelessWidget {
                   name: participantName!,
                   subtitle: participantSubtitle,
                   initials: participantInitials,
+                  avatarUrl: participantAvatarUrl,
                   ridesCount: participantRidesCount,
                   ratingAverage: participantRatingAverage,
                   ratingCount: participantRatingCount,
@@ -273,6 +277,7 @@ String? fretCancellationNotice(
 };
 
 class _FretParticipantSummary extends StatelessWidget {
+  final String? avatarUrl;
   final String name;
   final String? subtitle;
   final String? initials;
@@ -283,6 +288,7 @@ class _FretParticipantSummary extends StatelessWidget {
     required this.name,
     this.subtitle,
     this.initials,
+    this.avatarUrl,
     this.ridesCount,
     this.ratingAverage,
     this.ratingCount = 0,
@@ -298,7 +304,13 @@ class _FretParticipantSummary extends StatelessWidget {
     ),
     child: Row(
       children: [
-        _FretAvatar(initials: initials ?? _initials(name), size: 38),
+        FretAvatar(
+          imageUrl: avatarUrl,
+          initials: initials ?? _initials(name),
+          size: 38,
+          fontSize: 10,
+          borderColor: const Color(0x665C4B15),
+        ),
         const SizedBox(width: 10),
         Expanded(
           child: Column(
@@ -343,7 +355,10 @@ class _FretParticipantSummary extends StatelessWidget {
                 const SizedBox(width: 2),
                 Text(
                   fretRatingLabel(ratingAverage, ratingCount),
-                  style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w800),
+                  style: const TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
               ],
             ),
@@ -360,31 +375,6 @@ class _FretParticipantSummary extends StatelessWidget {
           ],
         ),
       ],
-    ),
-  );
-}
-
-class _FretAvatar extends StatelessWidget {
-  final String initials;
-  final double size;
-  const _FretAvatar({required this.initials, required this.size});
-  @override
-  Widget build(BuildContext context) => Container(
-    width: size,
-    height: size,
-    alignment: Alignment.center,
-    decoration: BoxDecoration(
-      color: FretColors.screenDark,
-      shape: BoxShape.circle,
-      border: Border.all(color: const Color(0x665C4B15)),
-    ),
-    child: Text(
-      initials,
-      style: const TextStyle(
-        color: FretColors.screenGold,
-        fontSize: 10,
-        fontWeight: FontWeight.w900,
-      ),
     ),
   );
 }

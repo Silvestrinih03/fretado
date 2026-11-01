@@ -1,4 +1,5 @@
 import '../../../../core/services/myself/models/myself_user_model.dart';
+import '../../../../core/services/myself/services/myself_service.dart';
 import '../../data/models/change_password_model.dart';
 import '../../data/models/update_user_model.dart';
 import '../../data/models/avatar_image.dart';
@@ -12,15 +13,20 @@ class ProfileController {
   Future<MyselfUserModel> uploadAvatar({
     required int userId,
     required AvatarImage image,
-  }) {
+  }) async {
     if (image.bytes.isEmpty || image.bytes.length > maxAvatarBytes) {
       throw const ProfileControllerException('Selecione uma foto de até 5 MB.');
     }
-    return _repository.uploadAvatar(userId: userId, image: image);
+    final user = await _repository.uploadAvatar(userId: userId, image: image);
+    MyselfService().updateCachedProfile(userId, user);
+    return user;
   }
 
-  Future<MyselfUserModel> removeAvatar({required int userId}) =>
-      _repository.removeAvatar(userId: userId);
+  Future<MyselfUserModel> removeAvatar({required int userId}) async {
+    final user = await _repository.removeAvatar(userId: userId);
+    MyselfService().updateCachedProfile(userId, user);
+    return user;
+  }
 
   Future<void> changePassword({
     required int userId,
@@ -70,7 +76,9 @@ class ProfileController {
       phone: _normalizePhone(phone),
     );
 
-    return _repository.updateUser(userId: userId, payload: payload);
+    final user = await _repository.updateUser(userId: userId, payload: payload);
+    MyselfService().updateCachedProfile(userId, user);
+    return user;
   }
 
   String? _normalizeBirthDate(String? birthDate) {

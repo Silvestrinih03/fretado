@@ -4,6 +4,7 @@ from fastapi import HTTPException
 from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
+from app.services.avatar_service import AvatarStorage
 
 from app.enums.ride_offer_status import RideOfferStatusEnum
 from app.enums.ride_status_enum import RideStatusEnum
@@ -268,6 +269,7 @@ def _conversation_summary(db, ride, conversation, viewer_id):
         other_participant={
             "id": other_id,
             "full_name": full_name,
+            "avatar_url": AvatarStorage.public_url(profile.avatar_path) if profile else None,
             "role": "driver" if other_id == conversation.driver_user_id else "client",
         },
         is_current=can_send,

@@ -1087,6 +1087,7 @@ class _DriverActiveRideCard extends StatelessWidget {
       valueLabel: 'VOCÊ RECEBE',
       participantName: client?.fullName,
       participantInitials: client?.initials,
+      participantAvatarUrl: client?.avatarUrl,
       participantRidesCount: client?.completedRidesCount,
       participantRatingAverage: client?.ratingAverage,
       participantRatingCount: client?.ratingCount ?? 0,

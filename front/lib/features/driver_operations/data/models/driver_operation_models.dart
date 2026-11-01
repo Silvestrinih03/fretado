@@ -386,6 +386,7 @@ class RideLinkedReturnModel {
 class RidePartyModel {
   final int id;
   final String fullName;
+  final String? avatarUrl;
   final int completedRidesCount;
   final double? ratingAverage;
   final int ratingCount;
@@ -393,6 +394,7 @@ class RidePartyModel {
   const RidePartyModel({
     required this.id,
     required this.fullName,
+    this.avatarUrl,
     required this.completedRidesCount,
     required this.ratingAverage,
     required this.ratingCount,
@@ -401,6 +403,7 @@ class RidePartyModel {
   factory RidePartyModel.fromJson(Map<String, dynamic> json) => RidePartyModel(
     id: _readInt(json['id']),
     fullName: _readString(json['full_name']),
+    avatarUrl: _readNullableString(json['avatar_url']),
     completedRidesCount: _readInt(json['completed_rides_count']),
     ratingAverage: json['rating_average'] == null
         ? null

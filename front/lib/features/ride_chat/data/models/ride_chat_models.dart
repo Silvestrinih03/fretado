@@ -2,11 +2,13 @@ class RideChatParticipant {
   final int id;
   final String fullName;
   final String role;
+  final String? avatarUrl;
 
   const RideChatParticipant({
     required this.id,
     required this.fullName,
     required this.role,
+    this.avatarUrl,
   });
 
   factory RideChatParticipant.fromJson(Map<String, dynamic> json) =>
@@ -14,6 +16,7 @@ class RideChatParticipant {
         id: _int(json['id']),
         fullName: '${json['full_name'] ?? 'Usuário'}',
         role: '${json['role'] ?? ''}',
+        avatarUrl: json['avatar_url']?.toString(),
       );
 }
 

@@ -613,21 +613,12 @@ class _PartyDetailsCard extends StatelessWidget {
         const SizedBox(height: 11),
         Row(
           children: [
-            Container(
-              width: 43,
-              height: 43,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(color: const Color(0x885C4B15)),
-              ),
-              child: Text(
-                party.initials,
-                style: const TextStyle(
-                  color: FretColors.screenGold,
-                  fontWeight: FontWeight.w900,
-                ),
-              ),
+            FretAvatar(
+              imageUrl: party.avatarUrl,
+              initials: party.initials,
+              size: 43,
+              backgroundColor: Colors.transparent,
+              borderColor: const Color(0x885C4B15),
             ),
             const SizedBox(width: 11),
             Expanded(

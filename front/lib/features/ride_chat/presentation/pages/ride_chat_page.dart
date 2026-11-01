@@ -340,15 +340,9 @@ class _ChatHeader extends StatelessWidget {
             ),
             child: Row(
               children: [
-                Container(
-                  width: 42,
-                  height: 42,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF3E9C5),
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  child: const Icon(Icons.person_outline_rounded),
-                ),
+                FretAvatar(imageUrl: conversation?.otherParticipant.avatarUrl, size: 42,
+                  borderRadius: BorderRadius.circular(14),
+                  backgroundColor: const Color(0xFFF3E9C5), foregroundColor: FretColors.screenDark),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(

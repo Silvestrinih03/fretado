@@ -6,6 +6,7 @@ import '../../../payments/presentation/pages/my_payment_methods_page.dart';
 import '../../../profile/presentation/pages/client_profile_page.dart';
 import '../../../rides/presentation/pages/ride_history_page.dart';
 import 'client_home_content.dart';
+import 'home_profile_avatar.dart';
 
 class ClientHomeShell extends StatefulWidget {
   final String userName;
@@ -74,7 +75,10 @@ class _ClientHomeShellState extends State<ClientHomeShell>
           SafeArea(
             child: Column(
               children: [
-                _ClientHomeHeader(onProfileTap: () => _selectTab(3)),
+                _ClientHomeHeader(
+                  userId: widget.userId,
+                  onProfileTap: () => _selectTab(3),
+                ),
                 Expanded(
                   child: ClientHomeContent(
                     userName: widget.userName,
@@ -107,6 +111,7 @@ class _ClientHomeShellState extends State<ClientHomeShell>
         ],
       ),
       bottomNavigationBar: _ClientBottomNavigation(
+        userId: widget.userId,
         currentIndex: _selectedIndex,
         onTap: _selectTab,
       ),
@@ -115,9 +120,10 @@ class _ClientHomeShellState extends State<ClientHomeShell>
 }
 
 class _ClientHomeHeader extends StatelessWidget {
+  final int userId;
   final VoidCallback onProfileTap;
 
-  const _ClientHomeHeader({required this.onProfileTap});
+  const _ClientHomeHeader({required this.userId, required this.onProfileTap});
 
   @override
   Widget build(BuildContext context) {
@@ -158,18 +164,9 @@ class _ClientHomeHeader extends StatelessWidget {
           IconButton(
             tooltip: 'Perfil',
             onPressed: onProfileTap,
-            icon: Container(
-              width: 34,
-              height: 34,
-              decoration: BoxDecoration(
-                color: FretColors.brandBlack,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: const Icon(
-                Icons.person_outline_rounded,
-                color: FretColors.white,
-                size: 19,
-              ),
+            icon: HomeProfileAvatar(
+              userId: userId,
+              borderRadius: BorderRadius.circular(12),
             ),
           ),
           const SizedBox(width: 18),
@@ -180,10 +177,12 @@ class _ClientHomeHeader extends StatelessWidget {
 }
 
 class _ClientBottomNavigation extends StatelessWidget {
+  final int userId;
   final int currentIndex;
   final ValueChanged<int> onTap;
 
   const _ClientBottomNavigation({
+    required this.userId,
     required this.currentIndex,
     required this.onTap,
   });
@@ -228,7 +227,16 @@ class _ClientBottomNavigation extends StatelessWidget {
                               : Colors.transparent,
                         ),
                         const SizedBox(height: 12),
-                        Icon(icons[index], size: 22, color: color),
+                        if (index == 3)
+                          HomeProfileAvatar(
+                            userId: userId,
+                            size: 22,
+                            iconSize: 22,
+                            backgroundColor: Colors.transparent,
+                            foregroundColor: color,
+                          )
+                        else
+                          Icon(icons[index], size: 22, color: color),
                         const SizedBox(height: 5),
                         Text(
                           labels[index],

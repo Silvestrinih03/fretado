@@ -494,6 +494,7 @@ class _ClientRideHistoryCard extends StatelessWidget {
       packageWeight: ride.packageWeight,
       participantName: driver?.fullName,
       participantInitials: driver?.initials,
+      participantAvatarUrl: driver?.avatarUrl,
       participantRidesCount: driver?.completedRidesCount,
       participantRatingAverage: driver?.ratingAverage,
       participantRatingCount: driver?.ratingCount ?? 0,

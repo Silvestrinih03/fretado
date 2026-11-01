@@ -141,6 +141,15 @@ void main() {
     );
   });
 
+  test('successful photo operations publish the profile used by home avatars', () async {
+    myself.currentUserId = 1;
+    final controller = ProfileController(_Repository());
+    await controller.uploadAvatar(userId: 1, image: AvatarImage.fromBytes(_png));
+    expect(myself.currentProfile.value!.avatarUrl, 'https://example.test/avatar.png');
+    await controller.removeAvatar(userId: 1);
+    expect(myself.currentProfile.value!.avatarUrl, isNull);
+  });
+
   test('selection checks size and supported signatures', () {
     expect(AvatarImage.fromBytes(_png).contentType, 'image/png');
     expect(

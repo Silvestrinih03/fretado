@@ -7,6 +7,7 @@ class ChatParticipantSummary(BaseModel):
     id: int
     full_name: str
     role: str
+    avatar_url: str | None = None
 
 
 class RideConversationSummary(BaseModel):

@@ -6,6 +6,7 @@ from datetime import datetime, timedelta, timezone
 from fastapi import HTTPException
 from sqlalchemy import and_, func, or_
 from sqlalchemy.orm import Session
+from app.services.avatar_service import AvatarStorage
 
 from app.enums.ride_history_status_group import RideHistoryStatusGroup
 from app.enums.ride_status_enum import RideStatusEnum
@@ -564,6 +565,7 @@ def _build_party_summary(db: Session, user_id: int | None):
     return {
         "id": user_id,
         "full_name": f"{row.first_name} {row.last_name}".strip(),
+        "avatar_url": AvatarStorage.public_url(row.avatar_path),
         "completed_rides_count": completed_rides,
         "rating_average": rating_average,
         "rating_count": int(rating_count or 0),

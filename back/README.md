@@ -75,6 +75,13 @@ Como o bucket é público, quem tem a URL pode visualizar a foto.
   `avatar_url: null`, inclusive quando não havia foto.
 - `GET /users/{user_id}` e `PATCH /users/{user_id}` incluem `avatar_url`
   opcional. A foto é alterada exclusivamente pelos endpoints de avatar.
+- As respostas de corrida incluem `client.avatar_url` e `driver.avatar_url`;
+  as conversas incluem `other_participant.avatar_url`. Esses campos opcionais
+  permitem exibir as fotos em cartões, acompanhamento, detalhes e chat.
+
+A tela inicial reutiliza o perfil carregado no login/abertura da home para
+mostrar a foto no cabeçalho e na aba Perfil. Alterar ou remover a foto atualiza
+essas visualizações imediatamente; mudar de conta limpa a foto em memória.
 
 A documentação `/docs` descreve os erros. Sem as variáveis do Storage, a API
 inicializa normalmente, mas envio/remoção retornam 503. Cada troca gera uma

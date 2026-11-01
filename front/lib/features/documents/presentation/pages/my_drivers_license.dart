@@ -25,8 +25,7 @@ class MyDriversLicensePage extends StatefulWidget {
 
 class _MyDriversLicensePageState extends State<MyDriversLicensePage> {
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
-  final TextEditingController _registrationController =
-      TextEditingController();
+  final TextEditingController _registrationController = TextEditingController();
   final TextEditingController _issueDateController = TextEditingController();
   final TextEditingController _expirationDateController =
       TextEditingController();
@@ -51,8 +50,9 @@ class _MyDriversLicensePageState extends State<MyDriversLicensePage> {
     super.initState();
     _httpService = HttpService();
     _categoryDatasource = DriverLicenseCategoryDatasource(_httpService);
-    _categoryRepository =
-        DriverLicenseCategoryRepositoryImpl(_categoryDatasource);
+    _categoryRepository = DriverLicenseCategoryRepositoryImpl(
+      _categoryDatasource,
+    );
     _documentDatasource = DriverDocumentDatasource(_httpService);
     _documentRepository = DriverDocumentRepositoryImpl(_documentDatasource);
     _myselfService = MyselfService();
@@ -79,10 +79,7 @@ class _MyDriversLicensePageState extends State<MyDriversLicensePage> {
   }
 
   Future<void> _loadInitialData() async {
-    await Future.wait([
-      _store.loadCategories(),
-      _store.loadDriverDocument(),
-    ]);
+    await Future.wait([_store.loadCategories(), _store.loadDriverDocument()]);
 
     if (!mounted) {
       return;
@@ -115,10 +112,12 @@ class _MyDriversLicensePageState extends State<MyDriversLicensePage> {
       );
       _issueDate = issueDate;
       _expirationDate = expirationDate;
-      _issueDateController.text =
-          issueDate == null ? '' : _formatDate(issueDate);
-      _expirationDateController.text =
-          expirationDate == null ? '' : _formatDate(expirationDate);
+      _issueDateController.text = issueDate == null
+          ? ''
+          : _formatDate(issueDate);
+      _expirationDateController.text = expirationDate == null
+          ? ''
+          : _formatDate(expirationDate);
       _isEditing = status == DocumentValidityStatusEnum.needsInformation;
       _showUpdateButtonLabel = false;
     });
@@ -163,7 +162,8 @@ class _MyDriversLicensePageState extends State<MyDriversLicensePage> {
 
     final now = DateTime.now();
     final selectedDate = await _showLicenseDatePicker(
-      initialDate: _expirationDate ?? DateTime(now.year + 5, now.month, now.day),
+      initialDate:
+          _expirationDate ?? DateTime(now.year + 5, now.month, now.day),
       firstDate: DateTime(1950),
       lastDate: DateTime(now.year + 30),
     );
@@ -192,11 +192,11 @@ class _MyDriversLicensePageState extends State<MyDriversLicensePage> {
         return Theme(
           data: Theme.of(context).copyWith(
             colorScheme: Theme.of(context).colorScheme.copyWith(
-                  primary: FretColors.loginFooterLink,
-                  onPrimary: FretColors.white,
-                  surface: FretColors.white,
-                  onSurface: FretColors.neutral900,
-                ),
+              primary: FretColors.screenDark,
+              onPrimary: FretColors.white,
+              surface: FretColors.white,
+              onSurface: FretColors.neutral900,
+            ),
           ),
           child: child!,
         );
@@ -216,10 +216,7 @@ class _MyDriversLicensePageState extends State<MyDriversLicensePage> {
     }
 
     if (_store.selectedCategoryId == null) {
-      showFretErrorPopup(
-        context,
-        message: 'Selecione a categoria da CNH.',
-      );
+      showFretErrorPopup(context, message: 'Selecione a categoria da CNH.');
       return;
     }
 
@@ -289,7 +286,7 @@ class _MyDriversLicensePageState extends State<MyDriversLicensePage> {
                 const Text(
                   'Alterar dados da CNH',
                   style: TextStyle(
-                    color: FretColors.loginFooterLink,
+                    color: FretColors.screenDark,
                     fontSize: 18,
                     fontWeight: FontWeight.w800,
                     height: 1.15,
@@ -300,7 +297,7 @@ class _MyDriversLicensePageState extends State<MyDriversLicensePage> {
                   subtitle,
                   style: const TextStyle(
                     color: FretColors.neutral700,
-                    fontSize: 14,
+                    fontSize: 12,
                     fontWeight: FontWeight.w500,
                     height: 1.35,
                   ),
@@ -314,7 +311,7 @@ class _MyDriversLicensePageState extends State<MyDriversLicensePage> {
                         child: ElevatedButton(
                           onPressed: () => Navigator.of(context).pop(),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: FretColors.neutral200,
+                            backgroundColor: FretColors.screenBackground,
                             foregroundColor: FretColors.black,
                             elevation: 0,
                             shape: RoundedRectangleBorder(
@@ -324,7 +321,7 @@ class _MyDriversLicensePageState extends State<MyDriversLicensePage> {
                           child: const Text(
                             'Cancelar',
                             style: TextStyle(
-                              fontSize: 14,
+                              fontSize: 12,
                               fontWeight: FontWeight.w800,
                             ),
                           ),
@@ -344,7 +341,7 @@ class _MyDriversLicensePageState extends State<MyDriversLicensePage> {
                             });
                           },
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: FretColors.loginFooterLink,
+                            backgroundColor: FretColors.screenDark,
                             foregroundColor: FretColors.white,
                             elevation: 0,
                             shape: RoundedRectangleBorder(
@@ -354,7 +351,7 @@ class _MyDriversLicensePageState extends State<MyDriversLicensePage> {
                           child: const Text(
                             'Alterar',
                             style: TextStyle(
-                              fontSize: 14,
+                              fontSize: 12,
                               fontWeight: FontWeight.w800,
                             ),
                           ),
@@ -378,15 +375,12 @@ class _MyDriversLicensePageState extends State<MyDriversLicensePage> {
         return Dialog(
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
-            side: const BorderSide(
-              color: FretColors.destructive500,
-              width: 2,
-            ),
+            side: const BorderSide(color: FretColors.destructive500, width: 2),
           ),
           child: Stack(
             children: [
               Padding(
-            padding: const EdgeInsets.fromLTRB(18, 18, 18, 16),
+                padding: const EdgeInsets.fromLTRB(18, 18, 18, 16),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -417,7 +411,7 @@ class _MyDriversLicensePageState extends State<MyDriversLicensePage> {
                                 'Seu documento Carteira Nacional de Habilitação está com prazo de validade expirado. Atualize imediatamente para continuar suas entregas.',
                                 style: TextStyle(
                                   color: FretColors.neutral700,
-                                  fontSize: 14,
+                                  fontSize: 12,
                                   fontWeight: FontWeight.w500,
                                   height: 1.35,
                                 ),
@@ -440,7 +434,7 @@ class _MyDriversLicensePageState extends State<MyDriversLicensePage> {
                           });
                         },
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: FretColors.loginFooterLink,
+                          backgroundColor: FretColors.screenDark,
                           foregroundColor: FretColors.white,
                           elevation: 0,
                           shape: RoundedRectangleBorder(
@@ -450,7 +444,7 @@ class _MyDriversLicensePageState extends State<MyDriversLicensePage> {
                         child: const Text(
                           'Atualizar agora',
                           style: TextStyle(
-                            fontSize: 14,
+                            fontSize: 12,
                             fontWeight: FontWeight.w900,
                           ),
                         ),
@@ -548,43 +542,39 @@ class _MyDriversLicensePageState extends State<MyDriversLicensePage> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    return AnimatedBuilder(
+  Widget build(BuildContext context) => FretScreenTheme(
+    child: AnimatedBuilder(
       animation: _store,
       builder: (context, _) {
         final isLoadingInitialData =
             _store.isLoadingDocument || _store.isLoadingCategories;
-
         return Scaffold(
-          backgroundColor: const Color(0xFFF7F8FA),
+          backgroundColor: FretColors.screenBackground,
+          appBar: const FretSecondaryAppBar(title: 'Minha CNH'),
           body: SafeArea(
             child: Column(
               children: [
-                const _MyDriversLicenseHeader(),
                 Expanded(
                   child: ListView(
-                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 22),
+                    padding: const EdgeInsets.fromLTRB(20, 8, 20, 22),
                     children: [
                       const Text(
-                        'Informações da Habilitação',
+                        'Informações da habilitação',
                         style: TextStyle(
-                          color: FretColors.loginFooterLink,
                           fontSize: 22,
                           fontWeight: FontWeight.w800,
-                          height: 1.12,
                         ),
                       ),
-                      const SizedBox(height: 6),
+                      const SizedBox(height: 7),
                       const Text(
-                        'Mantenha seus dados de condutor atualizados para receber alertas de vencimento',
+                        'Mantenha seus dados de condutor atualizados e confira a validade da sua CNH.',
                         style: TextStyle(
-                          color: Color(0xFF6F727D),
-                          fontSize: 14,
-                          fontWeight: FontWeight.w400,
-                          height: 1.45,
+                          fontSize: 12.5,
+                          color: FretColors.screenMuted,
+                          height: 1.55,
                         ),
                       ),
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 18),
                       Form(
                         key: _formKey,
                         autovalidateMode: _autovalidateMode,
@@ -617,52 +607,8 @@ class _MyDriversLicensePageState extends State<MyDriversLicensePage> {
           ),
         );
       },
-    );
-  }
-}
-
-class _MyDriversLicenseHeader extends StatelessWidget {
-  const _MyDriversLicenseHeader();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: 62,
-      width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(10, 8, 16, 8),
-      decoration: const BoxDecoration(
-        color: Color(0xFFF7F8FA),
-        border: Border(
-          bottom: BorderSide(color: Color(0xFFE7E9F0), width: 1),
-        ),
-      ),
-      child: Row(
-        children: [
-          IconButton(
-            onPressed: () => Navigator.of(context).maybePop(),
-            icon: const Icon(
-              Icons.arrow_back_ios_new_rounded,
-              color: FretColors.loginFooterLink,
-              size: 20,
-            ),
-          ),
-          const SizedBox(width: 8),
-          const Expanded(
-            child: Text(
-              'Minha CNH',
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontSize: 21,
-                fontWeight: FontWeight.w700,
-                color: FretColors.loginFooterLink,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+    ),
+  );
 }
 
 class _DriversLicenseFormCard extends StatelessWidget {
@@ -698,13 +644,14 @@ class _DriversLicenseFormCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(16, 18, 16, 22),
+      padding: const EdgeInsets.all(15),
       decoration: BoxDecoration(
         color: FretColors.white,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: FretColors.screenBorder),
         boxShadow: const [
           BoxShadow(
-            color: Color(0x080F1A4A),
+            color: Color(0x0A000000),
             blurRadius: 12,
             offset: Offset(0, 3),
           ),
@@ -713,9 +660,7 @@ class _DriversLicenseFormCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const _DriversLicenseInputLabel(
-            'Selecione a categoria da sua CNH',
-          ),
+          const _DriversLicenseInputLabel('Selecione a categoria da sua CNH'),
           const SizedBox(height: 8),
           _DriversLicenseCategoryField(
             isReadOnly: isReadOnly,
@@ -776,8 +721,8 @@ class _DriversLicenseInputLabel extends StatelessWidget {
     return Text(
       label,
       style: const TextStyle(
-        color: FretColors.loginFooterLink,
-        fontSize: 14,
+        color: FretColors.screenDark,
+        fontSize: 12,
         fontWeight: FontWeight.w800,
         height: 1.12,
       ),
@@ -817,8 +762,9 @@ class _DriversLicenseCategoryField extends StatelessWidget {
           height: 50,
           padding: const EdgeInsets.symmetric(horizontal: 14),
           decoration: BoxDecoration(
-            color: FretColors.neutral200,
-            borderRadius: BorderRadius.circular(12),
+            color: FretColors.screenBackground,
+            borderRadius: BorderRadius.circular(13),
+            border: Border.all(color: FretColors.screenBorder),
           ),
           child: isLoading
               ? const Align(
@@ -831,14 +777,13 @@ class _DriversLicenseCategoryField extends StatelessWidget {
                 )
               : DropdownButtonHideUnderline(
                   child: DropdownButton<int>(
-                    value:
-                        hasSelectedCategory ? selectedCategoryId : null,
+                    value: hasSelectedCategory ? selectedCategoryId : null,
                     isExpanded: true,
                     icon: isReadOnly
                         ? const SizedBox.shrink()
                         : const Icon(
                             Icons.keyboard_arrow_down_rounded,
-                            color: FretColors.loginFooterLink,
+                            color: FretColors.screenDark,
                             size: 24,
                           ),
                     hint: Text(
@@ -847,15 +792,15 @@ class _DriversLicenseCategoryField extends StatelessWidget {
                           : 'Selecionar categoria',
                       style: const TextStyle(
                         color: FretColors.black,
-                        fontSize: 14,
+                        fontSize: 12,
                         fontWeight: FontWeight.w400,
                       ),
                     ),
                     dropdownColor: FretColors.white,
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(13),
                     style: const TextStyle(
                       color: FretColors.black,
-                      fontSize: 14,
+                      fontSize: 12,
                       fontWeight: FontWeight.w400,
                     ),
                     items: categories.map((category) {
@@ -898,7 +843,7 @@ class _DriversLicenseCategoryField extends StatelessWidget {
                   child: Text(
                     'Tentar novamente',
                     style: TextStyle(
-                      color: FretColors.loginFooterLink,
+                      color: FretColors.screenDark,
                       fontSize: 12,
                       fontWeight: FontWeight.w800,
                     ),
@@ -941,24 +886,24 @@ class _DriversLicenseTextField extends StatelessWidget {
       validator: isReadOnly ? null : validator,
       style: const TextStyle(
         color: FretColors.black,
-        fontSize: 16,
+        fontSize: 13,
         fontWeight: FontWeight.w400,
       ),
       decoration: InputDecoration(
         hintText: hintText,
         hintStyle: const TextStyle(
           color: Color(0xFFA7A9B1),
-          fontSize: 14,
+          fontSize: 12,
           fontWeight: FontWeight.w400,
         ),
         filled: true,
-        fillColor: FretColors.neutral200,
+        fillColor: FretColors.screenBackground,
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 14,
           vertical: 14,
         ),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(13),
           borderSide: BorderSide.none,
         ),
       ),
@@ -989,18 +934,18 @@ class _DriversLicenseDateField extends StatelessWidget {
       validator: isReadOnly ? null : validator,
       style: const TextStyle(
         color: FretColors.black,
-        fontSize: 16,
+        fontSize: 13,
         fontWeight: FontWeight.w400,
       ),
       decoration: InputDecoration(
-        hintText: 'mm/dd/yyyy',
+        hintText: 'DD/MM/AAAA',
         hintStyle: const TextStyle(
           color: FretColors.black,
-          fontSize: 14,
+          fontSize: 12,
           fontWeight: FontWeight.w400,
         ),
         filled: true,
-        fillColor: FretColors.neutral200,
+        fillColor: FretColors.screenBackground,
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 14,
           vertical: 14,
@@ -1013,12 +958,9 @@ class _DriversLicenseDateField extends StatelessWidget {
             size: 18,
           ),
         ),
-        suffixIconConstraints: const BoxConstraints(
-          minWidth: 0,
-          minHeight: 0,
-        ),
+        suffixIconConstraints: const BoxConstraints(minWidth: 0, minHeight: 0),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(13),
           borderSide: BorderSide.none,
         ),
       ),
@@ -1069,60 +1011,21 @@ class _SaveDriversLicenseFooter extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-      decoration: const BoxDecoration(
-        color: Color(0xFFF7F8FA),
-        border: Border(
-          top: BorderSide(color: Color(0xFFE7E9F0), width: 1),
-        ),
-      ),
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            colors: [FretColors.loginButtonStart, FretColors.loginButtonEnd],
-            begin: Alignment.centerLeft,
-            end: Alignment.centerRight,
-          ),
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: [
-            BoxShadow(
-              color: FretColors.loginButtonEnd.withOpacity(0.24),
-              blurRadius: 14,
-              offset: const Offset(0, 6),
-            ),
-          ],
-        ),
-        child: SizedBox(
-          height: 52,
-          child: ElevatedButton(
-            onPressed: isSaving
-                || isDisabled
-                ? null
-                : () {
-                    onSave();
-                  },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.transparent,
-              shadowColor: Colors.transparent,
-              elevation: 0,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-            child: Text(
-              label,
-              style: const TextStyle(
-                color: FretColors.white,
-                fontSize: 16,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
+  Widget build(BuildContext context) => Container(
+    width: double.infinity,
+    padding: const EdgeInsets.fromLTRB(20, 13, 20, 20),
+    decoration: const BoxDecoration(
+      color: FretColors.screenBackground,
+      border: Border(top: BorderSide(color: FretColors.screenBorder)),
+    ),
+    child: FretScreenButton(
+      label: label,
+      loading: isSaving,
+      onPressed: isSaving || isDisabled
+          ? null
+          : () {
+              onSave();
+            },
+    ),
+  );
 }

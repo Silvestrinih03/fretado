@@ -27,10 +27,10 @@ class SelectVehicleType extends StatelessWidget {
         const Text(
           'TIPO DE VEÍCULO',
           style: TextStyle(
-            color: FretColors.textSecondary,
+            color: FretColors.screenMuted,
             fontWeight: FontWeight.w700,
-            letterSpacing: 0,
-            fontSize: 12,
+            letterSpacing: .7,
+            fontSize: 11.5,
           ),
         ),
         const SizedBox(height: 8),
@@ -46,12 +46,12 @@ class SelectVehicleType extends StatelessWidget {
         else if (errorMessage != null)
           Text(
             errorMessage!,
-            style: const TextStyle(color: FretColors.textSecondary),
+            style: const TextStyle(color: FretColors.screenMuted),
           )
         else if (vehicleTypes.isEmpty)
           const Text(
             'Nenhum tipo de veículo encontrado.',
-            style: TextStyle(color: FretColors.textSecondary),
+            style: TextStyle(color: FretColors.screenMuted),
           )
         else
           Wrap(
@@ -63,18 +63,18 @@ class SelectVehicleType extends StatelessWidget {
                 selected: isSelected,
                 label: Text(vehicleType.label),
                 onSelected: (_) => onSelected(vehicleType.id),
-                backgroundColor: FretColors.appSurfaceSoft,
-                selectedColor: FretColors.brandBlack,
+                backgroundColor: FretColors.screenBackground,
+                selectedColor: FretColors.screenGold.withValues(alpha: .11),
                 side: BorderSide(
                   color: isSelected
-                      ? FretColors.brandBlack
-                      : FretColors.appBorder,
+                      ? FretColors.screenGold
+                      : FretColors.screenBorder,
                 ),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(10),
                 ),
                 labelStyle: TextStyle(
-                  color: isSelected ? FretColors.brandGold : FretColors.textPrimary,
+                  color: FretColors.screenDark,
                   fontWeight: FontWeight.w600,
                   fontSize: 12,
                 ),

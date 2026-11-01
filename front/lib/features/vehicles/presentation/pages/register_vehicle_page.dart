@@ -72,7 +72,7 @@ class _RegisterVehiclePageState extends State<RegisterVehiclePage> {
       final messenger = ScaffoldMessenger.of(context);
       Navigator.of(context).pop(true);
       messenger.showSnackBar(
-        const SnackBar(content: Text('Ve?culo cadastrado com sucesso.')),
+        const SnackBar(content: Text('Veículo cadastrado com sucesso.')),
       );
     } else {
       showFretErrorPopup(
@@ -85,37 +85,35 @@ class _RegisterVehiclePageState extends State<RegisterVehiclePage> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    return AnimatedBuilder(
+  Widget build(BuildContext context) => FretScreenTheme(
+    child: AnimatedBuilder(
       animation: _store,
       builder: (context, _) => PopScope(
         canPop: !_store.isRegisteringVehicle,
         child: Scaffold(
-          backgroundColor: FretColors.appBackground,
-          appBar: AppBar(
-            backgroundColor: FretColors.appBackground,
-            foregroundColor: FretColors.textPrimary,
-            title: const Text('Adicionar veículo'),
-          ),
+          backgroundColor: FretColors.screenBackground,
+          appBar: const FretSecondaryAppBar(title: 'Adicionar veículo'),
           body: SafeArea(
             child: Form(
               key: _formKey,
               child: ListView(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.fromLTRB(20, 6, 20, 24),
                 children: [
                   const Text(
-                    'Selecione os dados do veículo. As informações técnicas serão identificadas automaticamente.',
+                    'Informe os dados do veículo. As informações técnicas serão identificadas automaticamente.',
                     style: TextStyle(
-                      color: FretColors.textSecondary,
-                      height: 1.4,
+                      fontSize: 12.5,
+                      color: FretColors.screenMuted,
+                      height: 1.55,
                     ),
                   ),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 18),
                   AbsorbPointer(
                     absorbing: _store.isRegisteringVehicle,
                     child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        FretSurfaceCard(
+                        FretScreenCard(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
@@ -137,27 +135,31 @@ class _RegisterVehiclePageState extends State<RegisterVehiclePage> {
                             ],
                           ),
                         ),
-                        const SizedBox(height: 16),
-                        FillVehicleBrandData(store: _store),
-                        const SizedBox(height: 16),
-                        FillVehicleDetailedData(
-                          colorController: _colorController,
-                          enabled: _store.selectedYear != null,
-                        ),
-                        const SizedBox(height: 16),
-                        FillVehiclePlate(
-                          controller: _plateController,
-                          enabled: _store.selectedYear != null,
+                        const SizedBox(height: 12),
+                        FillVehicleBrandData(
+                          store: _store,
+                          children: [
+                            FillVehicleDetailedData(
+                              colorController: _colorController,
+                              showCard: false,
+                              enabled: _store.selectedYear != null,
+                            ),
+                            FillVehiclePlate(
+                              controller: _plateController,
+                              showCard: false,
+                              enabled: _store.selectedYear != null,
+                            ),
+                          ],
                         ),
                       ],
                     ),
                   ),
-                  const SizedBox(height: 24),
-                  FretPrimaryButton(
+                  const SizedBox(height: 14),
+                  FretScreenButton(
                     label: 'Cadastrar veículo',
+                    gold: true,
                     loading: _store.isRegisteringVehicle,
                     onPressed: _save,
-                    trailingIcon: null,
                   ),
                 ],
               ),
@@ -165,6 +167,6 @@ class _RegisterVehiclePageState extends State<RegisterVehiclePage> {
           ),
         ),
       ),
-    );
-  }
+    ),
+  );
 }

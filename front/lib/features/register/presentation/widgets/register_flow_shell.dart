@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-
 import '../../../../app/design_system/design_system.dart';
 
 class RegisterFlowShell extends StatelessWidget {
@@ -9,7 +8,6 @@ class RegisterFlowShell extends StatelessWidget {
   final bool showBackButton;
   final VoidCallback? onBackPressed;
   final Color activeDotColor;
-
   const RegisterFlowShell({
     super.key,
     required this.child,
@@ -21,119 +19,80 @@ class RegisterFlowShell extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: FretColors.neutral100,
+  Widget build(BuildContext context) => FretScreenTheme(
+    child: Scaffold(
+      backgroundColor: FretColors.screenBackground,
       body: SafeArea(
         child: Column(
           children: [
-            _RegisterHeader(
-              showBackButton: showBackButton,
-              onBackPressed: onBackPressed,
+            Container(
+              height: 54,
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              decoration: const BoxDecoration(
+                border: Border(
+                  bottom: BorderSide(color: FretColors.screenBorder),
+                ),
+              ),
+              child: Row(
+                children: [
+                  SizedBox(
+                    width: 42,
+                    child: showBackButton
+                        ? IconButton(
+                            tooltip: 'Voltar',
+                            onPressed: onBackPressed,
+                            padding: EdgeInsets.zero,
+                            icon: const Icon(
+                              Icons.chevron_left_rounded,
+                              color: FretColors.screenDark,
+                              size: 24,
+                            ),
+                          )
+                        : null,
+                  ),
+                  const Expanded(
+                    child: Text(
+                      'Crie sua conta',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                        color: FretColors.screenDark,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 42),
+                ],
+              ),
             ),
             Expanded(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(20, 22, 20, 18),
+                padding: const EdgeInsets.fromLTRB(22, 24, 22, 10),
                 child: child,
               ),
             ),
             Padding(
-              padding: const EdgeInsets.only(bottom: 18),
-              child: _StepDots(
-                currentStep: stepIndex,
-                totalSteps: totalSteps,
-                activeColor: activeDotColor,
+              padding: const EdgeInsets.fromLTRB(0, 18, 0, 12),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: List.generate(totalSteps, (index) {
+                  final active = index == stepIndex;
+                  return AnimatedContainer(
+                    duration: const Duration(milliseconds: 180),
+                    margin: const EdgeInsets.symmetric(horizontal: 4.5),
+                    width: active ? 18 : 7,
+                    height: 7,
+                    decoration: BoxDecoration(
+                      color: active ? activeDotColor : const Color(0xFFD3D1CC),
+                      borderRadius: BorderRadius.circular(99),
+                    ),
+                  );
+                }),
               ),
             ),
           ],
         ),
       ),
-    );
-  }
-}
-
-class _RegisterHeader extends StatelessWidget {
-  final bool showBackButton;
-  final VoidCallback? onBackPressed;
-
-  const _RegisterHeader({
-    required this.showBackButton,
-    this.onBackPressed,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: 60,
-      decoration: const BoxDecoration(
-        border: Border(
-          bottom: BorderSide(color: FretColors.neutral200),
-        ),
-      ),
-      child: Row(
-        children: [
-          SizedBox(
-            width: 48,
-            child: showBackButton
-                ? IconButton(
-                    onPressed: onBackPressed,
-                    splashRadius: 18,
-                    icon: const Icon(
-                      Icons.arrow_back,
-                      color: FretColors.loginFooterLink,
-                      size: 22,
-                    ),
-                  )
-                : const SizedBox.shrink(),
-          ),
-          const Expanded(
-            child: Center(
-              child: Text(
-                'Crie sua conta',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w700,
-                  color: FretColors.loginFooterLink,
-                  letterSpacing: 0,
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(width: 48),
-        ],
-      ),
-    );
-  }
-}
-
-class _StepDots extends StatelessWidget {
-  final int currentStep;
-  final int totalSteps;
-  final Color activeColor;
-
-  const _StepDots({
-    required this.currentStep,
-    required this.totalSteps,
-    required this.activeColor,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: List.generate(totalSteps, (index) {
-        final bool isActive = index == currentStep;
-        return AnimatedContainer(
-          duration: const Duration(milliseconds: 180),
-          margin: const EdgeInsets.symmetric(horizontal: 8),
-          width: 12,
-          height: 12,
-          decoration: BoxDecoration(
-            color: isActive ? activeColor : FretColors.neutral300,
-            shape: BoxShape.circle,
-          ),
-        );
-      }),
-    );
-  }
+    ),
+  );
 }

@@ -165,7 +165,7 @@ def get_pickup_estimate(db: Session, ride_id: int):
     location = db.query(DriverLocation).filter(
         DriverLocation.driver_user_id == ride.driver_user_id,
     ).first()
-    if detail is None or location is None or not location.is_online:
+    if detail is None or location is None:
         raise HTTPException(
             status_code=409,
             detail="Localizacao recente do motorista indisponivel.",

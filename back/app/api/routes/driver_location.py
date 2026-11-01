@@ -3,10 +3,12 @@ from sqlalchemy.orm import Session
 
 from app.database.database import get_db
 from app.schemas.driver_location import (
+    DriverEligibilityResponse,
     DriverLocationResponse,
     DriverLocationUpdateRequest,
 )
 from app.services.driver_location_service import (
+    get_driver_availability_eligibility,
     get_driver_location_by_user_id,
     set_driver_online,
     set_driver_offline,
@@ -17,8 +19,24 @@ from app.models.user import User
 
 router = APIRouter(prefix="/driver-locations", tags=["Driver Locations"])
 
+
+@router.get(
+    "/me/eligibility", response_model=DriverEligibilityResponse,
+    summary="Consultar requisitos para ficar online",
+    description="Exige CNH preenchida e não vencida em America/Sao_Paulo e um veículo ativo. "
+                "Retira disponibilidade e redistribui ofertas pendentes se houver impedimento.",
+)
+def get_eligibility(
+    current_driver: User = Depends(get_current_driver), db: Session = Depends(get_db),
+):
+    return get_driver_availability_eligibility(db, current_driver.id)
+
 # Ficar online
-@router.post("/me/online", response_model=DriverLocationResponse,)
+@router.post(
+    "/me/online", response_model=DriverLocationResponse,
+    responses={409: {"description": "Cadastro pendente: detail.code=driver_setup_incomplete; "
+                      "detail.pending_requirements informa CNH ausente/vencida ou veículo ativo ausente."}},
+)
 def set_online(
     payload: DriverLocationUpdateRequest,
     current_driver: User = Depends(get_current_driver),

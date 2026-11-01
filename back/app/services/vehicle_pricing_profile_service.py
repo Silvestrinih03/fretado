@@ -18,6 +18,7 @@ from app.models.vehicle import Vehicle
 from app.models.vehicle_model import VehicleModel
 from app.models.vehicle_type import VehicleType
 from app.schemas.ride import RideQuoteRequest
+from app.services.driver_eligibility_service import valid_license_exists
 
 
 @dataclass(frozen=True)
@@ -161,6 +162,7 @@ class VehiclePricingProfileService:
         ).filter(
             Vehicle.status.is_(True),
             User.user_type_id == int(UserTypeEnum.DRIVER),
+            valid_license_exists(Vehicle.user_id),
             VehicleModel.vehicle_type_id == vehicle_type_id,
             Vehicle.user_id.notin_(busy_drivers),
             DriverLocation.is_online.is_(True),

@@ -7,6 +7,33 @@ void showFretErrorPopup(
   required String message,
   String title = 'Nao foi possivel continuar',
   String buttonLabel = 'Entendi',
+}) => _showFretMessagePopup(
+  context,
+  message: message,
+  title: title,
+  buttonLabel: buttonLabel,
+  informative: false,
+);
+
+void showFretInfoPopup(
+  BuildContext context, {
+  required String message,
+  String title = 'Informação',
+  String buttonLabel = 'Entendi',
+}) => _showFretMessagePopup(
+  context,
+  message: message,
+  title: title,
+  buttonLabel: buttonLabel,
+  informative: true,
+);
+
+void _showFretMessagePopup(
+  BuildContext context, {
+  required String message,
+  required String title,
+  required String buttonLabel,
+  required bool informative,
 }) {
   final String trimmedMessage = message.trim();
 
@@ -16,12 +43,13 @@ void showFretErrorPopup(
     context: context,
     barrierDismissible: true,
     builder: (_) {
-      return _FretErrorDialog(
+      return _FretMessageDialog(
         title: title,
         message: trimmedMessage.isEmpty
             ? 'Ocorreu um erro inesperado.'
             : trimmedMessage,
         buttonLabel: buttonLabel,
+        informative: informative,
       );
     },
   );
@@ -54,15 +82,17 @@ Future<bool> showFretConfirmationPopup(
   return result ?? false;
 }
 
-class _FretErrorDialog extends StatelessWidget {
+class _FretMessageDialog extends StatelessWidget {
   final String title;
   final String message;
   final String buttonLabel;
+  final bool informative;
 
-  const _FretErrorDialog({
+  const _FretMessageDialog({
     required this.title,
     required this.message,
     required this.buttonLabel,
+    required this.informative,
   });
 
   @override
@@ -77,7 +107,11 @@ class _FretErrorDialog extends StatelessWidget {
           decoration: BoxDecoration(
             color: FretColors.white,
             borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: FretColors.destructive100),
+            border: Border.all(
+              color: informative
+                  ? FretColors.attention200
+                  : FretColors.destructive100,
+            ),
             boxShadow: const [
               BoxShadow(
                 color: Color(0x24000000),
@@ -99,12 +133,18 @@ class _FretErrorDialog extends StatelessWidget {
                       width: 42,
                       height: 42,
                       decoration: BoxDecoration(
-                        color: FretColors.destructive050,
+                        color: informative
+                            ? FretColors.attention050
+                            : FretColors.destructive050,
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      child: const Icon(
-                        Icons.error_outline_rounded,
-                        color: FretColors.destructive600,
+                      child: Icon(
+                        informative
+                            ? Icons.info_outline_rounded
+                            : Icons.error_outline_rounded,
+                        color: informative
+                            ? FretColors.attention800
+                            : FretColors.destructive600,
                         size: 26,
                       ),
                     ),

@@ -53,314 +53,201 @@ class _DriverHomeContentState extends State<DriverHomeContent> {
     }
   }
 
-  void _reloadHomeData() {
+  Future<void> _reloadHomeData() async {
     if (!mounted) return;
 
     setState(() {
       _refreshVersion++;
     });
+    await widget.availabilityController.loadInitialStatus();
   }
 
   @override
   Widget build(BuildContext context) {
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(20, 2, 20, 24),
-      children: [
-        RichText(
-          text: TextSpan(
-            text: 'Olá, ',
-            style: const TextStyle(
-              fontSize: 28,
-              height: 1.2,
-              fontWeight: FontWeight.w800,
-              letterSpacing: -0.7,
-              color: FretColors.screenDark,
+    return RefreshIndicator(
+      onRefresh: _reloadHomeData,
+      child: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(20, 2, 20, 24),
+        children: [
+          RichText(
+            text: TextSpan(
+              text: 'Olá, ',
+              style: const TextStyle(
+                fontSize: 28,
+                height: 1.2,
+                fontWeight: FontWeight.w800,
+                letterSpacing: -0.7,
+                color: FretColors.screenDark,
+              ),
+              children: [
+                TextSpan(
+                  text: '${widget.firstName}!',
+                  style: const TextStyle(color: FretColors.screenGold),
+                ),
+              ],
             ),
-            children: [
-              TextSpan(
-                text: '${widget.firstName}!',
-                style: const TextStyle(color: FretColors.screenGold),
-              ),
-            ],
           ),
-        ),
-        const SizedBox(height: 6),
-        const Text(
-          'Fique online e deixe o FreteJá encontrar corridas compatíveis para você.',
-          style: TextStyle(
-            fontSize: 13,
-            height: 1.55,
-            color: FretColors.screenMuted,
+          const SizedBox(height: 6),
+          const Text(
+            'Fique online e deixe o FreteJá encontrar corridas compatíveis para você.',
+            style: TextStyle(
+              fontSize: 13,
+              height: 1.55,
+              color: FretColors.screenMuted,
+            ),
           ),
-        ),
-        const SizedBox(height: 16),
-        _DriverRequiredSetupAlert(
-          userId: widget.userId,
-          refreshVersion: _refreshVersion,
-        ),
-        const SizedBox(height: 12),
-        _DriverAvailabilitySummary(controller: widget.availabilityController),
-        const SizedBox(height: 16),
-        _BalanceCard(
-          userId: widget.userId,
-          refreshVersion: _refreshVersion,
-          onTap: widget.onWalletTap,
-        ),
-        const SizedBox(height: 16),
-        _DriverRideInProgressSection(
-          userId: widget.userId,
-          refreshVersion: _refreshVersion,
-          cancellationRefreshVersion: widget.cancellationRefreshVersion,
-          reassignmentRefreshVersion: widget.reassignmentRefreshVersion,
-          onRideFinished: _reloadHomeData,
-        ),
-        const SizedBox(height: 10),
-        _DriverShortcutCard(
-          icon: Icons.history_rounded,
-          title: 'Histórico de corridas',
-          subtitle: 'Ver corridas anteriores e finalizadas',
-          onTap: widget.onHistoryTap,
-        ),
-        const SizedBox(height: 10),
-        _DriverShortcutCard(
-          icon: Icons.local_shipping_rounded,
-          title: 'Meus veículos',
-          subtitle: 'Gerencie seus veículos cadastrados',
-          onTap: () async {
-            await Navigator.of(context).push(
-              MaterialPageRoute<void>(
-                builder: (_) => MyVehiclesPage(userId: widget.userId),
-              ),
-            );
+          const SizedBox(height: 16),
+          _DriverRequiredSetupAlert(
+            userId: widget.userId,
+            controller: widget.availabilityController,
+            onChanged: _reloadHomeData,
+          ),
+          const SizedBox(height: 12),
+          _DriverAvailabilitySummary(controller: widget.availabilityController),
+          const SizedBox(height: 16),
+          _BalanceCard(
+            userId: widget.userId,
+            refreshVersion: _refreshVersion,
+            onTap: widget.onWalletTap,
+          ),
+          const SizedBox(height: 16),
+          _DriverRideInProgressSection(
+            userId: widget.userId,
+            refreshVersion: _refreshVersion,
+            cancellationRefreshVersion: widget.cancellationRefreshVersion,
+            reassignmentRefreshVersion: widget.reassignmentRefreshVersion,
+            onRideFinished: _reloadHomeData,
+          ),
+          const SizedBox(height: 10),
+          _DriverShortcutCard(
+            icon: Icons.history_rounded,
+            title: 'Histórico de corridas',
+            subtitle: 'Ver corridas anteriores e finalizadas',
+            onTap: widget.onHistoryTap,
+          ),
+          const SizedBox(height: 10),
+          _DriverShortcutCard(
+            icon: Icons.local_shipping_rounded,
+            title: 'Meus veículos',
+            subtitle: 'Gerencie seus veículos cadastrados',
+            onTap: () async {
+              await Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => MyVehiclesPage(userId: widget.userId),
+                ),
+              );
 
-            _reloadHomeData();
-          },
-        ),
-        const SizedBox(height: 10),
-        _DriverShortcutCard(
-          icon: Icons.description_outlined,
-          title: 'Meus documentos',
-          subtitle: 'CNH, CRLV e habilitações',
-          onTap: () async {
-            await Navigator.of(context).push(
-              MaterialPageRoute<void>(
-                builder: (_) => MyDocumentsPage(userId: widget.userId),
-              ),
-            );
+              _reloadHomeData();
+            },
+          ),
+          const SizedBox(height: 10),
+          _DriverShortcutCard(
+            icon: Icons.description_outlined,
+            title: 'Meus documentos',
+            subtitle: 'CNH, CRLV e habilitações',
+            onTap: () async {
+              await Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => MyDocumentsPage(userId: widget.userId),
+                ),
+              );
 
-            _reloadHomeData();
-          },
-        ),
-      ],
+              _reloadHomeData();
+            },
+          ),
+        ],
+      ),
     );
   }
 }
 
-class _DriverRequiredSetupAlert extends StatefulWidget {
+class _DriverRequiredSetupAlert extends StatelessWidget {
   final int userId;
-  final int refreshVersion;
+  final DriverAvailabilityController controller;
+  final Future<void> Function() onChanged;
 
   const _DriverRequiredSetupAlert({
     required this.userId,
-    required this.refreshVersion,
+    required this.controller,
+    required this.onChanged,
   });
 
-  @override
-  State<_DriverRequiredSetupAlert> createState() =>
-      _DriverRequiredSetupAlertState();
-}
-
-class _DriverRequiredSetupAlertState extends State<_DriverRequiredSetupAlert> {
-  late final HttpService _httpService;
-  late Future<_DriverRequiredSetupStatus> _statusFuture;
-
-  @override
-  void initState() {
-    super.initState();
-    _httpService = HttpService();
-    _statusFuture = _loadStatus();
+  Future<void> _open(BuildContext context, Widget page) async {
+    await Navigator.of(
+      context,
+    ).push(MaterialPageRoute<void>(builder: (_) => page));
+    if (context.mounted) await onChanged();
   }
 
   @override
-  void didUpdateWidget(covariant _DriverRequiredSetupAlert oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.userId != widget.userId ||
-        oldWidget.refreshVersion != widget.refreshVersion) {
-      _reload();
-    }
-  }
-
-  @override
-  void dispose() {
-    _httpService.dispose();
-    super.dispose();
-  }
-
-  void _reload() {
-    setState(() {
-      _statusFuture = _loadStatus();
-    });
-  }
-
-  Future<_DriverRequiredSetupStatus> _loadStatus() async {
-    try {
-      final results = await Future.wait<bool>([
-        _loadHasVehicle(),
-        _loadHasDriverLicense(),
-      ]);
-
-      return _DriverRequiredSetupStatus(
-        hasVehicle: results[0],
-        hasDriverLicense: results[1],
-        errorMessage: null,
-      );
-    } on HttpServiceException catch (e) {
-      return _DriverRequiredSetupStatus.error(e.message);
-    } catch (_) {
-      return const _DriverRequiredSetupStatus.error(
-        'Nao foi possivel verificar seus cadastros obrigatorios.',
-      );
-    }
-  }
-
-  Future<bool> _loadHasVehicle() async {
-    final Map<String, dynamic> response;
-    try {
-      response = await _httpService.get(
-        Endpoints.vehiclesByUser(widget.userId),
-      );
-    } on HttpServiceException catch (e) {
-      if (e.statusCode == 404) return false;
-      rethrow;
-    }
-
-    final dynamic data = response['data'];
-    return data is List<dynamic> && data.isNotEmpty;
-  }
-
-  Future<bool> _loadHasDriverLicense() async {
-    try {
-      final response = await _httpService.get(
-        Endpoints.driverDocumentByUserId(widget.userId),
-      );
-
-      final licenseNumber = _readString(response['license_number']);
-      final licenseCategoryId = _readInt(response['license_category_id']) ?? 0;
-
-      return licenseNumber.isNotEmpty && licenseCategoryId > 0;
-    } on HttpServiceException catch (e) {
-      if (e.statusCode == 404) return false;
-      rethrow;
-    }
-  }
-
-  Future<void> _openVehiclesPage() async {
-    await Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (_) => MyVehiclesPage(userId: widget.userId),
-      ),
-    );
-
-    if (mounted) _reload();
-  }
-
-  Future<void> _openDocumentsPage() async {
-    await Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (_) => MyDocumentsPage(userId: widget.userId),
-      ),
-    );
-
-    if (mounted) _reload();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return FutureBuilder<_DriverRequiredSetupStatus>(
-      future: _statusFuture,
-      builder: (context, snapshot) {
-        final isLoading = snapshot.connectionState != ConnectionState.done;
-        final status = snapshot.data;
-
-        if (isLoading) {
-          return const _DriverSetupNoticeCard(
-            icon: Icons.hourglass_top_rounded,
-            title: 'Verificando cadastro',
-            message: 'Conferindo veiculo e CNH.',
-          );
-        }
-
-        if (status == null || status.errorMessage != null) {
-          return _DriverSetupNoticeCard(
-            icon: Icons.error_outline_rounded,
-            title: 'Nao foi possivel verificar',
-            message:
-                status?.errorMessage ??
-                'Tente novamente para validar seus dados obrigatorios.',
-            actions: [
-              TextButton.icon(
-                onPressed: _reload,
-                icon: const Icon(Icons.refresh_rounded, size: 18),
-                label: const Text('Tentar novamente'),
-              ),
-            ],
-          );
-        }
-
-        if (status.isComplete) {
-          return const SizedBox.shrink();
-        }
-
+  Widget build(BuildContext context) => AnimatedBuilder(
+    animation: controller,
+    builder: (context, _) {
+      if (controller.checkingEligibility) {
+        return const _DriverSetupNoticeCard(
+          icon: Icons.hourglass_top_rounded,
+          title: 'Verificando cadastro',
+          message: 'Conferindo veículo ativo e validade da CNH.',
+        );
+      }
+      final eligibility = controller.eligibility;
+      if (controller.eligibilityError != null || eligibility == null) {
         return _DriverSetupNoticeCard(
-          icon: Icons.warning_amber_rounded,
-          title: 'Cadastro obrigatorio pendente',
-          message: status.message,
+          icon: Icons.error_outline_rounded,
+          title: 'Não foi possível verificar',
+          message:
+              controller.eligibilityError ??
+              'Atualize para verificar seu cadastro.',
           actions: [
-            if (!status.hasVehicle)
-              ElevatedButton.icon(
-                onPressed: _openVehiclesPage,
-                icon: const Icon(Icons.local_shipping_rounded, size: 18),
-                label: const Text('Cadastrar veiculo'),
-              ),
-            if (!status.hasDriverLicense)
-              OutlinedButton.icon(
-                onPressed: _openDocumentsPage,
-                icon: const Icon(Icons.badge_outlined, size: 18),
-                label: const Text('Cadastrar CNH'),
-              ),
-            IconButton(
-              tooltip: 'Atualizar',
-              onPressed: _reload,
-              icon: const Icon(Icons.refresh_rounded),
+            TextButton.icon(
+              onPressed: controller.loadInitialStatus,
+              icon: const Icon(Icons.refresh_rounded, size: 18),
+              label: const Text('Tentar novamente'),
             ),
           ],
         );
-      },
-    );
-  }
-
-  String _readString(dynamic value) {
-    if (value is String) return value.trim();
-    return '';
-  }
-
-  int? _readInt(dynamic value) {
-    if (value is int) return value;
-    if (value is String) return int.tryParse(value);
-    return null;
-  }
+      }
+      if (eligibility.canGoOnline) return const SizedBox.shrink();
+      return _DriverSetupNoticeCard(
+        icon: Icons.warning_amber_rounded,
+        title: 'Cadastro obrigatório pendente',
+        actions: [
+          if (eligibility.needsVehicle)
+            ElevatedButton.icon(
+              onPressed: () => _open(context, MyVehiclesPage(userId: userId)),
+              icon: const Icon(Icons.local_shipping_rounded, size: 18),
+              label: const Text('Gerenciar veículos'),
+            ),
+          if (eligibility.needsLicense)
+            OutlinedButton.icon(
+              onPressed: () => _open(context, MyDocumentsPage(userId: userId)),
+              icon: const Icon(Icons.badge_outlined, size: 18),
+              label: Text(
+                eligibility.licenseExpired ? 'Atualizar CNH' : 'Cadastrar CNH',
+              ),
+            ),
+          IconButton(
+            tooltip: 'Atualizar',
+            onPressed: controller.loadInitialStatus,
+            icon: const Icon(Icons.refresh_rounded),
+          ),
+        ],
+      );
+    },
+  );
 }
 
 class _DriverSetupNoticeCard extends StatelessWidget {
   final IconData icon;
   final String title;
-  final String message;
+  final String? message;
   final List<Widget> actions;
 
   const _DriverSetupNoticeCard({
     required this.icon,
     required this.title,
-    required this.message,
+    this.message,
     this.actions = const [],
   });
 
@@ -402,16 +289,18 @@ class _DriverSetupNoticeCard extends StatelessWidget {
                         fontWeight: FontWeight.w800,
                       ),
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      message,
-                      style: const TextStyle(
-                        color: FretColors.neutral700,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        height: 1.25,
+                    if (message != null && message!.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        message!,
+                        style: const TextStyle(
+                          color: FretColors.neutral700,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          height: 1.25,
+                        ),
                       ),
-                    ),
+                    ],
                   ],
                 ),
               ),
@@ -432,37 +321,6 @@ class _DriverSetupNoticeCard extends StatelessWidget {
   }
 }
 
-class _DriverRequiredSetupStatus {
-  final bool hasVehicle;
-  final bool hasDriverLicense;
-  final String? errorMessage;
-
-  const _DriverRequiredSetupStatus({
-    required this.hasVehicle,
-    required this.hasDriverLicense,
-    required this.errorMessage,
-  });
-
-  const _DriverRequiredSetupStatus.error(String message)
-    : hasVehicle = false,
-      hasDriverLicense = false,
-      errorMessage = message;
-
-  bool get isComplete => hasVehicle && hasDriverLicense;
-
-  String get message {
-    if (!hasVehicle && !hasDriverLicense) {
-      return 'Cadastre pelo menos um veiculo e sua CNH para ficar apto a receber corridas.';
-    }
-
-    if (!hasVehicle) {
-      return 'Cadastre pelo menos um veiculo para ficar apto a receber corridas.';
-    }
-
-    return 'Cadastre sua CNH para ficar apto a receber corridas.';
-  }
-}
-
 class _DriverAvailabilitySummary extends StatelessWidget {
   final DriverAvailabilityController controller;
 
@@ -473,7 +331,10 @@ class _DriverAvailabilitySummary extends StatelessWidget {
     return AnimatedBuilder(
       animation: controller,
       builder: (context, _) {
-        final String? statusMessage = controller.message;
+        final String? statusMessage =
+            controller.message == controller.eligibility?.message
+            ? null
+            : controller.message;
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -502,6 +363,43 @@ class _DriverAvailabilityCard extends StatelessWidget {
   final DriverAvailabilityController controller;
 
   const _DriverAvailabilityCard({required this.controller});
+
+  void _showPendingRegistration(BuildContext context) {
+    showFretInfoPopup(
+      context,
+      title: 'Pendências cadastrais',
+      message:
+          'Há pendências no seu cadastro. Regularize seus documentos e veículos para ficar online.',
+    );
+  }
+
+  Future<void> _tryGoOnline(BuildContext context) async {
+    if (controller.eligibilityError != null || controller.eligibility == null) {
+      await controller.loadInitialStatus();
+      if (!context.mounted) return;
+    }
+    if (!controller.canGoOnline) {
+      if (controller.eligibilityError != null ||
+          controller.eligibility == null) {
+        showFretInfoPopup(
+          context,
+          title: 'Verificação do cadastro',
+          message:
+              'Não foi possível verificar seu cadastro. Atualize a tela e tente novamente.',
+        );
+      } else {
+        _showPendingRegistration(context);
+      }
+      return;
+    }
+    await controller.goOnline();
+    if (!context.mounted) return;
+    // The API can detect a new pending requirement after the initial check.
+    if (controller.eligibilityError == null &&
+        controller.eligibility?.canGoOnline == false) {
+      _showPendingRegistration(context);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -568,12 +466,12 @@ class _DriverAvailabilityCard extends StatelessWidget {
                 ? null
                 : (value) {
                     if (value) {
-                      controller.goOnline();
+                      _tryGoOnline(context);
                     } else {
                       controller.goOffline();
                     }
                   },
-            activeColor: FretColors.white,
+            activeThumbColor: FretColors.white,
             activeTrackColor: FretColors.screenGold,
             inactiveThumbColor: FretColors.white,
             inactiveTrackColor: FretColors.neutral300,

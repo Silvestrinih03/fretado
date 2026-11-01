@@ -1,5 +1,6 @@
 from datetime import datetime
 from decimal import Decimal
+from typing import Literal
 
 from pydantic import BaseModel, Field
 
@@ -28,7 +29,16 @@ class DriverLocationUpdateRequest(BaseModel):
     )
 
 
-class DriverLocationResponse(BaseModel):
+class DriverEligibilityResponse(BaseModel):
+    can_go_online: bool
+    pending_requirements: list[Literal[
+        "missing_driver_license", "expired_driver_license", "missing_active_vehicle",
+    ]]
+    has_active_ride: bool
+    message: str
+
+
+class DriverLocationResponse(DriverEligibilityResponse):
     id: int
     driver_user_id: int
     latitude: Decimal

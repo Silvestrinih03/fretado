@@ -10,6 +10,7 @@ from app.models.driver_license_category import DriverLicenseCategory
 from app.models.user import User
 from app.schemas.driver_document import DriverDocumentRequest, DriverDocumentResponse
 from app.schemas.driver_license_category import DriverLicenseCategoryResponse
+from app.services.driver_eligibility_service import enforce_driver_eligibility
 
 router = APIRouter(prefix="/driver_documents", tags=["Driver Documents"])
 
@@ -82,6 +83,7 @@ def create_driver_document(user_id: int, payload: DriverDocumentRequest, db: Ses
 
     try:
         db.add(document)
+        enforce_driver_eligibility(db, user_id)
         db.commit()
         db.refresh(document)
     except IntegrityError:
@@ -137,6 +139,7 @@ def update_driver_document(document_id: int, payload: DriverDocumentRequest, db:
     document.expiration_date = payload.expiration_date
 
     try:
+        enforce_driver_eligibility(db, document.user_id)
         db.commit()
         db.refresh(document)
     except IntegrityError:

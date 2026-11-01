@@ -13,6 +13,7 @@ from app.models.vehicle_model import VehicleModel
 from app.models.vehicle_type import VehicleType
 from app.schemas.vehicle import VehicleCreateRequest
 from app.services.carpedia_service import CarpediaProvider
+from app.services.driver_eligibility_service import enforce_driver_eligibility
 
 
 class VehicleService:
@@ -69,6 +70,7 @@ class VehicleService:
 
         db.add(vehicle)
         try:
+            enforce_driver_eligibility(db, payload.user_id)
             db.commit()
         except IntegrityError:
             db.rollback()

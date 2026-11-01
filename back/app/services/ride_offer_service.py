@@ -21,6 +21,9 @@ from app.models.vehicle_model import VehicleModel
 from app.models.vehicle_type import VehicleType
 from app.services.vehicle_pricing_profile_service import VehiclePricingProfileService
 from app.services.ride_chat_service import ensure_assignment_conversation
+from app.services.driver_eligibility_service import (
+    get_driver_eligibility, require_driver_eligible, valid_license_exists,
+)
 from app.services.push_notification_service import PushEvent, queue_push_notification
 
 
@@ -80,6 +83,7 @@ def find_nearest_candidate(
         .join(DriverLocation, DriverLocation.driver_user_id == Vehicle.user_id)
         .filter(
             User.user_type_id == int(UserTypeEnum.DRIVER),
+            valid_license_exists(Vehicle.user_id),
             Vehicle.status.is_(True),
             VehicleModel.vehicle_type_id == required_vehicle_type_id,
             DriverLocation.is_online.is_(True),
@@ -139,6 +143,8 @@ def find_nearest_candidate(
             .first()
         )
         if driver is None:
+            continue
+        if not get_driver_eligibility(db, driver.id).can_go_online:
             continue
 
         if _driver_has_active_ride(db, driver.id) or _driver_has_pending_offer(db, driver.id):
@@ -220,6 +226,10 @@ def create_offer(
 
 
 def get_offers_by_driver_user_id(db: Session, driver_user_id: int) -> list[RideOffer]:
+    from app.services.driver_eligibility_service import enforce_driver_eligibility
+    if not enforce_driver_eligibility(db, driver_user_id).can_go_online:
+        db.commit()
+        return []
     return (
         db.query(RideOffer)
         .filter(
@@ -237,6 +247,7 @@ def accept_offer(db: Session, offer_id: int, driver_user_id: int) -> RideOffer:
     if offer.status_id == ACCEPTED:
         return offer
     _validate_pending(offer)
+    require_driver_eligible(db, driver_user_id)
     if offer.purpose == "cargo_transfer":
         from app.services.driver_reassignment_service import accept_transfer_offer
         return accept_transfer_offer(db, offer, ride, driver_user_id)
@@ -300,7 +311,9 @@ def accept_offer(db: Session, offer_id: int, driver_user_id: int) -> RideOffer:
     return offer
 
 
-def reject_offer(db: Session, offer_id: int, driver_user_id: int) -> RideOffer:
+def reject_offer(
+    db: Session, offer_id: int, driver_user_id: int, *, commit: bool = True,
+) -> RideOffer:
     offer, ride = _get_offer_and_ride_locked(db, offer_id)
     _validate_owner(offer, driver_user_id)
     if offer.status_id == REJECTED:
@@ -308,7 +321,7 @@ def reject_offer(db: Session, offer_id: int, driver_user_id: int) -> RideOffer:
     _validate_pending(offer)
     if offer.purpose == "cargo_transfer":
         from app.services.driver_reassignment_service import reject_transfer_offer
-        return reject_transfer_offer(db, offer, ride, driver_user_id)
+        return reject_transfer_offer(db, offer, ride, driver_user_id, commit=commit)
     if not _is_waiting(ride):
         raise HTTPException(status_code=409, detail="Corrida nao esta aguardando motorista.")
 
@@ -370,12 +383,32 @@ def reject_offer(db: Session, offer_id: int, driver_user_id: int) -> RideOffer:
                     },
                 )
 
-        db.commit()
-        db.refresh(offer)
+        if commit:
+            db.commit()
+            db.refresh(offer)
+        else:
+            db.flush()
     except Exception:
         db.rollback()
         raise
     return offer
+
+
+def revoke_ineligible_driver_offers(db: Session, driver_user_id: int) -> None:
+    """Redistribute pending offers in the caller's transaction; keep accepted ones."""
+    offer_ids = [row[0] for row in db.query(RideOffer.id).filter(
+        RideOffer.driver_user_id == driver_user_id,
+        RideOffer.status_id == PENDING,
+    ).order_by(RideOffer.id).all()]
+    for offer_id in offer_ids:
+        offer, ride = _get_offer_and_ride_locked(db, offer_id)
+        if offer.status_id != PENDING:
+            continue
+        if offer.purpose != "cargo_transfer" and not _is_waiting(ride):
+            offer.status_id = int(RideOfferStatusEnum.CANCELADA)
+            db.flush()
+            continue
+        reject_offer(db, offer_id, driver_user_id, commit=False)
 
 
 def _get_offer_and_ride_locked(db: Session, offer_id: int) -> tuple[RideOffer, Ride]:
@@ -456,6 +489,8 @@ def _driver_has_active_transfer_commitment(db: Session, driver_user_id: int) -> 
 
 
 def offer_waiting_ride_to_driver(db: Session, driver_user_id: int) -> RideOffer | None:
+    if not get_driver_eligibility(db, driver_user_id).can_go_online:
+        return None
     if (
         _driver_has_active_ride(db, driver_user_id)
         or _driver_has_pending_offer(db, driver_user_id)

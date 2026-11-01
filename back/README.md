@@ -45,6 +45,32 @@ Para o funcionamento correto do back-end, é necessário criar um arquivo `.env`
 
 ## Serviços externos
 
+### Disponibilidade do motorista
+
+O motorista só pode ficar online com CNH preenchida, não vencida, e pelo
+menos um veículo com `status=true`. O vencimento considera o dia em
+`America/Sao_Paulo`, incluindo a própria data de validade. Instale as
+dependências atualizadas em `requirements.txt`, que inclui `tzdata`.
+
+- `GET /driver-locations/me/eligibility` retorna `can_go_online`,
+  `pending_requirements`, `has_active_ride` e `message`, autenticando o motorista
+  pelo Bearer token. Funciona antes do primeiro registro de localização.
+- As respostas de localização incluem esses mesmos campos. Ao detectar uma
+  pendência, a API retira a disponibilidade e redistribui ofertas pendentes.
+- `POST /driver-locations/me/online` retorna 409 com
+  `detail.code=driver_setup_incomplete` e os campos acima quando houver pendência.
+  Os códigos são `missing_driver_license`, `expired_driver_license` e
+  `missing_active_vehicle`.
+- Regularizar o cadastro libera a ativação manual; não coloca o motorista
+  online automaticamente.
+
+Corridas já aceitas, incluindo transferências aguardando recebimento da carga,
+continuam permitindo localização, acompanhamento e conclusão enquanto o
+motorista está offline. `has_active_ride` mantém o envio periódico de GPS
+independentemente da disponibilidade para novas ofertas. A home compartilha
+a verificação entre o aviso e o botão e atualiza ao retornar do cadastro,
+retomar o aplicativo, voltar à aba Início ou atualizar a lista.
+
 ### Fotos de perfil — Supabase Storage
 
 1. No banco existente, aplique `sql/migrations/034_add_user_profile_avatar.sql`

@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 from app.enums.ride_offer_status import RideOfferStatusEnum
 from app.enums.ride_status_enum import RideStatusEnum
 from app.models.driver_location import DriverLocation
+from app.services.driver_eligibility_service import get_driver_eligibility, require_driver_eligible
 from app.models.ride import Ride
 from app.models.ride_cancellation import RideCancellation
 from app.models.ride_detail import RideDetail
@@ -16,6 +17,7 @@ from app.models.ride_driver_reassignment import RideDriverReassignment
 from app.models.ride_driver_reassignment_event import RideDriverReassignmentEvent
 from app.models.ride_offer import RideOffer
 from app.models.user import User
+from app.models.vehicle import Vehicle
 from app.schemas.driver_reassignment import DriverReassignmentCreate, DriverReassignmentSummary
 from app.services.geocoding_service import MapboxGeocodingService
 from app.services.ride_offer_service import create_offer, find_nearest_candidate
@@ -243,6 +245,7 @@ def offer_pending_reassignment(db: Session) -> RideOffer | None:
 
 
 def accept_transfer_offer(db: Session, offer: RideOffer, ride: Ride, driver_user_id: int) -> RideOffer:
+    require_driver_eligible(db, driver_user_id)
     reassignment = _locked_reassignment(db, offer.reassignment_id)
     if reassignment.status != "awaiting_replacement" or ride.status_id != int(RideStatusEnum.A_CAMINHO_ENTREGA):
         raise HTTPException(status_code=409, detail="A transferencia nao esta mais disponivel.")
@@ -250,6 +253,13 @@ def accept_transfer_offer(db: Session, offer: RideOffer, ride: Ride, driver_user
         raise HTTPException(status_code=409, detail="O motorista responsavel pela corrida mudou.")
     if offer.driver_user_id != driver_user_id or offer.status_id != PENDING:
         raise HTTPException(status_code=409, detail="A oferta de transferencia nao esta pendente.")
+
+    if db.query(Vehicle.id).filter(
+        Vehicle.id == offer.vehicle_id,
+        Vehicle.user_id == driver_user_id,
+        Vehicle.status.is_(True),
+    ).first() is None:
+        raise HTTPException(status_code=409, detail="O veículo desta oferta não está mais ativo.")
 
     try:
         offer.status_id = ACCEPTED
@@ -271,7 +281,9 @@ def accept_transfer_offer(db: Session, offer: RideOffer, ride: Ride, driver_user
     return offer
 
 
-def reject_transfer_offer(db: Session, offer: RideOffer, ride: Ride, driver_user_id: int) -> RideOffer:
+def reject_transfer_offer(
+    db: Session, offer: RideOffer, ride: Ride, driver_user_id: int, *, commit: bool = True,
+) -> RideOffer:
     reassignment = _locked_reassignment(db, offer.reassignment_id)
     if offer.driver_user_id != driver_user_id or offer.status_id != PENDING:
         raise HTTPException(status_code=409, detail="A oferta de transferencia nao esta pendente.")
@@ -286,9 +298,13 @@ def reject_transfer_offer(db: Session, offer: RideOffer, ride: Ride, driver_user
             "replacement_offer_rejected",
             {"offer_id": offer.id},
         )
+        db.flush()
         _search_replacement(db, ride, reassignment)
-        db.commit()
-        db.refresh(offer)
+        if commit:
+            db.commit()
+            db.refresh(offer)
+        else:
+            db.flush()
     except Exception:
         db.rollback()
         raise
@@ -390,8 +406,10 @@ def _request_delivery_transfer(db, ride, offer, detail, driver, payload):
     now = _now()
     location = db.query(DriverLocation).filter(DriverLocation.driver_user_id == driver.id).first()
     if location is None:
-        location = DriverLocation(driver_user_id=driver.id, is_online=True)
+        location = DriverLocation(driver_user_id=driver.id, is_online=False)
         db.add(location)
+    if not get_driver_eligibility(db, driver.id).can_go_online:
+        location.is_online = False
     location.latitude = payload.latitude
     location.longitude = payload.longitude
     location.accuracy = payload.accuracy

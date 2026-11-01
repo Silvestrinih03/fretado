@@ -321,7 +321,6 @@ def prepare_driver_quote(
         db.query(DriverLocation)
         .filter(
             DriverLocation.driver_user_id == driver.id,
-            DriverLocation.is_online.is_(True),
             DriverLocation.last_seen_at >= fresh_after,
             DriverLocation.location_recorded_at >= fresh_after,
         )

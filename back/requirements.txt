@@ -2,6 +2,7 @@ fastapi
 uvicorn[standard]
 SQLAlchemy
 python-dotenv
+tzdata>=2025.2
 bcrypt
 requests
 email-validator

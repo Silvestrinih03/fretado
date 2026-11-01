@@ -6,6 +6,7 @@ from app.models.vehicle import Vehicle
 from app.models.vehicle_model import VehicleModel
 from app.schemas.vehicle import UpdateVehicleRequest, VehicleCreateRequest, VehicleResponse, VehicleListResponse
 from app.services.vehicle_service import VehicleService
+from app.services.driver_eligibility_service import enforce_driver_eligibility
 
 router = APIRouter(prefix="/vehicles", tags=["Vehicles"])
 
@@ -68,6 +69,7 @@ def update_vehicle_by_id(
     for field_name, value in update_data.items():
         setattr(vehicle, field_name, value)
 
+    enforce_driver_eligibility(db, vehicle.user_id)
     db.commit()
     db.refresh(vehicle)
 
@@ -83,7 +85,9 @@ def delete_vehicle_by_id(vehicle_id: int, db: Session = Depends(get_db)):
             detail="Vehicle not found."
         )
 
+    driver_user_id = vehicle.user_id
     db.delete(vehicle)
+    enforce_driver_eligibility(db, driver_user_id)
     db.commit()
 
     return Response(status_code=status.HTTP_204_NO_CONTENT)

@@ -57,6 +57,7 @@ class _DriverHomeShellState extends State<DriverHomeShell>
   }
 
   void _selectTab(int index) {
+    if (index == 0) widget.availabilityController.loadInitialStatus();
     if (_selectedIndex == index) {
       if (index == 0 || index == 1 || index == 2) {
         setState(() {

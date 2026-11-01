@@ -85,7 +85,13 @@ Rotas autenticadas com Bearer token de motorista:
 - `GET /vehicle-catalog/versions/page?brand_id=...&model_id=...&page=1`
 
 As respostas contêm `items`, `page`, `total_pages`, `total_items` e `has_more`.
-O app oferece **Carregar mais opções**, preserva os itens se uma página
+Os seletores de marca, modelo e versão apresentam uma lista contínua com busca
+digitável. Ao rolar perto do fim, o app acrescenta a próxima página dentro do
+próprio seletor, sem botão para carregar opções e sem perder o texto da busca.
+A busca ignora maiúsculas e acentos e filtra as opções já carregadas; se não
+houver correspondências e ainda existirem páginas, a lista orienta continuar
+rolando. Não há carregamento de todo o catálogo ao abrir a tela nem chamada por
+tecla digitada. O app preserva os itens se uma página
 seguinte falhar e permite repetir somente a página que falhou. Trocar marca
 ou modelo limpa os campos dependentes e ignora respostas antigas.
 As rotas antigas sem `/page` mantêm respostas em lista e aceitam `page`;

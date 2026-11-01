@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../app/design_system/design_system.dart';
-import '../../data/models/vehicle_catalog_option_model.dart';
+import 'vehicle_catalog_select.dart';
 import '../stores/register_vehicle_store.dart';
 
 class FillVehicleBrandData extends StatelessWidget {
@@ -78,51 +78,12 @@ class FillVehicleBrandData extends StatelessWidget {
     String? value,
     bool enabled,
     ValueChanged<String?> onChanged,
-  ) {
-    final loading = store.isLoading(level);
-    final error = store.error(level);
-    final options = store.options(level);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        DropdownButtonFormField<String>(
-          key: ValueKey('$level:$value'),
-          initialValue: value,
-          isExpanded: true,
-          decoration: InputDecoration(labelText: label),
-          items: options
-              .map(
-                (VehicleCatalogOptionModel item) => DropdownMenuItem(
-                  value: item.value,
-                  child: Text(item.label, overflow: TextOverflow.ellipsis),
-                ),
-              )
-              .toList(),
-          onChanged: enabled && !loading && options.isNotEmpty
-              ? onChanged
-              : null,
-          validator: (value) =>
-              value == null ? 'Selecione ${label.toLowerCase()}.' : null,
-        ),
-        if (loading) ...[
-          const SizedBox(height: 8),
-          const LinearProgressIndicator(minHeight: 3),
-        ],
-        if (error != null) ...[
-          const SizedBox(height: 8),
-          Text(error),
-          TextButton(
-            onPressed: loading ? null : () => store.retry(level),
-            child: const Text('Tentar novamente'),
-          ),
-        ],
-        if (error == null && store.hasMore(level))
-          TextButton.icon(
-            onPressed: loading ? null : () => store.loadMore(level),
-            icon: const Icon(Icons.expand_more_rounded),
-            label: Text(loading ? 'Carregando...' : 'Carregar mais opções'),
-          ),
-      ],
-    );
-  }
+  ) => VehicleCatalogSelect(
+    store: store,
+    label: label,
+    level: level,
+    value: value,
+    enabled: enabled,
+    onChanged: onChanged,
+  );
 }

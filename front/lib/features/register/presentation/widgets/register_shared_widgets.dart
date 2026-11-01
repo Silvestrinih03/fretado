@@ -12,7 +12,7 @@ class RegisterSectionTitle extends StatelessWidget {
     super.key,
     required this.title,
     required this.subtitle,
-    this.titleColor = FretColors.screenDark,
+    this.titleColor = FretColors.neutral900,
   });
 
   @override
@@ -23,20 +23,20 @@ class RegisterSectionTitle extends StatelessWidget {
         Text(
           title,
           style: TextStyle(
-            fontSize: 25,
+            fontSize: 28,
             height: 1.16,
-            fontWeight: FontWeight.w800,
+            fontWeight: FontWeight.w700,
             color: titleColor,
-            letterSpacing: .3,
+            letterSpacing: 0,
           ),
         ),
         const SizedBox(height: 8),
         Text(
           subtitle,
           style: const TextStyle(
-            fontSize: 13,
-            height: 1.5,
-            color: FretColors.screenMuted,
+            fontSize: 15,
+            height: 1.35,
+            color: FretColors.neutral700,
           ),
         ),
       ],
@@ -54,9 +54,9 @@ class RegisterInputLabel extends StatelessWidget {
     return Text(
       text,
       style: const TextStyle(
-        fontSize: 11,
+        fontSize: 12,
         fontWeight: FontWeight.w700,
-        color: FretColors.screenDark,
+        color: FretColors.neutral700,
         letterSpacing: 0,
       ),
     );
@@ -104,44 +104,33 @@ class RegisterInputField extends StatelessWidget {
       onFieldSubmitted: onFieldSubmitted,
       textCapitalization: textCapitalization,
       style: const TextStyle(
-        fontSize: 13,
-        color: FretColors.screenDark,
+        fontSize: 15,
+        color: FretColors.neutral700,
         fontWeight: FontWeight.w500,
       ),
       decoration: InputDecoration(
         hintText: hintText,
         hintStyle: const TextStyle(
-          fontSize: 13,
-          color: FretColors.screenMuted,
+          fontSize: 15,
+          color: FretColors.neutral500,
           fontWeight: FontWeight.w500,
         ),
         filled: true,
-        fillColor: FretColors.white,
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 14,
-          vertical: 15,
-        ),
+        fillColor: FretColors.neutral200,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(13),
-          borderSide: const BorderSide(color: FretColors.screenBorder),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(13),
-          borderSide: const BorderSide(color: FretColors.screenBorder),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(13),
-          borderSide: const BorderSide(color: FretColors.screenGold),
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide.none,
         ),
         errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(13),
+          borderRadius: BorderRadius.circular(12),
           borderSide: const BorderSide(
             color: FretColors.destructive500,
             width: 1.2,
           ),
         ),
         focusedErrorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(13),
+          borderRadius: BorderRadius.circular(12),
           borderSide: const BorderSide(
             color: FretColors.destructive600,
             width: 1.4,
@@ -172,7 +161,7 @@ class RegisterInfoBanner extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
         color: FretColors.neutral100,
-        borderRadius: BorderRadius.circular(13),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(color: FretColors.neutral200),
       ),
       child: Row(
@@ -189,7 +178,7 @@ class RegisterInfoBanner extends StatelessWidget {
               style: const TextStyle(
                 fontSize: 14,
                 height: 1.32,
-                color: FretColors.screenDark,
+                color: FretColors.neutral700,
                 fontWeight: FontWeight.w500,
               ),
             ),

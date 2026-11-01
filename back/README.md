@@ -45,6 +45,92 @@ Para o funcionamento correto do back-end, é necessário criar um arquivo `.env`
 
 ## Serviços externos
 
+### Carpédia — catálogo v2
+
+O cadastro mantém a seleção de tipo, marca, modelo, versão e ano, seguida
+de cor e placa. A integração usa o catálogo da
+[API v2 da Carpédia](https://www.carpedia.com.br/desenvolvedores/v2).
+As listas exigem acesso PJ ao catálogo na conta vinculada à chave; ter saldo
+grátis ou pago, por si só, não concede essa permissão. Isso não significa
+necessariamente contratar um plano Enterprise.
+
+Configure somente no backend e reinicie a API:
+
+```dotenv
+CARPEDIA_BASE_URL=https://www.carpedia.com.br/api/v2
+CARPEDIA_API_KEY=sua_chave_cpk
+CARPEDIA_TIMEOUT_SECONDS=10
+CARPEDIA_CACHE_TTL_SECONDS=3600
+```
+
+Para liberar o acesso, confira no portal da Carpédia a aprovação PJ e a
+habilitação do catálogo na conta da chave configurada. `GET /api/v2/produtos`
+é uma leitura sem cobrança: `catalogo: null` significa que a chave ainda não
+tem esse acesso. Quando habilitado, o catálogo informa as tarifas em
+`precosPorEntidadeMilesimos`. Se o painel mostrar a liberação e a API continuar
+retornando `catalogo: null`, confirme a conta/chave com o suporte da Carpédia.
+Não é necessário comprar mais créditos para corrigir uma falta de permissão.
+A habilitação é realizada no provedor, não por uma alteração no código do app.
+
+O backend verifica a autorização em `/produtos`, com cache de 15 segundos.
+Não consulta `/conta/consumo` para impedir operações com base apenas em
+`saldo_milesimos`: esse campo legado não é usado como prova de ausência de
+saldo grátis. A Carpédia decide o saldo aplicável à operação e informa HTTP 402
+quando ele for insuficiente.
+
+Rotas autenticadas com Bearer token de motorista:
+
+- `GET /vehicle-catalog/brands/page?page=1`
+- `GET /vehicle-catalog/models/page?brand_id=...&page=1`
+- `GET /vehicle-catalog/versions/page?brand_id=...&model_id=...&page=1`
+
+As respostas contêm `items`, `page`, `total_pages`, `total_items` e `has_more`.
+Os seletores de marca, modelo e versão apresentam uma lista contínua com busca
+digitável. Ao rolar perto do fim, o app acrescenta a próxima página dentro do
+próprio seletor, sem botão para carregar opções e sem perder o texto da busca.
+A busca ignora maiúsculas e acentos e filtra as opções já carregadas; se não
+houver correspondências e ainda existirem páginas, a lista orienta continuar
+rolando. Não há carregamento de todo o catálogo ao abrir a tela nem chamada por
+tecla digitada. O app preserva os itens se uma página
+seguinte falhar e permite repetir somente a página que falhou. Trocar marca
+ou modelo limpa os campos dependentes e ignora respostas antigas.
+As rotas antigas sem `/page` mantêm respostas em lista e aceitam `page`;
+o padrão é a primeira página. `search` filtra os nomes da página atual.
+
+As consultas usam `POST /catalogo/pesquisar`, com `entidade`, `filtros` e
+paginação de até 24 itens. A ficha usa `entidade=detalhes`, `fipeId` e ano,
+sem paginação. `POST /vehicles` recebe `user_id` do próprio motorista,
+`vehicle_type_id`, `version_id`, `year`, `plate`, `color` opcional e `status`.
+O ID de versão é o inteiro não zero retornado pelo catálogo, diferente do
+código FIPE textual. Modelos existentes são reutilizados; o mapeamento de
+combustível, consumo e estimativas da categoria permanece.
+O fluxo por placa e os tokens de consulta foram removidos. Não há migration.
+
+Cada operação envia UUID em `Idempotency-Key`. O cache guarda até 512
+operações por processo e separa contas/ambientes. Não há varredura automática
+de páginas nem repetição automática de POST. Após timeout ou resultado
+ambíguo, o UUID é preservado durante a validade da entrada. Expirar/remover
+entradas ou reiniciar workers perde essa proteção; não há deduplicação
+persistente entre workers. Uma nova consulta fora do cache pode consumir saldo.
+
+Falhas retornam `detail.code` e `detail.message` em português:
+
+- `vehicle_catalog_access_denied`: catálogo não habilitado para a conta.
+- `vehicle_catalog_credentials_invalid`: chave recusada pela Carpédia.
+- `vehicle_catalog_insufficient_balance`: saldo insuficiente informado pelo provedor.
+- `vehicle_catalog_unavailable` / `vehicle_catalog_timeout`: conexão ou demora.
+- `vehicle_catalog_upstream_error` / `vehicle_catalog_invalid_response`: falha ou resposta inesperada do provedor.
+
+Esses erros do provedor não encerram a sessão do motorista. Logs registram
+operação, status HTTP e código seguro, sem chave ou corpo da resposta.
+O OpenAPI em `/docs` detalha os campos e exemplos dos erros.
+
+Após liberar o catálogo e reiniciar a API, confira manualmente marca → modelo →
+versão → ano → cor/placa → cadastro, incluindo a próxima página e uma nova
+consulta dos veículos cadastrados. A conferência com o catálogo real depende
+da autorização da conta e pode consumir créditos. Não foram executados testes
+automatizados; a verificação local usa sintaxe Python e análise estática Flutter.
+
 ### Disponibilidade do motorista
 
 O motorista só pode ficar online com CNH preenchida, não vencida, e pelo

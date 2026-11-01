@@ -19,7 +19,6 @@ class RegisterStepTwo extends StatelessWidget {
   final VoidCallback onTogglePassword;
   final VoidCallback onToggleConfirmPassword;
   final VoidCallback onContinue;
-  final String roleLabel;
 
   const RegisterStepTwo({
     super.key,
@@ -34,7 +33,6 @@ class RegisterStepTwo extends StatelessWidget {
     required this.onTogglePassword,
     required this.onToggleConfirmPassword,
     required this.onContinue,
-    this.roleLabel = 'Cliente',
   });
 
   @override
@@ -45,115 +43,93 @@ class RegisterStepTwo extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Align(
-            alignment: Alignment.centerLeft,
-            child: Container(
-              margin: const EdgeInsets.only(bottom: 12),
-              padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
-              decoration: BoxDecoration(
-                color: FretColors.screenGold.withValues(alpha: .11),
-                borderRadius: BorderRadius.circular(99),
-              ),
-              child: Text(
-                'Cadastro de ${roleLabel.toLowerCase()}',
-                style: const TextStyle(
-                  fontSize: 10,
-                  fontWeight: FontWeight.w700,
-                  color: Color(0xFF806515),
-                ),
-              ),
-            ),
+        const RegisterSectionTitle(
+          title: 'Insira seus dados',
+          subtitle: 'Preencha as informações abaixo para continuar',
+        ),
+        const SizedBox(height: 26),
+        const RegisterInputLabel(text: 'CPF'),
+        const SizedBox(height: 6),
+        RegisterInputField(
+          controller: cpfController,
+          hintText: 'Digite seu CPF sem pontuação',
+          keyboardType: TextInputType.number,
+          textInputAction: TextInputAction.next,
+          inputFormatters: const [_CpfInputFormatter()],
+          validator: _validateCpf,
+        ),
+        const SizedBox(height: 18),
+        const RegisterInputLabel(text: 'EMAIL'),
+        const SizedBox(height: 6),
+        RegisterInputField(
+          controller: emailController,
+          hintText: 'Digite seu email',
+          keyboardType: TextInputType.emailAddress,
+          textInputAction: TextInputAction.next,
+          validator: _validateEmail,
+        ),
+        const SizedBox(height: 18),
+        Container(
+          padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
+          decoration: BoxDecoration(
+            color: FretColors.neutral100,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: FretColors.neutral200),
           ),
-          const RegisterSectionTitle(
-            title: 'Insira seus dados',
-            subtitle: 'Preencha as informações de acesso para continuar.',
-          ),
-          const SizedBox(height: 22),
-          const RegisterInputLabel(text: 'CPF'),
-          const SizedBox(height: 6),
-          RegisterInputField(
-            controller: cpfController,
-            hintText: 'Digite seu CPF sem pontuação',
-            keyboardType: TextInputType.number,
-            textInputAction: TextInputAction.next,
-            inputFormatters: const [_CpfInputFormatter()],
-            validator: _validateCpf,
-          ),
-          const SizedBox(height: 14),
-          const RegisterInputLabel(text: 'EMAIL'),
-          const SizedBox(height: 6),
-          RegisterInputField(
-            controller: emailController,
-            hintText: 'Digite seu email',
-            keyboardType: TextInputType.emailAddress,
-            textInputAction: TextInputAction.next,
-            validator: _validateEmail,
-          ),
-          const SizedBox(height: 14),
-          Container(
-            padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
-            decoration: BoxDecoration(
-              color: FretColors.white.withValues(alpha: .42),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: FretColors.screenBorder),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                const RegisterInputLabel(text: 'SENHA'),
-                const SizedBox(height: 6),
-                RegisterInputField(
-                  controller: passwordController,
-                  hintText: 'Digite uma senha',
-                  obscureText: obscurePassword,
-                  textInputAction: TextInputAction.next,
-                  validator: _validatePassword,
-                  suffixIcon: IconButton(
-                    onPressed: onTogglePassword,
-                    icon: Icon(
-                      obscurePassword
-                          ? Icons.visibility_outlined
-                          : Icons.visibility_off_outlined,
-                      color: FretColors.screenMuted,
-                    ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const RegisterInputLabel(text: 'SENHA'),
+              const SizedBox(height: 6),
+              RegisterInputField(
+                controller: passwordController,
+                hintText: 'Digite uma senha',
+                obscureText: obscurePassword,
+                textInputAction: TextInputAction.next,
+                validator: _validatePassword,
+                suffixIcon: IconButton(
+                  onPressed: onTogglePassword,
+                  icon: Icon(
+                    obscurePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                    color: FretColors.neutral500,
                   ),
                 ),
-                const SizedBox(height: 14),
-                const RegisterInputLabel(text: 'CONFIRMAÇÃO DE SENHA'),
-                const SizedBox(height: 6),
-                RegisterInputField(
-                  controller: confirmPasswordController,
-                  hintText: 'Digite novamente sua senha',
-                  obscureText: obscureConfirmPassword,
-                  textInputAction: TextInputAction.done,
-                  onFieldSubmitted: (_) => onContinue(),
-                  validator: (value) =>
-                      _validateConfirmPassword(value, passwordController.text),
-                  suffixIcon: IconButton(
-                    onPressed: onToggleConfirmPassword,
-                    icon: Icon(
-                      obscureConfirmPassword
-                          ? Icons.visibility_outlined
-                          : Icons.visibility_off_outlined,
-                      color: FretColors.screenMuted,
-                    ),
+              ),
+              const SizedBox(height: 14),
+              const RegisterInputLabel(text: 'CONFIRMAÇÃO DE SENHA'),
+              const SizedBox(height: 6),
+              RegisterInputField(
+                controller: confirmPasswordController,
+                hintText: 'Digite novamente sua senha',
+                obscureText: obscureConfirmPassword,
+                textInputAction: TextInputAction.done,
+                onFieldSubmitted: (_) => onContinue(),
+                validator: (value) => _validateConfirmPassword(
+                  value,
+                  passwordController.text,
+                ),
+                suffixIcon: IconButton(
+                  onPressed: onToggleConfirmPassword,
+                  icon: Icon(
+                    obscureConfirmPassword ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                    color: FretColors.neutral500,
                   ),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
-          const SizedBox(height: 20),
-          FretScreenButton(
-            label: 'Próximo',
-            icon: Icons.arrow_forward_rounded,
-            onPressed: onContinue,
-          ),
-          const SizedBox(height: 14),
-          // const RegisterInfoBanner(
-          //   icon: Icons.lock,
-          //   iconColor: FretColors.secondaryVariation500,
-          //   text: 'Seus dados estão protegidos sob nossa infraestrutura de segurança bancária e criptografia de ponta a ponta.',
-          // ),
+        ),
+        const SizedBox(height: 20),
+        FretPrimaryGradientButton(
+          label: 'Próximo',
+          onPressed: onContinue,
+        ),
+        const SizedBox(height: 18),
+        // const RegisterInfoBanner(
+        //   icon: Icons.lock,
+        //   iconColor: FretColors.secondaryVariation500,
+        //   text: 'Seus dados estão protegidos sob nossa infraestrutura de segurança bancária e criptografia de ponta a ponta.',
+        // ),
         ],
       ),
     );

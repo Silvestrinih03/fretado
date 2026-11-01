@@ -85,35 +85,37 @@ class _RegisterVehiclePageState extends State<RegisterVehiclePage> {
   }
 
   @override
-  Widget build(BuildContext context) => FretScreenTheme(
-    child: AnimatedBuilder(
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
       animation: _store,
       builder: (context, _) => PopScope(
         canPop: !_store.isRegisteringVehicle,
         child: Scaffold(
-          backgroundColor: FretColors.screenBackground,
-          appBar: const FretSecondaryAppBar(title: 'Adicionar veículo'),
+          backgroundColor: FretColors.appBackground,
+          appBar: AppBar(
+            backgroundColor: FretColors.appBackground,
+            foregroundColor: FretColors.textPrimary,
+            title: const Text('Adicionar veículo'),
+          ),
           body: SafeArea(
             child: Form(
               key: _formKey,
               child: ListView(
-                padding: const EdgeInsets.fromLTRB(20, 6, 20, 24),
+                padding: const EdgeInsets.all(16),
                 children: [
                   const Text(
-                    'Informe os dados do veículo. As informações técnicas serão identificadas automaticamente.',
+                    'Selecione os dados do veículo. As informações técnicas serão identificadas automaticamente.',
                     style: TextStyle(
-                      fontSize: 12.5,
-                      color: FretColors.screenMuted,
-                      height: 1.55,
+                      color: FretColors.textSecondary,
+                      height: 1.4,
                     ),
                   ),
-                  const SizedBox(height: 18),
+                  const SizedBox(height: 24),
                   AbsorbPointer(
                     absorbing: _store.isRegisteringVehicle,
                     child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        FretScreenCard(
+                        FretSurfaceCard(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
@@ -135,31 +137,27 @@ class _RegisterVehiclePageState extends State<RegisterVehiclePage> {
                             ],
                           ),
                         ),
-                        const SizedBox(height: 12),
-                        FillVehicleBrandData(
-                          store: _store,
-                          children: [
-                            FillVehicleDetailedData(
-                              colorController: _colorController,
-                              showCard: false,
-                              enabled: _store.selectedYear != null,
-                            ),
-                            FillVehiclePlate(
-                              controller: _plateController,
-                              showCard: false,
-                              enabled: _store.selectedYear != null,
-                            ),
-                          ],
+                        const SizedBox(height: 16),
+                        FillVehicleBrandData(store: _store),
+                        const SizedBox(height: 16),
+                        FillVehicleDetailedData(
+                          colorController: _colorController,
+                          enabled: _store.selectedYear != null,
+                        ),
+                        const SizedBox(height: 16),
+                        FillVehiclePlate(
+                          controller: _plateController,
+                          enabled: _store.selectedYear != null,
                         ),
                       ],
                     ),
                   ),
-                  const SizedBox(height: 14),
-                  FretScreenButton(
+                  const SizedBox(height: 24),
+                  FretPrimaryButton(
                     label: 'Cadastrar veículo',
-                    gold: true,
                     loading: _store.isRegisteringVehicle,
                     onPressed: _save,
+                    trailingIcon: null,
                   ),
                 ],
               ),
@@ -167,6 +165,6 @@ class _RegisterVehiclePageState extends State<RegisterVehiclePage> {
           ),
         ),
       ),
-    ),
-  );
+    );
+  }
 }

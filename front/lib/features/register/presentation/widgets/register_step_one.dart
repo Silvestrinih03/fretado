@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../../../../app/design_system/design_system.dart';
 import '../../../../core/enums/register_account_type.dart';
 import 'register_shared_widgets.dart';
@@ -6,6 +7,7 @@ import 'register_shared_widgets.dart';
 class RegisterStepOne extends StatelessWidget {
   final UserTypeEnum? selectedType;
   final ValueChanged<UserTypeEnum> onTypeSelected;
+
   const RegisterStepOne({
     super.key,
     required this.selectedType,
@@ -13,117 +15,110 @@ class RegisterStepOne extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) => Column(
-    crossAxisAlignment: CrossAxisAlignment.stretch,
-    children: [
-      const RegisterSectionTitle(
-        title: 'Você é motorista ou cliente?',
-        subtitle: 'Escolha como você vai usar o app',
-      ),
-      const SizedBox(height: 28),
-      Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-            child: _AccountTypeOptionCard(
-              icon: Icons.local_shipping_outlined,
-              title: 'MOTORISTA',
-              description: 'Quero realizar fretes',
-              selected: selectedType == UserTypeEnum.driver,
-              onTap: () => onTypeSelected(UserTypeEnum.driver),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: _AccountTypeOptionCard(
-              icon: Icons.person_outline_rounded,
-              title: 'CLIENTE',
-              description: 'Quero solicitar fretes',
-              selected: selectedType == UserTypeEnum.client,
-              onTap: () => onTypeSelected(UserTypeEnum.client),
-            ),
-          ),
-        ],
-      ),
-      const SizedBox(height: 24),
-      Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        decoration: BoxDecoration(
-          color: FretColors.screenGold.withValues(alpha: .08),
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(
-            color: FretColors.screenGold.withValues(alpha: .18),
-          ),
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const SizedBox(height: 8),
+        const RegisterSectionTitle(
+          title: 'Você é \nmotorista ou cliente?',
+          subtitle: 'Escolha como você vai usar o app',
         ),
-        child: const Text(
-          'Você poderá acessar recursos específicos do seu perfil após concluir o cadastro.',
-          style: TextStyle(fontSize: 11, height: 1.5, color: Color(0xFF806515)),
+        const SizedBox(height: 28),
+        Row(
+          children: [
+            Expanded(
+              child: _AccountTypeOptionCard(
+                imageIcon: Icons.local_shipping_outlined,
+                title: 'Sou',
+                subtitle: 'MOTORISTA',
+                selected: selectedType == UserTypeEnum.driver,
+                onTap: () => onTypeSelected(UserTypeEnum.driver),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _AccountTypeOptionCard(
+                imageIcon: Icons.person_outline,
+                title: 'Sou',
+                subtitle: 'CLIENTE',
+                selected: selectedType == UserTypeEnum.client,
+                onTap: () => onTypeSelected(UserTypeEnum.client),
+              ),
+            ),
+          ],
         ),
-      ),
-    ],
-  );
+        const SizedBox(height: 28),
+        // const RegisterInfoBanner(
+        //   icon: Icons.info,
+        //   text: 'Você poderá alterar o tipo de perfil mais tarde nas configurações.',
+        // ),
+      ],
+    );
+  }
 }
 
 class _AccountTypeOptionCard extends StatelessWidget {
-  final IconData icon;
+  final IconData imageIcon;
   final String title;
-  final String description;
+  final String subtitle;
   final bool selected;
   final VoidCallback onTap;
+
   const _AccountTypeOptionCard({
-    required this.icon,
+    required this.imageIcon,
     required this.title,
-    required this.description,
+    required this.subtitle,
     required this.selected,
     required this.onTap,
   });
 
   @override
-  Widget build(BuildContext context) => Material(
-    color: FretColors.white,
-    shape: RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(18),
-      side: BorderSide(
-        color: selected ? FretColors.screenGold : FretColors.screenBorder,
-      ),
-    ),
-    clipBehavior: Clip.antiAlias,
-    child: InkWell(
+  Widget build(BuildContext context) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(16),
       onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(10, 22, 10, 18),
-        child: Column(
-          children: [
-            FretIconBox(
-              icon: icon,
-              size: 62,
-              radius: 18,
-              iconSize: 26,
-              backgroundColor: FretColors.screenDark,
-              iconColor: FretColors.screenGold,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              title,
-              style: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w800,
-                color: FretColors.screenDark,
+      child: Column(
+        children: [
+          Container(
+            height: 112,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(14),
+              color: FretColors.neutral300,
+              border: Border.all(
+                color: selected ? FretColors.loginFooterLink : FretColors.neutral200,
+                width: selected ? 2 : 1,
               ),
             ),
-            const SizedBox(height: 5),
-            Text(
-              description,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 10.5,
-                height: 1.4,
-                color: FretColors.screenMuted,
+            child: Center(
+              child: Icon(
+                imageIcon,
+                size: 38,
+                color: FretColors.neutral700,
               ),
             ),
-          ],
-        ),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            title,
+            style: const TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w500,
+              color: FretColors.neutral900,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            subtitle,
+            style: const TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
+              color: FretColors.loginFooterLink,
+              letterSpacing: 0,
+            ),
+          ),
+        ],
       ),
-    ),
-  );
+    );
+  }
 }

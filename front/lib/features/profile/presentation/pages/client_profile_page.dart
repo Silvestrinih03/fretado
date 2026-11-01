@@ -7,7 +7,6 @@ import '../widgets/profile_widgets.dart';
 import '../widgets/editable_profile_avatar.dart';
 import 'change_password_popup.dart';
 import 'terms_privacy_page.dart';
-import 'help_support_page.dart';
 import 'user_data_page.dart';
 
 class ClientProfilePage extends StatelessWidget {
@@ -241,15 +240,10 @@ class _UserProfilePageState extends State<UserProfilePage> {
                     ),
                   ),
                   const SizedBox(height: 10),
-                  _ProfileActionTile(
+                  const _ProfileActionTile(
                     icon: Icons.help_outline_rounded,
                     title: 'Ajuda e suporte',
                     subtitle: 'Central de atendimento',
-                    onTap: () => Navigator.of(context).push(
-                      MaterialPageRoute<void>(
-                        builder: (_) => const HelpSupportPage(),
-                      ),
-                    ),
                   ),
                   const SizedBox(height: 10),
                   _ProfileActionTile(

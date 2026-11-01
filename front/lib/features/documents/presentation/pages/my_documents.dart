@@ -65,8 +65,8 @@ class _MyDocumentsPageState extends State<MyDocumentsPage> {
   }
 
   @override
-  Widget build(BuildContext context) => FretScreenTheme(
-    child: AnimatedBuilder(
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
       animation: _store,
       builder: (context, _) {
         final document = _DriverDocument(
@@ -74,171 +74,234 @@ class _MyDocumentsPageState extends State<MyDocumentsPage> {
           subtitle: 'Carteira Nacional de Habilitação',
           expiresAt: _store.driverDocument?.expirationDateValue,
         );
+
         return Scaffold(
-          backgroundColor: FretColors.screenBackground,
-          appBar: const FretSecondaryAppBar(title: 'Meus documentos'),
+          backgroundColor: const Color(0xFFF7F8FA),
           body: SafeArea(
-            child: ListView(
-              padding: const EdgeInsets.fromLTRB(20, 8, 20, 22),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Gerencie sua documentação profissional',
-                  style: TextStyle(
-                    fontSize: 12.5,
-                    color: FretColors.screenMuted,
+                const _MyDocumentsHeader(),
+                Expanded(
+                  child: ListView(
+                    padding: const EdgeInsets.fromLTRB(16, 18, 16, 18),
+                    children: [
+                      const Text(
+                        'Gerencie sua documentação profissional',
+                        style: TextStyle(
+                          color: Color(0xFF777A86),
+                          fontSize: 15,
+                          fontWeight: FontWeight.w500,
+                          height: 1.2,
+                        ),
+                      ),
+                      const SizedBox(height: 18),
+                      if (_store.isLoading)
+                        const Center(
+                          child: Padding(
+                            padding: EdgeInsets.only(top: 24),
+                            child: CircularProgressIndicator(),
+                          ),
+                        )
+                      else ...[
+                        if (_store.errorMessage != null) ...[
+                          _DocumentsErrorCard(
+                            message: _store.errorMessage!,
+                            onRetry: _store.loadDriverDocument,
+                          ),
+                          const SizedBox(height: 16),
+                        ],
+                        _DocumentStatusCard(
+                          document: document,
+                          onTap: _openDriversLicensePage,
+                        ),
+                      ],
+                    ],
                   ),
                 ),
-                const SizedBox(height: 18),
-                if (_store.isLoading)
-                  const Center(
-                    child: Padding(
-                      padding: EdgeInsets.only(top: 24),
-                      child: CircularProgressIndicator(),
-                    ),
-                  )
-                else ...[
-                  if (_store.errorMessage != null) ...[
-                    _DocumentsErrorCard(
-                      message: _store.errorMessage!,
-                      onRetry: _store.loadDriverDocument,
-                    ),
-                    const SizedBox(height: 16),
-                  ],
-                  _DocumentStatusCard(
-                    document: document,
-                    onTap: _openDriversLicensePage,
-                  ),
-                  if (_store.errorMessage == null) ...[
-                    const SizedBox(height: 14),
-                    _DocumentHint(status: document.status),
-                  ],
-                ],
               ],
             ),
           ),
         );
       },
-    ),
-  );
+    );
+  }
 }
 
-class _DocumentStatusCard extends StatelessWidget {
-  final _DriverDocument document;
-  final VoidCallback onTap;
-  const _DocumentStatusCard({required this.document, required this.onTap});
+class _MyDocumentsHeader extends StatelessWidget {
+  const _MyDocumentsHeader();
 
   @override
   Widget build(BuildContext context) {
-    final status = document.status;
-    final pending = status == DocumentValidityStatusEnum.needsInformation;
-    final color = pending ? const Color(0xFF9A7810) : status.iconColor;
-    return Material(
-      color: FretColors.white,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(18),
-        side: BorderSide(
-          color: pending ? FretColors.screenGold : status.borderColor,
-          width: 1.5,
+    return Container(
+      height: 62,
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(10, 8, 16, 8),
+      decoration: const BoxDecoration(
+        color: Color(0xFFF7F8FA),
+        border: Border(
+          bottom: BorderSide(color: Color(0xFFE7E9F0), width: 1),
         ),
       ),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.all(14),
-          child: Row(
-            children: [
-              const FretIconBox(
-                icon: Icons.credit_card_outlined,
-                size: 48,
-                radius: 15,
-                iconSize: 23,
-                backgroundColor: FretColors.screenBackground,
-                iconColor: FretColors.screenDark,
-              ),
-              const SizedBox(width: 13),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      document.title,
-                      style: const TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      document.subtitle,
-                      style: const TextStyle(
-                        fontSize: 11.5,
-                        color: FretColors.screenMuted,
-                      ),
-                    ),
-                    if (document.statusMessage != null) ...[
-                      const SizedBox(height: 4),
-                      Text(
-                        document.statusMessage!,
-                        style: TextStyle(
-                          fontSize: 10.5,
-                          fontWeight: FontWeight.w700,
-                          color: color,
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-              const SizedBox(width: 8),
-              FretIconBox(
-                icon: pending ? Icons.edit_outlined : status.icon,
-                size: 40,
-                radius: 12,
-                backgroundColor: status.iconBackgroundColor,
-                iconColor: color,
-              ),
-            ],
+      child: Row(
+        children: [
+          IconButton(
+            onPressed: () => Navigator.of(context).maybePop(),
+            icon: const Icon(
+              Icons.arrow_back_ios_new_rounded,
+              color: FretColors.loginFooterLink,
+              size: 20,
+            ),
           ),
-        ),
+          const SizedBox(width: 4),
+          const Expanded(
+            child: Text(
+              'Meus documentos',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 21,
+                fontWeight: FontWeight.w700,
+                color: FretColors.loginFooterLink,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
 }
 
-class _DocumentHint extends StatelessWidget {
-  final DocumentValidityStatusEnum status;
-  const _DocumentHint({required this.status});
+class _DocumentStatusCard extends StatelessWidget {
+  final _DriverDocument document;
+  final VoidCallback onTap;
+
+  const _DocumentStatusCard({
+    required this.document,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final pending = status == DocumentValidityStatusEnum.needsInformation;
-    final text = switch (status) {
-      DocumentValidityStatusEnum.needsInformation =>
-        'Complete sua CNH para manter o perfil apto a receber novas corridas.',
-      DocumentValidityStatusEnum.valid =>
-        'CNH cadastrada. Mantenha seus dados de condutor atualizados.',
-      DocumentValidityStatusEnum.expiringSoon =>
-        'Sua CNH está próxima do vencimento. Confira a validade e mantenha seus dados atualizados.',
-      DocumentValidityStatusEnum.expired =>
-        'Sua CNH está vencida. Atualize a documentação para receber novas corridas.',
-    };
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
-      decoration: BoxDecoration(
-        color: pending
-            ? FretColors.screenGold.withValues(alpha: .08)
-            : status.iconBackgroundColor,
-        borderRadius: BorderRadius.circular(14),
-      ),
-      child: Text(
-        text,
-        style: TextStyle(
-          fontSize: 11,
-          height: 1.5,
-          color: pending ? const Color(0xFF806515) : status.iconColor,
-        ),
-      ),
+    final status = document.status;
+    final statusMessage = document.statusMessage;
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isCompact = constraints.maxWidth < 430;
+        final cardPadding = isCompact ? 14.0 : 18.0;
+        final leadingSize = isCompact ? 44.0 : 54.0;
+        final leadingIconSize = isCompact ? 24.0 : 28.0;
+        final titleFontSize = isCompact ? 17.0 : 20.0;
+        final subtitleFontSize = isCompact ? 13.0 : 15.0;
+        final statusMessageFontSize = isCompact ? 12.0 : 13.0;
+        final statusSize = isCompact ? 36.0 : 42.0;
+        final contentGap = isCompact ? 10.0 : 14.0;
+        final statusGap = isCompact ? 8.0 : 10.0;
+
+        return Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: onTap,
+            borderRadius: BorderRadius.circular(12),
+            child: Ink(
+              padding: EdgeInsets.all(cardPadding),
+              decoration: BoxDecoration(
+                color: FretColors.white,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: status.borderColor,
+                  width: 1.4,
+                ),
+                boxShadow: const [
+                  BoxShadow(
+                    color: Color(0x080F1A4A),
+                    blurRadius: 10,
+                    offset: Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: leadingSize,
+                    height: leadingSize,
+                    decoration: BoxDecoration(
+                      color: FretColors.neutral100,
+                      borderRadius:
+                          BorderRadius.circular(isCompact ? 14.0 : 18.0),
+                    ),
+                    child: Icon(
+                      Icons.credit_card_rounded,
+                      color: FretColors.loginFooterLink,
+                      size: leadingIconSize,
+                    ),
+                  ),
+                  SizedBox(width: contentGap),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          document.title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: titleFontSize,
+                            fontWeight: FontWeight.w800,
+                            color: FretColors.loginFooterLink,
+                            height: 1,
+                          ),
+                        ),
+                          const SizedBox(height: 4),
+                        Text(
+                          document.subtitle,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: subtitleFontSize,
+                            fontWeight: FontWeight.w400,
+                            color: const Color(0xFF2F3342),
+                            height: 1.12,
+                          ),
+                        ),
+                        if (statusMessage != null) ...[
+                          const SizedBox(height: 4),
+                          Text(
+                            statusMessage,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: status.iconColor,
+                              fontSize: statusMessageFontSize,
+                              fontWeight: FontWeight.w800,
+                              height: 1.15,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                  SizedBox(width: statusGap),
+                  Container(
+                    width: statusSize,
+                    height: statusSize,
+                    decoration: BoxDecoration(
+                      color: status.iconBackgroundColor,
+                      borderRadius: BorderRadius.circular(7),
+                    ),
+                    child: Icon(
+                      status.icon,
+                      color: status.iconColor,
+                      size: isCompact ? 22.0 : 24.0,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 }
@@ -247,7 +310,10 @@ class _DocumentsErrorCard extends StatelessWidget {
   final String message;
   final VoidCallback onRetry;
 
-  const _DocumentsErrorCard({required this.message, required this.onRetry});
+  const _DocumentsErrorCard({
+    required this.message,
+    required this.onRetry,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -279,7 +345,10 @@ class _DocumentsErrorCard extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 10),
-          TextButton(onPressed: onRetry, child: const Text('Tentar novamente')),
+          TextButton(
+            onPressed: onRetry,
+            child: const Text('Tentar novamente'),
+          ),
         ],
       ),
     );
@@ -330,8 +399,7 @@ class _DriverDocument {
     return switch (status) {
       DocumentValidityStatusEnum.needsInformation =>
         'Preenchimento obrigatório',
-      DocumentValidityStatusEnum.valid =>
-        'Documento válido até ${expiresAt!.day.toString().padLeft(2, '0')}/${expiresAt!.month.toString().padLeft(2, '0')}/${expiresAt!.year}',
+      DocumentValidityStatusEnum.valid => null,
       DocumentValidityStatusEnum.expiringSoon =>
         'Vence em ${daysUntilExpiration ?? 0} dias',
       DocumentValidityStatusEnum.expired => 'Vencido. Envie novamente',

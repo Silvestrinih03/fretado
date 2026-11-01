@@ -1,10 +1,43 @@
 import '../../../../core/endpoints.dart';
 import '../../../../core/services/http_service.dart';
 import '../models/vehicle_catalog_option_model.dart';
+import '../models/vehicle_catalog_page_model.dart';
 
 class VehicleCatalogDatasource {
   final HttpService _httpService;
   const VehicleCatalogDatasource(this._httpService);
+
+  Future<VehicleCatalogPageModel> listBrandsPage({int page = 1}) =>
+      _page(Endpoints.vehicleCatalogBrandsPage(page: page));
+
+  Future<VehicleCatalogPageModel> listModelsPage({
+    required String brandId,
+    int page = 1,
+  }) => _page(Endpoints.vehicleCatalogModelsPage(brandId: brandId, page: page));
+
+  Future<VehicleCatalogPageModel> listVersionsPage({
+    required String brandId,
+    required String modelId,
+    int page = 1,
+  }) => _page(
+    Endpoints.vehicleCatalogVersionsPage(
+      brandId: brandId,
+      modelId: modelId,
+      page: page,
+    ),
+  );
+
+  Future<VehicleCatalogPageModel> _page(String endpoint) async {
+    try {
+      return VehicleCatalogPageModel.fromJson(await _httpService.get(endpoint));
+    } on HttpServiceException catch (e) {
+      throw VehicleCatalogDatasourceException(e.message);
+    } on FormatException {
+      throw const VehicleCatalogDatasourceException(
+        'Não foi possível carregar os dados do catálogo.',
+      );
+    }
+  }
 
   Future<List<VehicleCatalogOptionModel>> listBrands() =>
       _list(Endpoints.vehicleCatalogBrands());

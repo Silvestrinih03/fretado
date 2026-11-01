@@ -52,46 +52,37 @@ class _MyVehiclesPageState extends State<MyVehiclesPage> {
   }
 
   @override
-  Widget build(BuildContext context) => FretScreenTheme(
-    child: AnimatedBuilder(
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
       animation: _store,
       builder: (context, _) => Scaffold(
-        backgroundColor: FretColors.screenBackground,
-        appBar: const FretSecondaryAppBar(title: 'Meus veículos'),
+        backgroundColor: FretColors.appBackground,
+        appBar: AppBar(
+          title: const Text('Meus veículos'),
+          backgroundColor: FretColors.appBackground,
+          foregroundColor: FretColors.textPrimary,
+          actions: [
+            IconButton(
+              tooltip: 'Adicionar veículo',
+              onPressed: _openRegisterVehicle,
+              icon: const Icon(Icons.add_rounded),
+            ),
+          ],
+        ),
         body: SafeArea(
           child: RefreshIndicator(
             onRefresh: _store.loadVehicles,
             child: ListView(
               physics: const AlwaysScrollableScrollPhysics(),
-              padding: const EdgeInsets.fromLTRB(20, 8, 20, 22),
+              padding: const EdgeInsets.all(16),
               children: [
-                Row(
-                  children: [
-                    const Expanded(
-                      child: Text(
-                        'Gerencie seus veículos',
-                        style: TextStyle(
-                          fontSize: 12.5,
-                          color: FretColors.screenMuted,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    IconButton.filled(
-                      tooltip: 'Adicionar veículo',
-                      onPressed: _openRegisterVehicle,
-                      style: IconButton.styleFrom(
-                        backgroundColor: FretColors.screenDark,
-                        foregroundColor: FretColors.screenGold,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      icon: const Icon(Icons.add_rounded, size: 20),
-                    ),
-                  ],
+                Text(
+                  'Gerencie seus veículos',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: FretColors.textSecondary,
+                  ),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 24),
                 if (_store.isLoading)
                   const Padding(
                     padding: EdgeInsets.all(32),
@@ -109,18 +100,14 @@ class _MyVehiclesPageState extends State<MyVehiclesPage> {
                   _VehiclesState(
                     icon: Icons.local_shipping_outlined,
                     title: 'Nenhum veículo cadastrado',
-                    subtitle:
-                        'Adicione seu primeiro veículo para começar a receber fretes compatíveis.',
+                    subtitle: 'Adicione seu primeiro veículo para começar.',
                     action: 'Adicionar veículo',
                     onPressed: _openRegisterVehicle,
                   )
                 else ...[
                   Text(
                     '${_store.vehicles.length} ${_store.vehicles.length == 1 ? 'veículo cadastrado' : 'veículos cadastrados'}',
-                    style: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                    ),
+                    style: Theme.of(context).textTheme.titleSmall,
                   ),
                   const SizedBox(height: 16),
                   for (final vehicle in _store.vehicles)
@@ -132,10 +119,9 @@ class _MyVehiclesPageState extends State<MyVehiclesPage> {
                       ),
                     ),
                   const SizedBox(height: 8),
-                  FretScreenButton(
+                  FretPrimaryButton(
                     label: 'Adicionar veículo',
-                    gold: true,
-                    icon: Icons.add_rounded,
+                    trailingIcon: Icons.add_rounded,
                     onPressed: _openRegisterVehicle,
                   ),
                 ],
@@ -144,8 +130,8 @@ class _MyVehiclesPageState extends State<MyVehiclesPage> {
           ),
         ),
       ),
-    ),
-  );
+    );
+  }
 
   Future<void> _openRegisterVehicle() async {
     final didRegister = await Navigator.of(context).push<bool>(
@@ -175,17 +161,10 @@ class _VehiclesState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return FretScreenCard(
+    return FretSurfaceCard(
       child: Column(
         children: [
-          FretIconBox(
-            icon: icon,
-            size: 62,
-            radius: 18,
-            iconSize: 28,
-            backgroundColor: FretColors.screenDark,
-            iconColor: FretColors.screenGold,
-          ),
+          FretIconBox(icon: icon, size: 48, iconSize: 26),
           const SizedBox(height: 16),
           Text(
             title,
@@ -198,10 +177,14 @@ class _VehiclesState extends StatelessWidget {
             textAlign: TextAlign.center,
             style: Theme.of(
               context,
-            ).textTheme.bodyMedium?.copyWith(color: FretColors.screenMuted),
+            ).textTheme.bodyMedium?.copyWith(color: FretColors.textSecondary),
           ),
           const SizedBox(height: 24),
-          FretScreenButton(label: action, gold: true, onPressed: onPressed),
+          FretPrimaryButton(
+            label: action,
+            onPressed: onPressed,
+            trailingIcon: null,
+          ),
         ],
       ),
     );

@@ -58,7 +58,7 @@ class VehicleService:
                     raise HTTPException(status_code=409, detail="Could not register vehicle model.")
 
         if vehicle_model.vehicle_type_id != vehicle_type.id:
-            raise HTTPException(status_code=400, detail="Vehicle model belongs to a different vehicle type.")
+            raise HTTPException(status_code=400, detail="O veículo encontrado pertence a outro tipo. Confira o tipo selecionado.")
 
         vehicle = Vehicle(
             user_id=payload.user_id,
@@ -93,7 +93,7 @@ class VehicleService:
         if existing_vehicle:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Plate already registered.",
+                detail="Esta placa já está cadastrada.",
             )
 
     @staticmethod
@@ -162,9 +162,7 @@ class VehicleService:
         vehicle_type: VehicleType,
         db: Session,
     ) -> VehicleModel:
-        provider = CarpediaProvider()
-
-        technical_data = provider.get_technical_data(
+        technical_data = CarpediaProvider().get_technical_data(
             version_id=payload.version_id,
             year=payload.year,
         )

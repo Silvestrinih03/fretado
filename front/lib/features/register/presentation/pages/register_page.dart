@@ -75,7 +75,7 @@ class _RegisterPageState extends State<RegisterPage> {
   int get _currentStepIndex => _currentStep.index;
 
   Color get _currentStepDotColor {
-    return FretColors.screenGold;
+    return FretColors.loginFooterLink;
   }
 
   void _handleBack() {
@@ -213,9 +213,10 @@ class _RegisterPageState extends State<RegisterPage> {
   Future<String?> _loginRegisteredUser() async {
     final HttpService httpService = HttpService();
     try {
-      final user = await AuthDatasource(
-        httpService,
-      ).login(email: _emailController.text, password: _passwordController.text);
+      final user = await AuthDatasource(httpService).login(
+        email: _emailController.text,
+        password: _passwordController.text,
+      );
       return user.accessToken;
     } catch (_) {
       return null;
@@ -249,9 +250,6 @@ class _RegisterPageState extends State<RegisterPage> {
         );
       case RegisterStepEnum.basicData:
         return RegisterStepTwo(
-          roleLabel: _selectedAccountType == UserTypeEnum.driver
-              ? 'Motorista'
-              : 'Cliente',
           formKey: _stepTwoFormKey,
           autovalidateMode: _stepTwoAutovalidateMode,
           cpfController: _cpfController,
@@ -270,7 +268,6 @@ class _RegisterPageState extends State<RegisterPage> {
         );
       case RegisterStepEnum.personalData:
         return RegisterStepThree(
-          isDriver: _selectedAccountType == UserTypeEnum.driver,
           formKey: _stepThreeFormKey,
           autovalidateMode: _stepThreeAutovalidateMode,
           firstNameController: _firstNameController,

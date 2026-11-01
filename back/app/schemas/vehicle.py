@@ -32,7 +32,7 @@ class VehicleListResponse(VehicleResponse):
 class VehicleCreateRequest(BaseModel):
     user_id: int = Field(..., gt=0)
     vehicle_type_id: int = Field(..., gt=0)
-    version_id: int = Field(..., gt=0)
+    version_id: int = Field(..., description="ID inteiro não zero da versão no catálogo Carpédia (fipeId).")
 
     year: int = Field(
         ...,
@@ -52,6 +52,13 @@ class VehicleCreateRequest(BaseModel):
     )
 
     status: bool = True
+
+    @field_validator("version_id")
+    @classmethod
+    def validate_version_id(cls, value: int) -> int:
+        if value == 0:
+            raise ValueError("O identificador da versão não pode ser zero.")
+        return value
 
     @field_validator("plate", mode="before")
     @classmethod

@@ -6,6 +6,7 @@ from app.models.driver_earning import DriverEarning
 from app.models.driver_license_category import DriverLicenseCategory
 from app.models.driver_location import DriverLocation
 from app.models.driver_wallet import DriverWallet
+from app.models.mapbox_usage import MapboxUsage
 from app.models.fuel_price import FuelPrice
 from app.models.fuel_type import FuelType
 from app.models.pricing_policy import PricingPolicy
@@ -39,6 +40,7 @@ __all__ = [
     "DriverLicenseCategory",
     "DriverLocation",
     "DriverWallet",
+    "MapboxUsage",
     "FuelPrice",
     "FuelType",
     "PricingPolicy",

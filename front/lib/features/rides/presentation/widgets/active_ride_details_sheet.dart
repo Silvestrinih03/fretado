@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 
 import '../../../../app/design_system/design_system.dart';
 import '../../../../core/enums/home_profile.dart';
+import '../../../../core/maps/geocoding_credit.dart';
 import '../../../driver_operations/data/models/driver_operation_models.dart';
+import '../../../driver_navigation/presentation/widgets/driver_navigation_access_button.dart';
 import '../../../ride_cancellation/presentation/widgets/cancellation_log_timeline.dart';
 import '../../../ride_chat/presentation/widgets/ride_chat_access_button.dart';
 import '../../../ride_rating/presentation/widgets/ride_rating_access_button.dart';
@@ -12,6 +14,7 @@ Future<void> showActiveRideDetailsSheet(
   required DriverRideModel ride,
   required HomeProfileEnum profile,
   VoidCallback? onTrack,
+  ValueChanged<bool>? onNavigationChanged,
   String? trackLabel,
   VoidCallback? onCancel,
   VoidCallback? onDriverReassignment,
@@ -29,6 +32,7 @@ Future<void> showActiveRideDetailsSheet(
     builder: (sheetContext) => _ActiveRideDetailsSheet(
       ride: ride,
       profile: profile,
+      onNavigationChanged: onNavigationChanged,
       onTrack: onTrack == null
           ? null
           : () {
@@ -60,6 +64,7 @@ class _ActiveRideDetailsSheet extends StatelessWidget {
   final DriverRideModel ride;
   final HomeProfileEnum profile;
   final VoidCallback? onTrack;
+  final ValueChanged<bool>? onNavigationChanged;
   final String? trackLabel;
   final VoidCallback? onCancel;
   final VoidCallback? onDriverReassignment;
@@ -72,6 +77,7 @@ class _ActiveRideDetailsSheet extends StatelessWidget {
     required this.ride,
     required this.profile,
     required this.onTrack,
+    required this.onNavigationChanged,
     required this.trackLabel,
     required this.onCancel,
     required this.onDriverReassignment,
@@ -253,6 +259,12 @@ class _ActiveRideDetailsSheet extends StatelessWidget {
               ),
               const SizedBox(height: 8),
             ],
+            if (isDriver)
+              DriverNavigationAccessButton(
+                ride: ride,
+                beforeOpen: () => Navigator.of(context).pop(),
+                onChanged: onNavigationChanged,
+              ),
             RideChatAccessButton(
               rideId: ride.id,
               labelOverride: ride.linkedReturnRide == null
@@ -356,7 +368,7 @@ class _RouteDetailsCard extends StatelessWidget {
           const SizedBox(height: 13),
           _RouteDetail(
             label: 'COLETA',
-            address: details?.originAddress ?? ride.originLabel,
+            address: details?.originDisplayAddress ?? ride.originLabel,
             complement: details?.originAddressComplement,
             reference: details?.originReferencePoint,
             color: FretColors.screenGold,
@@ -364,11 +376,18 @@ class _RouteDetailsCard extends StatelessWidget {
           const SizedBox(height: 15),
           _RouteDetail(
             label: 'ENTREGA',
-            address: details?.destinationAddress ?? ride.destinationLabel,
+            address:
+                details?.destinationDisplayAddress ?? ride.destinationLabel,
             complement: details?.destinationAddressComplement,
             reference: details?.destinationReferencePoint,
             color: FretColors.screenDark,
           ),
+          if (details?.originAddressSource != null ||
+              details?.destinationAddressSource != null)
+            GeocodingCredit(
+              source:
+                  '${details?.originAddressSource ?? ''} | ${details?.destinationAddressSource ?? ''}',
+            ),
         ],
       ),
     );

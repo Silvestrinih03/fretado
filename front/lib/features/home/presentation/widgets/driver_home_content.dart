@@ -7,6 +7,7 @@ import '../../../../core/endpoints.dart';
 import '../../../../core/enums/home_profile.dart';
 import '../../../../core/services/http_service.dart';
 import '../../../driver_operations/data/models/driver_operation_models.dart';
+import '../../../driver_navigation/presentation/widgets/driver_navigation_access_button.dart';
 import '../../../documents/presentation/pages/my_documents.dart';
 import '../../../vehicles/presentation/pages/my_vehicles.dart';
 import '../../../rides/presentation/pages/ride_tracking_page.dart';
@@ -840,12 +841,19 @@ class _DriverRideInProgressSectionState
     if (mounted) await _loadRides();
   }
 
+  void _navigationChanged(bool finished) {
+    if (!mounted) return;
+    unawaited(_loadRides());
+    if (finished) widget.onRideFinished();
+  }
+
   void _openDetails(DriverRideModel ride) {
     showActiveRideDetailsSheet(
       context,
       ride: ride,
       profile: HomeProfileEnum.driver,
       onTrack: () => _openTracking(ride),
+      onNavigationChanged: _navigationChanged,
       onDriverReassignment: () => _requestReassignment(ride),
     );
   }
@@ -937,6 +945,7 @@ class _DriverRideInProgressSectionState
                 onTrack: () => _openTracking(ride),
                 onDetails: () => _openDetails(ride),
                 onReassignment: () => _requestReassignment(ride),
+                onNavigationChanged: _navigationChanged,
               ),
             ),
           ),
@@ -952,6 +961,7 @@ class _DriverActiveRideCard extends StatelessWidget {
   final VoidCallback onTrack;
   final VoidCallback onDetails;
   final VoidCallback onReassignment;
+  final ValueChanged<bool> onNavigationChanged;
 
   const _DriverActiveRideCard({
     required this.ride,
@@ -960,6 +970,7 @@ class _DriverActiveRideCard extends StatelessWidget {
     required this.onTrack,
     required this.onDetails,
     required this.onReassignment,
+    required this.onNavigationChanged,
   });
 
   @override
@@ -1002,6 +1013,10 @@ class _DriverActiveRideCard extends StatelessWidget {
       footer: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          DriverNavigationAccessButton(
+            ride: ride,
+            onChanged: onNavigationChanged,
+          ),
           if (ride.isCancellationReturn) ...[
             const Text(
               'DEVOLUÇÃO DE CANCELAMENTO',

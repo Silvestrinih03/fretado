@@ -29,7 +29,7 @@ from app.schemas.ride_cancellation import (
 from app.services.driver_earning_service import create_cancellation_earning
 from app.services.fuel_price_service import FuelPriceService
 from app.services.freight_pricing_service import FreightPricingService
-from app.services.geocoding_service import MapboxGeocodingService
+from app.services.geocoding_service import GeoapifyGeocodingService
 from app.services.pricing_policy_service import PricingPolicyService
 from app.services.route_service import MapboxRouteService
 from app.services.ride_chat_service import (
@@ -616,7 +616,7 @@ def _calculate_delivery_charge(db, ride, detail, location, cancellation):
         model,
         vehicle_type,
     )
-    origin = MapboxGeocodingService().reverse(float(detail.origin_latitude), float(detail.origin_longitude))
+    origin = GeoapifyGeocodingService().reverse(float(detail.origin_latitude), float(detail.origin_longitude))
     state_code = origin.get("state") if origin else None
     if not state_code:
         raise HTTPException(status_code=400, detail="Nao foi possivel identificar a UF da coleta.")
@@ -698,6 +698,8 @@ def _create_return_ride(db, original, cancellation, now):
         origin_latitude=cancellation.driver_latitude,
         origin_longitude=cancellation.driver_longitude,
         destination_address=cancellation.return_address,
+        destination_address_number=detail.origin_address_number if cancellation.return_destination_type == "pickup" else None,
+        destination_address_source=detail.origin_address_source if cancellation.return_destination_type == "pickup" else None,
         destination_address_complement=cancellation.return_address_complement,
         destination_reference_point=cancellation.return_reference_point,
         destination_latitude=cancellation.return_latitude,

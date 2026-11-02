@@ -1,7 +1,7 @@
 from decimal import Decimal
 from typing import List
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy.orm import Session
 
 from app.database.database import get_db
@@ -11,7 +11,7 @@ from app.models.user import User
 from app.enums.user_type import UserTypeEnum
 
 from app.services.geocoding_service import (
-    MapboxGeocodingService,
+    GeoapifyGeocodingService,
 )
 
 from app.services.ride_service import (
@@ -34,6 +34,8 @@ from app.services.route_service import (
     MapboxRouteService,
 )
 from app.schemas.ride import RideCreate, RideFullResponse, RideGeocodeResponse, RideHistoryPageResponse, RidePickupEstimateResponse, RideQuoteRequest, RideQuoteResponse, RideQuoteRouteResponse, RideUpdate
+from app.schemas.ride_navigation import RideNavigationResponse, RideNavigationContextResponse
+from app.services.ride_navigation_service import get_navigation, get_navigation_tile, navigation_context
 
 router = APIRouter(
     prefix="/rides",
@@ -143,7 +145,7 @@ def geocode(
         max_length=200,
     ),
 ):
-    service = MapboxGeocodingService()
+    service = GeoapifyGeocodingService()
 
     return {
         "data": service.search(q),
@@ -166,7 +168,7 @@ def reverse_geocode(
         le=180,
     ),
 ):
-    service = MapboxGeocodingService()
+    service = GeoapifyGeocodingService()
 
     result = service.reverse(
         latitude=latitude,
@@ -258,6 +260,63 @@ def get_ride_pickup_estimate(
 ):
     ensure_ride_access(db, ride_id, current_user)
     return get_pickup_estimate(db, ride_id)
+
+
+@router.get(
+    "/{ride_id}/navigation/context",
+    response_model=RideNavigationContextResponse,
+    summary="Destino autorizado do motorista, sem consultar serviços Mapbox",
+)
+def get_navigation_context(
+    ride_id: int,
+    response: Response,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    response.headers["Cache-Control"] = "private, no-store"
+    status_id, destination = navigation_context(db, ride_id, current_user)
+    return RideNavigationContextResponse(
+        ride_id=ride_id, status_id=status_id,
+        leg="pickup" if status_id == 3 else "delivery", destination=destination,
+    )
+
+
+@router.get(
+    "/{ride_id}/navigation",
+    response_model=RideNavigationResponse,
+    summary="Rota ate o proximo destino do motorista atribuido",
+    description="Compatibilidade com aplicativos anteriores. O Android usa Navigation SDK e /navigation/context. Cache de 30 segundos.",
+    responses={403: {"description": "Motorista nao atribuido"},
+               409: {"description": "Navegacao interrompida ou destino alterado"},
+               429: {"description": "Limite do provedor"},
+               503: {"description": "Mapbox nao configurado"}},
+)
+def navigate_ride(
+    ride_id: int,
+    origin_latitude: float = Query(..., ge=-90, le=90, allow_inf_nan=False),
+    origin_longitude: float = Query(..., ge=-180, le=180, allow_inf_nan=False),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    return get_navigation(db, ride_id, current_user, origin_latitude, origin_longitude)
+
+
+@router.get(
+    "/{ride_id}/navigation/tiles/{z}/{x}/{y}",
+    response_class=Response,
+    summary="Compatibilidade: imagem Mapbox 512px",
+    responses={200: {"content": {"image/png": {}, "image/jpeg": {}, "image/webp": {}}},
+               403: {"description": "Motorista nao atribuido"},
+               409: {"description": "Corrida fora de navegacao"},
+               429: {"description": "Limite do provedor de imagens"},
+               503: {"description": "Mapa indisponivel"}},
+)
+def navigation_tile(
+    ride_id: int, z: int, x: int, y: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    return get_navigation_tile(db, ride_id, current_user, z, x, y)
 
 
 @router.put(

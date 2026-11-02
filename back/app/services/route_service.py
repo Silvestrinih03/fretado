@@ -2,7 +2,7 @@ import os
 
 from dataclasses import dataclass, field
 from decimal import Decimal
-from math import ceil
+from math import ceil, isfinite
 
 import httpx
 
@@ -52,7 +52,7 @@ class MapboxRouteService(RouteService):
         if not self.access_token:
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail="Mapbox nao esta configurado no servidor.",
+                detail={"code": "mapbox_not_configured", "message": "O serviço de rotas está temporariamente indisponível. Tente novamente mais tarde."},
             )
 
         coordinates = (
@@ -81,6 +81,10 @@ class MapboxRouteService(RouteService):
                 detail="Nao foi possivel consultar a rota no Mapbox.",
             )
 
+        if response.status_code in (401, 403):
+            raise HTTPException(503, detail={"code": "mapbox_credentials_invalid", "message": "O serviço de rotas está temporariamente indisponível. Tente novamente mais tarde."})
+        if response.status_code == 429:
+            raise HTTPException(429, detail={"code": "mapbox_rate_limited", "message": "O serviço de rotas atingiu o limite do provedor. Tente novamente mais tarde."})
         if response.status_code != status.HTTP_200_OK:
             raise HTTPException(
                 status_code=status.HTTP_502_BAD_GATEWAY,
@@ -107,13 +111,15 @@ class MapboxRouteService(RouteService):
 
         routes = data.get("routes") or []
 
-        if not routes:
+        if not isinstance(routes, list) or not routes:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Nenhuma rota encontrada entre origem e destino.",
             )
 
         route = routes[0]
+        if not isinstance(route, dict):
+            raise HTTPException(status_code=502, detail="Mapbox retornou uma rota invalida.")
 
         try:
             distance_meters = Decimal(str(route["distance"]))
@@ -131,14 +137,16 @@ class MapboxRouteService(RouteService):
             ceil(duration_seconds / Decimal("60")),
         )
 
-        geometry_data = route.get("geometry", {})
-        raw_coordinates = geometry_data.get("coordinates", [])
-
-        geometry = [
-            [float(coordinate[0]), float(coordinate[1])]
-            for coordinate in raw_coordinates
-            if len(coordinate) >= 2
-        ]
+        try:
+            raw_coordinates = route["geometry"]["coordinates"]
+            geometry = [[float(coordinate[0]), float(coordinate[1])] for coordinate in raw_coordinates]
+            if len(geometry) < 2 or any(
+                not isfinite(lng) or not isfinite(lat) or not -180 <= lng <= 180 or not -90 <= lat <= 90
+                for lng, lat in geometry
+            ):
+                raise ValueError("Invalid geometry")
+        except (KeyError, TypeError, ValueError, IndexError, OverflowError):
+            raise HTTPException(502, detail="Mapbox retornou um trajeto invalido.") from None
 
         return RouteEstimate(
             provider=self.provider_name,

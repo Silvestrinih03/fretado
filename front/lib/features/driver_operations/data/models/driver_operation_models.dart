@@ -4,11 +4,15 @@ class RideDetailModel {
   final int id;
   final int rideId;
   final String originAddress;
+  final String? originAddressNumber;
+  final String? originAddressSource;
   final String? originAddressComplement;
   final String? originReferencePoint;
   final double originLatitude;
   final double originLongitude;
   final String destinationAddress;
+  final String? destinationAddressNumber;
+  final String? destinationAddressSource;
   final String? destinationAddressComplement;
   final String? destinationReferencePoint;
   final double destinationLatitude;
@@ -24,6 +28,8 @@ class RideDetailModel {
     : id = _readInt(json['id']),
       rideId = _readInt(json['ride_id']),
       originAddress = _readString(json['origin_address']),
+      originAddressNumber = _readNullableString(json['origin_address_number']),
+      originAddressSource = _readNullableString(json['origin_address_source']),
       originAddressComplement = _readNullableString(
         json['origin_address_complement'],
       ),
@@ -33,6 +39,12 @@ class RideDetailModel {
       originLatitude = _readDouble(json['origin_latitude']),
       originLongitude = _readDouble(json['origin_longitude']),
       destinationAddress = _readString(json['destination_address']),
+      destinationAddressNumber = _readNullableString(
+        json['destination_address_number'],
+      ),
+      destinationAddressSource = _readNullableString(
+        json['destination_address_source'],
+      ),
       destinationAddressComplement = _readNullableString(
         json['destination_address_complement'],
       ),
@@ -48,8 +60,15 @@ class RideDetailModel {
       createdAt = _readDateTime(json['created_at']),
       updatedAt = _readDateTime(json['updated_at']);
 
+  String get originDisplayAddress => originAddressNumber == null
+      ? '$originAddress · Número não informado'
+      : originAddress;
+  String get destinationDisplayAddress => destinationAddressNumber == null
+      ? '$destinationAddress · Número não informado'
+      : destinationAddress;
+
   String get originLabel => _buildAddressLabel(
-    address: originAddress,
+    address: originDisplayAddress,
     complement: originAddressComplement,
     referencePoint: originReferencePoint,
     latitude: originLatitude,
@@ -57,7 +76,7 @@ class RideDetailModel {
   );
 
   String get destinationLabel => _buildAddressLabel(
-    address: destinationAddress,
+    address: destinationDisplayAddress,
     complement: destinationAddressComplement,
     referencePoint: destinationReferencePoint,
     latitude: destinationLatitude,

@@ -1,5 +1,55 @@
 # ⚙️ Back-end
 
+## Atualização: endereços, mapas e navegação Android
+
+Antes de iniciar o backend atualizado, aplique
+`sql/migrations/036_add_address_numbers.sql` no banco existente.
+Instalações novas já incluem os campos em `sql/schema/004_rides.sql`.
+A migration é aditiva e preserva registros antigos; não preenche S/N por suposição.
+
+Configure no `.env` do backend e reinicie a API:
+
+```dotenv
+MAPBOX_ACCESS_TOKEN=seu_token_mapbox
+MAPBOX_DIRECTIONS_PROFILE=mapbox/driving-traffic
+GEOAPIFY_API_KEY=sua_chave_geoapify
+GEOAPIFY_BASE_URL=https://api.geoapify.com
+```
+
+O frete continua usando Directions Mapbox e preço calculado no servidor.
+As antigas variáveis `MAPBOX_BILLING_*`, `MAPBOX_*_INITIAL_USAGE` e
+`MAPBOX_*_LIMIT` não são exigidas nem consultadas. A tabela `mapbox_usage`
+é preservada, mas não controla as consultas. Acompanhe o consumo no provedor.
+
+`GET /rides/geocode` e `GET /rides/reverse-geocode` agora usam Geoapify:
+português, Brasil, até cinco sugestões, incluindo `street`, `house_number`,
+`address_without_number`, `source` e `place_id`. A mesma integração resolve
+UFs e endereços de cancelamento/transferência. A chave não é enviada ao aplicativo.
+
+Novas cotações e criações exigem `origin_address_number` e
+`destination_address_number`, com até 20 caracteres. Envie `S/N` apenas quando
+o cliente selecionar essa opção. Os campos `origin_address` e
+`destination_address` contêm os endereços completos; número e atribuição são
+armazenados separadamente. `origin_address_source` e `destination_address_source`
+preservam os créditos retornados na busca. Corridas antigas retornam os novos
+campos como `null` e continuam legíveis.
+
+`GET /rides/{ride_id}/navigation/context` exige o motorista atribuído e retorna
+`ride_id`, `status_id`, `leg` (`pickup` ou `delivery`) e `destination`
+(`address`, `latitude`, `longitude`). Não faz consulta Mapbox. Apenas os status
+3 e 4 são aceitos; transferência em andamento bloqueia navegação. A resposta
+usa `Cache-Control: private, no-store`.
+
+O Android usa esse contexto para abrir o Navigation SDK diretamente. As rotas
+legadas `/navigation` e `/navigation/tiles/...` permanecem por compatibilidade;
+o novo aplicativo não as consulta nem duplica recálculos no backend.
+
+Geoapify Free permite armazenamento com atribuição e oferece 3.000 créditos/dia:
+https://www.geoapify.com/pricing/ e https://www.geoapify.com/geocoding-api/.
+Mapbox Navigation deve usar a modalidade por viagens, com franquia própria:
+https://www.mapbox.com/pricing. Usar produtos com faixa gratuita não impede
+cobranças se o consumo ultrapassar a franquia.
+
 O back-end será desenvolvido em **Python** utilizando o framework **FastAPI**, focado em alta performance e construção de APIs modernas.
 
 ## 🚀 Como rodar o projeto
@@ -279,7 +329,7 @@ https://www.gov.br/anp/pt-br/centrais-de-conteudo/dados-abertos/serie-historica-
 ### Novo fluxo de cotacao
 
 A cotacao e a criacao usam `RideQuoteService` com a sessao do banco. A UF de origem
-pode ser enviada em `origin_state`; se ausente, e resolvida pelo Mapbox. Os precos
+pode ser enviada em `origin_state`; se ausente, e resolvida pela Geoapify. Os precos
 sao lidos exclusivamente de `fuel_prices`. O importador ANP continua separado,
 executado pelo comando `python -m scripts.update_fuel_prices` no cron semanal.
 

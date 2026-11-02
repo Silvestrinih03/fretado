@@ -1,168 +1,75 @@
+"""Address lookup whose results may be stored with their attribution."""
 import os
+from math import isfinite
 
 import httpx
-from fastapi import HTTPException, status
+from fastapi import HTTPException
 
 
-class MapboxGeocodingService:
+class GeoapifyGeocodingService:
+    attribution = "Powered by Geoapify | © OpenStreetMap contributors"
+
     def __init__(self):
-        self.access_token = os.getenv("MAPBOX_ACCESS_TOKEN", "").strip()
-        self.base_url = os.getenv(
-            "MAPBOX_BASE_URL",
-            "https://api.mapbox.com",
-        ).rstrip("/")
+        self.api_key = os.getenv("GEOAPIFY_API_KEY", "").strip()
+        self.base_url = os.getenv("GEOAPIFY_BASE_URL", "https://api.geoapify.com").rstrip("/")
+
+    def _request(self, endpoint: str, params: dict) -> list[dict]:
+        if not self.api_key:
+            raise HTTPException(503, detail={"code": "geocoding_not_configured", "message": "A busca de endereços está temporariamente indisponível. Tente novamente mais tarde."})
+        try:
+            with httpx.Client(timeout=10.0) as client:
+                response = client.get(f"{self.base_url}/v1/geocode/{endpoint}", params={
+                    **params, "apiKey": self.api_key, "lang": "pt", "format": "json",
+                })
+        except httpx.RequestError:
+            raise HTTPException(502, detail={"code": "geocoding_unavailable", "message": "Não foi possível buscar o endereço. Tente novamente."}) from None
+        if response.status_code in (401, 403):
+            raise HTTPException(503, detail={"code": "geocoding_credentials_invalid", "message": "A busca de endereços está temporariamente indisponível. Tente novamente mais tarde."})
+        if response.status_code == 429:
+            raise HTTPException(429, detail={"code": "geocoding_rate_limited", "message": "A busca de endereços atingiu o limite do provedor. Tente novamente mais tarde."})
+        if response.status_code != 200:
+            raise HTTPException(502, detail={"code": "geocoding_upstream_error", "message": "O serviço de endereços está indisponível. Tente novamente."})
+        try:
+            data = response.json()
+            rows = data["results"]
+            if not isinstance(rows, list):
+                raise ValueError()
+        except (ValueError, KeyError, TypeError):
+            raise HTTPException(502, detail={"code": "geocoding_invalid_response", "message": "O serviço de endereços retornou uma resposta inválida."}) from None
+        return [result for row in rows if (result := self._result(row)) is not None]
 
     def search(self, query: str) -> list[dict]:
         query = " ".join(query.strip().split())
-
         if len(query) < 3:
             return []
-
-        if not self.access_token:
-            raise HTTPException(
-                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail="Mapbox nao esta configurado no servidor.",
-            )
-
-        url = f"{self.base_url}/search/geocode/v6/forward"
-
-        params = {
-            "q": query,
-            "access_token": self.access_token,
-            "limit": 5,
-            "country": "br",
-            "language": "pt",
-            "autocomplete": "true",
-        }
-
-        try:
-            with httpx.Client(timeout=10.0) as client:
-                response = client.get(url, params=params)
-
-        except httpx.RequestError:
-            raise HTTPException(
-                status_code=status.HTTP_502_BAD_GATEWAY,
-                detail="Nao foi possivel buscar enderecos no Mapbox.",
-            )
-
-        if response.status_code != status.HTTP_200_OK:
-            raise HTTPException(
-                status_code=status.HTTP_502_BAD_GATEWAY,
-                detail="Mapbox retornou erro ao buscar enderecos.",
-            )
-
-        data = response.json()
-
-        results = []
-
-        for feature in data.get("features", []):
-            result = self._feature_to_result(feature)
-            if result:
-                results.append(result)
-
-        return results
+        return self._request("autocomplete", {"text": query, "filter": "countrycode:br", "limit": 5})
 
     def reverse(self, latitude: float, longitude: float) -> dict | None:
-        if not self.access_token:
-            raise HTTPException(
-                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail="Mapbox nao esta configurado no servidor.",
-            )
+        results = self._request("reverse", {"lat": float(latitude), "lon": float(longitude), "limit": 1})
+        return results[0] if results else None
 
-        url = f"{self.base_url}/search/geocode/v6/reverse"
-
-        params = {
-            "latitude": latitude,
-            "longitude": longitude,
-            "access_token": self.access_token,
-            "limit": 1,
-            "language": "pt",
-        }
-
+    def _result(self, row: dict) -> dict | None:
+        if not isinstance(row, dict) or str(row.get("country_code", "")).lower() != "br":
+            return None
         try:
-            with httpx.Client(timeout=10.0) as client:
-                response = client.get(url, params=params)
-
-        except httpx.RequestError:
-            raise HTTPException(
-                status_code=status.HTTP_502_BAD_GATEWAY,
-                detail="Nao foi possivel buscar endereco no Mapbox.",
-            )
-
-        if response.status_code != status.HTTP_200_OK:
-            raise HTTPException(
-                status_code=status.HTTP_502_BAD_GATEWAY,
-                detail="Mapbox retornou erro ao buscar endereco.",
-            )
-
-        data = response.json()
-
-        for feature in data.get("features", []):
-            result = self._feature_to_result(feature)
-            if result:
-                return result
-
-        return None
-
-    def _feature_to_result(self, feature: dict) -> dict | None:
-        if not isinstance(feature, dict):
+            lat, lon = float(row["lat"]), float(row["lon"])
+            if not isfinite(lat) or not isfinite(lon) or not -90 <= lat <= 90 or not -180 <= lon <= 180:
+                return None
+        except (KeyError, TypeError, ValueError, OverflowError):
             return None
-
-        properties = feature.get("properties", {})
-        if not isinstance(properties, dict):
-            properties = {}
-
-        geometry = feature.get("geometry", {})
-        if not isinstance(geometry, dict):
-            geometry = {}
-
-        coordinates = geometry.get("coordinates", [])
-        if not isinstance(coordinates, list):
-            coordinates = []
-
-        if len(coordinates) < 2:
-            coordinates_data = properties.get("coordinates")
-            if not isinstance(coordinates_data, dict):
-                coordinates_data = {}
-            coordinates = [
-                coordinates_data.get("longitude"),
-                coordinates_data.get("latitude"),
-            ]
-
-        if len(coordinates) < 2:
-            return None
-
-        try:
-            longitude = float(coordinates[0])
-            latitude = float(coordinates[1])
-        except (TypeError, ValueError):
-            return None
-
-        label_value = (
-            properties.get("full_address")
-            or self._join_label_parts(
-                properties.get("name"),
-                properties.get("place_formatted"),
-            )
-            or properties.get("name")
-            or feature.get("place_name")
-            or ""
-        )
-        label = str(label_value).strip()
-
+        label = str(row.get("formatted") or "").strip()
         if not label:
             return None
-
-        context = properties.get("context") or {}
-        region = context.get("region") or {}
-        state = region.get("region_code") or region.get("region_code_full", "").removeprefix("BR-")
+        state = str(row.get("state_code") or row.get("iso3166_2") or "").removeprefix("BR-").upper()
+        street = row.get("street") or row.get("name")
+        parts = [street, row.get("suburb"), row.get("city") or row.get("town") or row.get("village"), state, row.get("postcode")]
+        base_address = ", ".join(dict.fromkeys(str(p).strip() for p in parts if p))
+        datasource = row.get("datasource")
+        datasource = datasource if isinstance(datasource, dict) else {}
+        attribution = datasource.get("attribution") or "© OpenStreetMap contributors"
         return {
-            "state": state or None,
-            "label": label,
-            "latitude": latitude,
-            "longitude": longitude,
+            "label": label, "latitude": lat, "longitude": lon, "state": state or None,
+            "street": street, "house_number": str(row["housenumber"]) if row.get("housenumber") is not None else None,
+            "address_without_number": base_address if street else label,
+            "place_id": row.get("place_id"), "source": f"Powered by Geoapify | {attribution}",
         }
-
-    def _join_label_parts(self, name: str | None, place: str | None) -> str:
-        parts = [part.strip() for part in [name, place] if part and part.strip()]
-        return ", ".join(parts)

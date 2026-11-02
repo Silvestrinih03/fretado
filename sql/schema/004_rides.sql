@@ -65,6 +65,8 @@ CREATE TABLE ride_details (
         ON DELETE CASCADE,
 
     origin_address VARCHAR(255) NOT NULL,
+    origin_address_number VARCHAR(20),
+    origin_address_source VARCHAR(255),
     origin_address_complement VARCHAR(255),
     origin_reference_point VARCHAR(255),
 
@@ -72,6 +74,8 @@ CREATE TABLE ride_details (
     origin_longitude NUMERIC(9,6) NOT NULL,
 
     destination_address VARCHAR(255) NOT NULL,
+    destination_address_number VARCHAR(20),
+    destination_address_source VARCHAR(255),
     destination_address_complement VARCHAR(255),
     destination_reference_point VARCHAR(255),
 

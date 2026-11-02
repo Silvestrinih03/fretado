@@ -7,6 +7,10 @@ from pydantic import BaseModel, ConfigDict
 class RideDetailResponse(BaseModel):
     id: int
     ride_id: int
+    origin_address_number: str | None = None
+    destination_address_number: str | None = None
+    origin_address_source: str | None = None
+    destination_address_source: str | None = None
 
     origin_address: str
     origin_address_complement: str | None = None

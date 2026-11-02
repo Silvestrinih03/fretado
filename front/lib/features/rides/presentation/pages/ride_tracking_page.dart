@@ -7,6 +7,7 @@ import '../../../../core/enums/home_profile.dart';
 import '../../../../core/services/http_service.dart';
 import '../../../driver_operations/data/datasources/driver_operations_datasource.dart';
 import '../../../driver_operations/data/models/driver_operation_models.dart';
+import '../../../driver_navigation/presentation/widgets/driver_navigation_access_button.dart';
 import '../../../driver_reassignment/presentation/widgets/driver_reassignment_flow.dart';
 import '../../../home/presentation/pages/home_page.dart';
 import '../../../ride_cancellation/data/datasources/ride_cancellation_datasource.dart';
@@ -202,6 +203,7 @@ class _RideTrackingPageState extends State<RideTrackingPage> {
       ride: ride,
       profile: widget.profile,
       onTrack: () {},
+      onNavigationChanged: (_) => unawaited(_load()),
       onCancel:
           _isClient &&
               !ride.isCancellationReturn &&
@@ -294,6 +296,13 @@ class _RideTrackingPageState extends State<RideTrackingPage> {
         _TrackingHero(ride: ride, profile: widget.profile),
         const SizedBox(height: 11),
         _RideSteps(ride: ride, profile: widget.profile),
+        if (!_isClient) ...[
+          const SizedBox(height: 11),
+          DriverNavigationAccessButton(
+            ride: ride,
+            onChanged: (_) => unawaited(_load()),
+          ),
+        ],
         if (party != null) ...[
           const SizedBox(height: 11),
           _TrackingPartyCard(

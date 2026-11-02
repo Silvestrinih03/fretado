@@ -13,6 +13,11 @@ class RideGeocodeResult(BaseModel):
     latitude: float
     longitude: float
     state: str | None = None
+    street: str | None = None
+    house_number: str | None = None
+    address_without_number: str | None = None
+    place_id: str | None = None
+    source: str | None = None
 
 
 class RideGeocodeResponse(BaseModel):
@@ -21,6 +26,10 @@ class RideGeocodeResponse(BaseModel):
 
 class RideQuoteRequest(BaseModel):
     origin_state: str | None = None
+    origin_address_number: str = Field(..., min_length=1, max_length=20)
+    destination_address_number: str = Field(..., min_length=1, max_length=20)
+    origin_address_source: str | None = Field(None, max_length=255)
+    destination_address_source: str | None = Field(None, max_length=255)
     origin_address: str = Field(..., max_length=255)
     origin_address_complement: str | None = Field(None, max_length=255)
     origin_reference_point: str | None = Field(None, max_length=255)
@@ -35,6 +44,18 @@ class RideQuoteRequest(BaseModel):
     package_height: Decimal = Field(..., gt=0, max_digits=10, decimal_places=2)
     package_length: Decimal = Field(..., gt=0, max_digits=10, decimal_places=2)
     package_weight: Decimal = Field(..., gt=0, max_digits=10, decimal_places=2)
+
+    @field_validator("origin_address_number", "destination_address_number", mode="before")
+    @classmethod
+    def normalize_address_number(cls, value):
+        if not isinstance(value, str) or not value.strip():
+            raise ValueError("Informe o número do endereço ou selecione S/N.")
+        value = value.strip()
+        if value.upper() in {"S/N", "SN", "S/N.", "SEM NÚMERO", "SEM NUMERO"}:
+            return "S/N"
+        if not any(character.isdigit() for character in value):
+            raise ValueError("Informe o número do endereço ou selecione S/N.")
+        return value
 
     @field_validator("origin_state")
     @classmethod

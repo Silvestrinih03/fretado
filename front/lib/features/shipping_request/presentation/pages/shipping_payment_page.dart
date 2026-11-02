@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../app/design_system/design_system.dart';
 import '../../../../core/endpoints.dart';
 import '../../../../core/enums/home_profile.dart';
+import '../../../../core/maps/geocoding_credit.dart';
 import '../../../../core/services/http_service.dart';
 import '../../../home/presentation/pages/home_page.dart';
 import '../../../rides/presentation/pages/ride_tracking_page.dart';
@@ -772,7 +773,7 @@ class _FreightSummaryCard extends StatelessWidget {
           const SizedBox(height: 18),
           _SummaryRouteStop(
             label: 'Coleta',
-            address: addressData.pickupAddress,
+            address: addressData.originAddress,
             detail: _addressDetail(
               addressData.pickupAddressComplement,
               addressData.pickupReferencePoint,
@@ -783,13 +784,17 @@ class _FreightSummaryCard extends StatelessWidget {
           ),
           _SummaryRouteStop(
             label: 'Entrega',
-            address: addressData.deliveryAddress,
+            address: addressData.destinationAddress,
             detail: _addressDetail(
               addressData.deliveryAddressComplement,
               addressData.deliveryReferencePoint,
             ),
             icon: Icons.location_on_rounded,
             color: _ShippingPaymentPageState._primaryBlue,
+          ),
+          GeocodingCredit(
+            source:
+                '${addressData.pickupAddressSource ?? ''} | ${addressData.deliveryAddressSource ?? ''}',
           ),
           const SizedBox(height: 14),
           Wrap(

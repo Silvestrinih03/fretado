@@ -1,4 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:latlong2/latlong.dart';
+import '../../../../core/maps/address_result.dart';
+import '../../../../core/maps/address_point_confirmation.dart';
+import '../../../../core/maps/geocoding_credit.dart';
 
 import '../../../../app/design_system/design_system.dart';
 import '../../../../core/endpoints.dart';
@@ -11,11 +15,15 @@ import 'shipping_resume_page.dart';
 class FillInPackageDetailsPage extends StatefulWidget {
   final int userId;
   final FreightAddressData addressData;
+  final FreightDetailsDraft? initialDraft;
+  final ValueChanged<FreightDetailsDraft>? onDraftSaved;
 
   const FillInPackageDetailsPage({
     super.key,
     required this.userId,
     required this.addressData,
+    this.initialDraft,
+    this.onDraftSaved,
   });
 
   @override
@@ -44,16 +52,85 @@ class _FillInPackageDetailsPageState extends State<FillInPackageDetailsPage> {
   late final HttpService _httpService;
   AutovalidateMode _autovalidateMode = AutovalidateMode.disabled;
   bool _isQuoting = false;
+  late FreightAddressData _address;
+  final _pickupNumber = TextEditingController();
+  final _deliveryNumber = TextEditingController();
+  final _pickupNumberKey = GlobalKey<FormFieldState<String>>();
+  final _deliveryNumberKey = GlobalKey<FormFieldState<String>>();
+  final _packageKey = GlobalKey();
+  bool _pickupWithoutNumber = false;
+  bool _deliveryWithoutNumber = false;
+  String _previousPickupNumber = '';
+  String _previousDeliveryNumber = '';
 
   @override
   void initState() {
     super.initState();
     _httpService = HttpService();
+    _address = widget.addressData;
+    _pickupNumber.text = _address.pickupAddressNumber ?? '';
+    _deliveryNumber.text = _address.deliveryAddressNumber ?? '';
+    _pickupWithoutNumber = _pickupNumber.text == 'S/N';
+    _deliveryWithoutNumber = _deliveryNumber.text == 'S/N';
+    _pickupComplementController.text = _address.pickupAddressComplement ?? '';
+    _pickupReferenceController.text = _address.pickupReferencePoint ?? '';
+    _deliveryComplementController.text =
+        _address.deliveryAddressComplement ?? '';
+    _deliveryReferenceController.text = _address.deliveryReferencePoint ?? '';
+    final draft = widget.initialDraft;
+    if (draft != null) {
+      _widthController.text = draft.fields['width'] ?? '';
+      _heightController.text = draft.fields['height'] ?? '';
+      _lengthController.text = draft.fields['length'] ?? '';
+      _weightController.text = draft.fields['weight'] ?? '';
+      final previous = draft.addressData;
+      if (previous.pickupAddress == _address.pickupAddress &&
+          previous.pickupLatitude == _address.pickupLatitude &&
+          previous.pickupLongitude == _address.pickupLongitude) {
+        _pickupNumber.text = draft.fields['pickup_number'] ?? '';
+        _pickupWithoutNumber = draft.pickupWithoutNumber;
+        _pickupComplementController.text =
+            draft.fields['pickup_complement'] ?? '';
+        _pickupReferenceController.text =
+            draft.fields['pickup_reference'] ?? '';
+      }
+      if (previous.deliveryAddress == _address.deliveryAddress &&
+          previous.deliveryLatitude == _address.deliveryLatitude &&
+          previous.deliveryLongitude == _address.deliveryLongitude) {
+        _deliveryNumber.text = draft.fields['delivery_number'] ?? '';
+        _deliveryWithoutNumber = draft.deliveryWithoutNumber;
+        _deliveryComplementController.text =
+            draft.fields['delivery_complement'] ?? '';
+        _deliveryReferenceController.text =
+            draft.fields['delivery_reference'] ?? '';
+      }
+    }
   }
 
   @override
   void dispose() {
+    widget.onDraftSaved?.call(
+      FreightDetailsDraft(
+        addressData: _address,
+        pickupWithoutNumber: _pickupWithoutNumber,
+        deliveryWithoutNumber: _deliveryWithoutNumber,
+        fields: {
+          'width': _widthController.text,
+          'height': _heightController.text,
+          'length': _lengthController.text,
+          'weight': _weightController.text,
+          'pickup_number': _pickupNumber.text,
+          'delivery_number': _deliveryNumber.text,
+          'pickup_complement': _pickupComplementController.text,
+          'pickup_reference': _pickupReferenceController.text,
+          'delivery_complement': _deliveryComplementController.text,
+          'delivery_reference': _deliveryReferenceController.text,
+        },
+      ),
+    );
     _httpService.dispose();
+    _pickupNumber.dispose();
+    _deliveryNumber.dispose();
     _widthController.dispose();
     _heightController.dispose();
     _lengthController.dispose();
@@ -63,6 +140,31 @@ class _FillInPackageDetailsPageState extends State<FillInPackageDetailsPage> {
     _deliveryComplementController.dispose();
     _deliveryReferenceController.dispose();
     super.dispose();
+  }
+
+  void _toggleWithoutNumber(bool pickup, bool value) {
+    final controller = pickup ? _pickupNumber : _deliveryNumber;
+    setState(() {
+      if (pickup) {
+        if (value) {
+          _previousPickupNumber = controller.text;
+        }
+        _pickupWithoutNumber = value;
+        controller.text = value ? 'S/N' : _previousPickupNumber;
+      } else {
+        if (value) {
+          _previousDeliveryNumber = controller.text;
+        }
+        _deliveryWithoutNumber = value;
+        controller.text = value ? 'S/N' : _previousDeliveryNumber;
+      }
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        (pickup ? _pickupNumberKey : _deliveryNumberKey).currentState
+            ?.validate();
+      }
+    });
   }
 
   @override
@@ -99,17 +201,46 @@ class _FillInPackageDetailsPageState extends State<FillInPackageDetailsPage> {
                       ),
                     ),
                     const SizedBox(height: 18),
-                    _RouteOverviewCard(addressData: widget.addressData),
-                    const SizedBox(height: 14),
-                    _AddressDetailsCard(
-                      pickupComplementController: _pickupComplementController,
-                      pickupReferenceController: _pickupReferenceController,
-                      deliveryComplementController:
-                          _deliveryComplementController,
-                      deliveryReferenceController: _deliveryReferenceController,
+                    const Text(
+                      'Confirme os pontos de acesso e conte o que vamos transportar.',
+                      style: TextStyle(
+                        color: FretColors.textSecondary,
+                        height: 1.5,
+                      ),
                     ),
-                    const SizedBox(height: 14),
+                    const SizedBox(height: 20),
+                    _AddressEditor(
+                      title: 'Coleta',
+                      address: _address.pickupAddress,
+                      color: _orange,
+                      number: _pickupNumber,
+                      numberKey: _pickupNumberKey,
+                      withoutNumber: _pickupWithoutNumber,
+                      onWithoutNumber: (value) =>
+                          _toggleWithoutNumber(true, value),
+                      complement: _pickupComplementController,
+                      reference: _pickupReferenceController,
+                    ),
+                    const SizedBox(height: 16),
+                    _AddressEditor(
+                      title: 'Entrega',
+                      address: _address.deliveryAddress,
+                      color: _primaryBlue,
+                      number: _deliveryNumber,
+                      numberKey: _deliveryNumberKey,
+                      withoutNumber: _deliveryWithoutNumber,
+                      onWithoutNumber: (value) =>
+                          _toggleWithoutNumber(false, value),
+                      complement: _deliveryComplementController,
+                      reference: _deliveryReferenceController,
+                    ),
+                    GeocodingCredit(
+                      source:
+                          '${_address.pickupAddressSource ?? ''} | ${_address.deliveryAddressSource ?? ''}',
+                    ),
+                    const SizedBox(height: 16),
                     _PackageDetailsCard(
+                      key: _packageKey,
                       widthController: _widthController,
                       heightController: _heightController,
                       lengthController: _lengthController,
@@ -135,6 +266,18 @@ class _FillInPackageDetailsPageState extends State<FillInPackageDetailsPage> {
 
     final bool isFormValid = _formKey.currentState?.validate() ?? false;
     if (!isFormValid) {
+      final target = _pickupNumberKey.currentState?.hasError == true
+          ? _pickupNumberKey.currentContext
+          : _deliveryNumberKey.currentState?.hasError == true
+          ? _deliveryNumberKey.currentContext
+          : _packageKey.currentContext;
+      if (target != null) {
+        Scrollable.ensureVisible(
+          target,
+          duration: const Duration(milliseconds: 250),
+          alignment: .15,
+        );
+      }
       setState(() {
         _autovalidateMode = AutovalidateMode.onUserInteraction;
       });
@@ -147,17 +290,26 @@ class _FillInPackageDetailsPageState extends State<FillInPackageDetailsPage> {
       lengthCm: _parseMetric(_lengthController.text),
       weightKg: _parseMetric(_weightController.text),
     );
-    final addressData = widget.addressData.copyWith(
-      pickupAddressComplement: _optionalText(_pickupComplementController.text),
-      pickupReferencePoint: _optionalText(_pickupReferenceController.text),
-      deliveryAddressComplement: _optionalText(
-        _deliveryComplementController.text,
-      ),
-      deliveryReferencePoint: _optionalText(_deliveryReferenceController.text),
-    );
-
     setState(() => _isQuoting = true);
     try {
+      if (!await _confirmNumber(true) ||
+          !await _confirmNumber(false) ||
+          !mounted) {
+        return;
+      }
+      final addressData = _address.copyWith(
+        pickupAddressComplement: _optionalText(
+          _pickupComplementController.text,
+        ),
+        pickupReferencePoint: _optionalText(_pickupReferenceController.text),
+        deliveryAddressComplement: _optionalText(
+          _deliveryComplementController.text,
+        ),
+        deliveryReferencePoint: _optionalText(
+          _deliveryReferenceController.text,
+        ),
+      );
+
       final response = await _httpService.post(
         Endpoints.rideQuote,
         body: {...addressData.toRideJson(), ...packageData.toQuoteJson()},
@@ -187,6 +339,70 @@ class _FillInPackageDetailsPageState extends State<FillInPackageDetailsPage> {
         setState(() => _isQuoting = false);
       }
     }
+  }
+
+  Future<bool> _confirmNumber(bool pickup) async {
+    final number = (pickup ? _pickupWithoutNumber : _deliveryWithoutNumber)
+        ? 'S/N'
+        : (pickup ? _pickupNumber.text : _deliveryNumber.text).trim();
+    final previous = pickup
+        ? _address.pickupAddressNumber
+        : _address.deliveryAddressNumber;
+    if (number == previous) return true;
+    final base = pickup ? _address.pickupAddress : _address.deliveryAddress;
+    AddressResult? match;
+    if (number != 'S/N') {
+      final response = await _httpService.get(
+        Endpoints.rideGeocode(formatFreightAddress(base, number)),
+      );
+      final candidates = (response['data'] as List).map(
+        (row) => AddressResult.fromJson(Map<String, dynamic>.from(row as Map)),
+      );
+      for (final candidate in candidates) {
+        if (candidate.number?.toUpperCase() == number.toUpperCase()) {
+          match = candidate;
+          break;
+        }
+      }
+    }
+    if (!mounted) return false;
+    final initial =
+        match?.point ??
+        LatLng(
+          pickup ? _address.pickupLatitude : _address.deliveryLatitude,
+          pickup ? _address.pickupLongitude : _address.deliveryLongitude,
+        );
+    final confirmed = await showModalBottomSheet<LatLng>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (_) => AddressPointConfirmation(
+        title: pickup ? 'Confirmar coleta' : 'Confirmar entrega',
+        address: formatFreightAddress(match?.baseAddress ?? base, number),
+        initialPoint: initial,
+        exactMatch: match != null || number == 'S/N',
+      ),
+    );
+    if (confirmed == null || !mounted) return false;
+    setState(() {
+      _address = pickup
+          ? _address.copyWith(
+              pickupAddress: match?.baseAddress ?? base,
+              pickupAddressNumber: number,
+              pickupState: match?.state,
+              pickupAddressSource: match?.source,
+              pickupLatitude: confirmed.latitude,
+              pickupLongitude: confirmed.longitude,
+            )
+          : _address.copyWith(
+              deliveryAddress: match?.baseAddress ?? base,
+              deliveryAddressNumber: number,
+              deliveryAddressSource: match?.source,
+              deliveryLatitude: confirmed.latitude,
+              deliveryLongitude: confirmed.longitude,
+            );
+    });
+    return true;
   }
 
   double _parseMetric(String value) {
@@ -249,107 +465,6 @@ class _FreightRequestHeader extends StatelessWidget {
   }
 }
 
-class _RouteOverviewCard extends StatelessWidget {
-  final FreightAddressData addressData;
-
-  const _RouteOverviewCard({required this.addressData});
-
-  @override
-  Widget build(BuildContext context) {
-    return _SectionPanel(
-      icon: Icons.alt_route_rounded,
-      title: 'Rota selecionada',
-      children: [
-        _RouteOverviewStop(
-          label: 'Coleta',
-          address: addressData.pickupAddress,
-          color: _FillInPackageDetailsPageState._orange,
-          showConnector: true,
-        ),
-        _RouteOverviewStop(
-          label: 'Entrega',
-          address: addressData.deliveryAddress,
-          color: _FillInPackageDetailsPageState._primaryBlue,
-        ),
-      ],
-    );
-  }
-}
-
-class _RouteOverviewStop extends StatelessWidget {
-  final String label;
-  final String address;
-  final Color color;
-  final bool showConnector;
-
-  const _RouteOverviewStop({
-    required this.label,
-    required this.address,
-    required this.color,
-    this.showConnector = false,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        SizedBox(
-          width: 22,
-          child: Column(
-            children: [
-              const SizedBox(height: 6),
-              Container(
-                width: 11,
-                height: 11,
-                decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-              ),
-              if (showConnector)
-                Container(
-                  width: 1,
-                  height: 30,
-                  color: const Color(0xFFE0E2EA),
-                ),
-            ],
-          ),
-        ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: Padding(
-            padding: EdgeInsets.only(bottom: showConnector ? 12 : 0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  label.toUpperCase(),
-                  style: const TextStyle(
-                    color: FretColors.neutral500,
-                    fontSize: 9,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 0,
-                  ),
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  address,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: FretColors.neutral900,
-                    fontSize: 13,
-                    height: 1.2,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
 class _SectionPanel extends StatelessWidget {
   final IconData icon;
   final String title;
@@ -368,7 +483,7 @@ class _SectionPanel extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
       decoration: BoxDecoration(
         color: FretColors.white,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(18),
         border: Border.all(color: const Color(0xFFE6E7ED)),
         boxShadow: const [
           BoxShadow(
@@ -387,8 +502,8 @@ class _SectionPanel extends StatelessWidget {
                 width: 32,
                 height: 32,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF1F2F8),
-                  borderRadius: BorderRadius.circular(8),
+                  color: const Color(0xFFF5EBC2),
+                  borderRadius: BorderRadius.circular(18),
                 ),
                 child: Icon(
                   icon,
@@ -417,78 +532,105 @@ class _SectionPanel extends StatelessWidget {
   }
 }
 
-class _AddressDetailsCard extends StatelessWidget {
-  final TextEditingController pickupComplementController;
-  final TextEditingController pickupReferenceController;
-  final TextEditingController deliveryComplementController;
-  final TextEditingController deliveryReferenceController;
-
-  const _AddressDetailsCard({
-    required this.pickupComplementController,
-    required this.pickupReferenceController,
-    required this.deliveryComplementController,
-    required this.deliveryReferenceController,
+class _AddressEditor extends StatelessWidget {
+  final String title;
+  final String address;
+  final Color color;
+  final TextEditingController number;
+  final GlobalKey<FormFieldState<String>> numberKey;
+  final bool withoutNumber;
+  final ValueChanged<bool> onWithoutNumber;
+  final TextEditingController complement;
+  final TextEditingController reference;
+  const _AddressEditor({
+    required this.title,
+    required this.address,
+    required this.color,
+    required this.number,
+    required this.numberKey,
+    required this.withoutNumber,
+    required this.onWithoutNumber,
+    required this.complement,
+    required this.reference,
   });
-
   @override
-  Widget build(BuildContext context) {
-    return _SectionPanel(
-      icon: Icons.edit_location_alt_outlined,
-      title: 'Detalhes dos enderecos',
-      children: [
-        const _FieldGroupLabel(text: 'Coleta'),
-        const SizedBox(height: 8),
-        _OptionalAddressField(
-          label: 'Complemento',
-          controller: pickupComplementController,
-          icon: Icons.apartment_rounded,
-          hintText: 'Apto, bloco, sala...',
+  Widget build(BuildContext context) => _SectionPanel(
+    icon: title == 'Coleta' ? Icons.trip_origin : Icons.location_on_outlined,
+    title: title,
+    children: [
+      Text(
+        address,
+        style: const TextStyle(
+          fontSize: 14,
+          fontWeight: FontWeight.w600,
+          height: 1.5,
         ),
-        const SizedBox(height: 12),
-        _OptionalAddressField(
-          label: 'Referencia',
-          controller: pickupReferenceController,
-          icon: Icons.near_me_outlined,
-          hintText: 'Proximo a...',
-        ),
-        const SizedBox(height: 16),
-        const _FieldGroupLabel(text: 'Entrega'),
-        const SizedBox(height: 8),
-        _OptionalAddressField(
-          label: 'Complemento',
-          controller: deliveryComplementController,
-          icon: Icons.apartment_rounded,
-          hintText: 'Apto, bloco, sala...',
-        ),
-        const SizedBox(height: 12),
-        _OptionalAddressField(
-          label: 'Referencia',
-          controller: deliveryReferenceController,
-          icon: Icons.near_me_outlined,
-          hintText: 'Proximo a...',
-        ),
-      ],
-    );
-  }
-}
-
-class _FieldGroupLabel extends StatelessWidget {
-  final String text;
-
-  const _FieldGroupLabel({required this.text});
-
-  @override
-  Widget build(BuildContext context) {
-    return Text(
-      text.toUpperCase(),
-      style: const TextStyle(
-        color: _FillInPackageDetailsPageState._orange,
-        fontSize: 10,
-        fontWeight: FontWeight.w900,
-        letterSpacing: 0,
       ),
-    );
-  }
+      const SizedBox(height: 16),
+      Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: TextFormField(
+              key: numberKey,
+              controller: number,
+              enabled: !withoutNumber,
+              maxLength: 20,
+              textInputAction: TextInputAction.next,
+              keyboardType: TextInputType.streetAddress,
+              validator: (value) => withoutNumber
+                  ? null
+                  : (value == null ||
+                        value.trim().isEmpty ||
+                        !RegExp(r'[0-9]').hasMatch(value))
+                  ? 'Informe o número ou marque S/N.'
+                  : null,
+              decoration: InputDecoration(
+                labelText: 'Número *',
+                hintText: withoutNumber ? 'S/N' : 'Ex.: 120, 12A',
+                counterText: '',
+                prefixIcon: Icon(Icons.tag, color: color),
+                filled: true,
+                fillColor: FretColors.appSurfaceSoft,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          SizedBox(
+            width: 134,
+            child: CheckboxListTile(
+              value: withoutNumber,
+              contentPadding: EdgeInsets.zero,
+              title: const Text(
+                'Sem número\nS/N',
+                style: TextStyle(fontSize: 12),
+              ),
+              controlAffinity: ListTileControlAffinity.leading,
+              activeColor: color,
+              onChanged: (value) => onWithoutNumber(value ?? false),
+            ),
+          ),
+        ],
+      ),
+      const SizedBox(height: 16),
+      _OptionalAddressField(
+        label: 'Complemento (opcional)',
+        controller: complement,
+        icon: Icons.apartment_rounded,
+        hintText: 'Apto, bloco, sala...',
+      ),
+      const SizedBox(height: 14),
+      _OptionalAddressField(
+        label: 'Referência (opcional)',
+        controller: reference,
+        icon: Icons.near_me_outlined,
+        hintText: 'Um ponto que facilite a chegada',
+      ),
+    ],
+  );
 }
 
 class _OptionalAddressField extends StatelessWidget {
@@ -548,15 +690,15 @@ class _OptionalAddressField extends StatelessWidget {
                 vertical: 11,
               ),
               border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(6),
+                borderRadius: BorderRadius.circular(12),
                 borderSide: const BorderSide(color: FretColors.neutral200),
               ),
               enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(6),
+                borderRadius: BorderRadius.circular(12),
                 borderSide: const BorderSide(color: FretColors.neutral200),
               ),
               focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(6),
+                borderRadius: BorderRadius.circular(12),
                 borderSide: const BorderSide(
                   color: _FillInPackageDetailsPageState._primaryBlue,
                 ),
@@ -576,6 +718,7 @@ class _PackageDetailsCard extends StatelessWidget {
   final TextEditingController weightController;
 
   const _PackageDetailsCard({
+    super.key,
     required this.widthController,
     required this.heightController,
     required this.lengthController,
@@ -586,7 +729,7 @@ class _PackageDetailsCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return _SectionPanel(
       icon: Icons.inventory_2_outlined,
-      title: 'Caracteristicas do produto',
+      title: 'Encomenda',
       children: [
         Row(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -703,15 +846,15 @@ class _PackageMetricField extends StatelessWidget {
                 vertical: 11,
               ),
               border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(6),
+                borderRadius: BorderRadius.circular(12),
                 borderSide: const BorderSide(color: FretColors.neutral200),
               ),
               enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(6),
+                borderRadius: BorderRadius.circular(12),
                 borderSide: const BorderSide(color: FretColors.neutral200),
               ),
               focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(6),
+                borderRadius: BorderRadius.circular(12),
                 borderSide: const BorderSide(
                   color: _FillInPackageDetailsPageState._primaryBlue,
                 ),
@@ -762,7 +905,7 @@ class _FieldUnitSuffix extends StatelessWidget {
 String? _validatePositiveMetric(String? value, String label) {
   final String normalizedValue = (value ?? '').trim().replaceAll(',', '.');
   final double? metricValue = double.tryParse(normalizedValue);
-  if (metricValue == null) {
+  if (metricValue == null || !metricValue.isFinite) {
     return 'Informe ${label.toLowerCase()}.';
   }
   if (metricValue <= 0) {
@@ -849,7 +992,7 @@ class _BottomCalculateBar extends StatelessWidget {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Text(
-                            'Calcular Valor',
+                            'Calcular frete',
                             style: TextStyle(
                               fontSize: 13,
                               fontWeight: FontWeight.w800,

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_map/flutter_map.dart';
+import '../../../../core/maps/fret_map.dart';
+import '../../../../core/maps/geocoding_credit.dart';
 import 'package:latlong2/latlong.dart';
 
 import '../../../../app/design_system/design_system.dart';
@@ -188,7 +189,7 @@ class _RouteSummaryCard extends StatelessWidget {
         const SizedBox(height: 14),
         _RouteStop(
           label: 'ORIGEM (COLETA)',
-          address: addressData.pickupAddress,
+          address: addressData.originAddress,
           coordinate: _formatCoordinates(
             addressData.pickupLatitude,
             addressData.pickupLongitude,
@@ -197,7 +198,7 @@ class _RouteSummaryCard extends StatelessWidget {
         ),
         _RouteStop(
           label: 'DESTINO (ENTREGA)',
-          address: addressData.deliveryAddress,
+          address: addressData.destinationAddress,
           coordinate: _formatCoordinates(
             addressData.deliveryLatitude,
             addressData.deliveryLongitude,
@@ -211,124 +212,54 @@ class _RouteSummaryCard extends StatelessWidget {
 class _RouteMapCard extends StatefulWidget {
   final FreightAddressData addressData;
   final FreightQuoteModel quote;
-
-  const _RouteMapCard({
-    required this.addressData,
-    required this.quote,
-  });
-
+  const _RouteMapCard({required this.addressData, required this.quote});
   @override
   State<_RouteMapCard> createState() => _RouteMapCardState();
 }
 
 class _RouteMapCardState extends State<_RouteMapCard> {
-  final MapController _mapController = MapController();
-
-  LatLng get _pickup => LatLng(
-        widget.addressData.pickupLatitude,
-        widget.addressData.pickupLongitude,
-      );
-
-  LatLng get _delivery => LatLng(
-        widget.addressData.deliveryLatitude,
-        widget.addressData.deliveryLongitude,
-      );
-
-  List<LatLng> get _polylinePoints {
-    if (widget.quote.routePoints.isNotEmpty) {
-      return widget.quote.routePoints;
-    }
-
-    return <LatLng>[_pickup, _delivery];
-  }
-
-  List<LatLng> get _cameraPoints {
-    return <LatLng>[
-      _pickup,
-      ...widget.quote.routePoints,
-      _delivery,
-    ];
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _fitRoute());
-  }
-
+  final _controller = FretMapController();
   @override
   void dispose() {
-    _mapController.dispose();
+    _controller.dispose();
     super.dispose();
-  }
-
-  void _fitRoute() {
-    if (!mounted) {
-      return;
-    }
-
-    _mapController.fitCamera(
-      CameraFit.coordinates(
-        coordinates: _cameraPoints,
-        padding: const EdgeInsets.all(36),
-        maxZoom: 15,
-      ),
-    );
   }
 
   @override
   Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(5),
-      child: SizedBox(
-        height: 180,
-        child: FlutterMap(
-          mapController: _mapController,
-          options: MapOptions(initialCenter: _pickup, initialZoom: 12),
-          children: [
-            TileLayer(
-              urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-              userAgentPackageName: 'com.example.fretado',
+    final pickup = LatLng(
+      widget.addressData.pickupLatitude,
+      widget.addressData.pickupLongitude,
+    );
+    final delivery = LatLng(
+      widget.addressData.deliveryLatitude,
+      widget.addressData.deliveryLongitude,
+    );
+    return Column(
+      children: [
+        ClipRRect(
+          borderRadius: BorderRadius.circular(16),
+          child: SizedBox(
+            height: 200,
+            child: FretMap(
+              controller: _controller,
+              initialCenter: pickup,
+              pickup: pickup,
+              delivery: delivery,
+              routePoints: widget.quote.routePoints,
+              onReady: () => _controller.fit([
+                pickup,
+                ...widget.quote.routePoints,
+                delivery,
+              ]),
             ),
-            if (_polylinePoints.length >= 2)
-              PolylineLayer(
-                polylines: [
-                  Polyline(
-                    points: _polylinePoints,
-                    strokeWidth: 5,
-                    color: ShippingResumePage._primaryBlue,
-                    borderStrokeWidth: 2,
-                    borderColor: FretColors.white,
-                  ),
-                ],
-              ),
-            MarkerLayer(
-              markers: [
-                Marker(
-                  point: _pickup,
-                  width: 44,
-                  height: 44,
-                  child: const Icon(
-                    Icons.radio_button_checked,
-                    color: ShippingResumePage._orange,
-                    size: 34,
-                  ),
-                ),
-                Marker(
-                  point: _delivery,
-                  width: 44,
-                  height: 44,
-                  child: const Icon(
-                    Icons.location_on,
-                    color: ShippingResumePage._primaryBlue,
-                    size: 38,
-                  ),
-                ),
-              ],
-            ),
-          ],
+          ),
         ),
-      ),
+        GeocodingCredit(
+          source:
+              '${widget.addressData.pickupAddressSource ?? ''} | ${widget.addressData.deliveryAddressSource ?? ''}',
+        ),
+      ],
     );
   }
 }

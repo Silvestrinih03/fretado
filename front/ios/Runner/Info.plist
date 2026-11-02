@@ -55,7 +55,7 @@
 		<key>NSPhotoLibraryUsageDescription</key>
 		<string>Usamos suas fotos para escolher uma imagem de perfil.</string>
 		<key>NSLocationWhenInUseUsageDescription</key>
-		<string>Usamos sua localizacao para mostrar sua disponibilidade como motorista.</string>
+		<string>Usamos sua localização para mostrar sua disponibilidade e acompanhar o trajeto até a coleta e a entrega.</string>
 		<key>UIStatusBarHidden</key>
 		<false/>
 	</dict>

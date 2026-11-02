@@ -16,7 +16,7 @@ from app.services.fuel_price_service import (
 )
 from app.services.freight_pricing_service import FreightPricingService
 from app.services.geocoding_service import (
-    MapboxGeocodingService,
+    GeoapifyGeocodingService,
 )
 from app.services.pricing_policy_service import (
     PricingPolicyService,
@@ -186,7 +186,7 @@ class RideQuoteService:
             )
 
         origin = (
-            MapboxGeocodingService()
+            GeoapifyGeocodingService()
             .reverse(
                 latitude=(
                     payload.origin_latitude

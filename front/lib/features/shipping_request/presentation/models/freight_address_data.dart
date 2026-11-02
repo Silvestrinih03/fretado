@@ -1,12 +1,18 @@
+import '../../../../core/maps/address_result.dart';
+
 class FreightAddressData {
   final String? pickupState;
   final String pickupAddress;
+  final String? pickupAddressNumber;
+  final String? pickupAddressSource;
   final String? pickupAddressComplement;
   final String? pickupReferencePoint;
   final double pickupLatitude;
   final double pickupLongitude;
   final String? pickupPlaceId;
   final String deliveryAddress;
+  final String? deliveryAddressNumber;
+  final String? deliveryAddressSource;
   final String? deliveryAddressComplement;
   final String? deliveryReferencePoint;
   final double deliveryLatitude;
@@ -16,12 +22,16 @@ class FreightAddressData {
   const FreightAddressData({
     this.pickupState,
     required this.pickupAddress,
+    this.pickupAddressNumber,
+    this.pickupAddressSource,
     this.pickupAddressComplement,
     this.pickupReferencePoint,
     required this.pickupLatitude,
     required this.pickupLongitude,
     this.pickupPlaceId,
     required this.deliveryAddress,
+    this.deliveryAddressNumber,
+    this.deliveryAddressSource,
     this.deliveryAddressComplement,
     this.deliveryReferencePoint,
     required this.deliveryLatitude,
@@ -32,12 +42,16 @@ class FreightAddressData {
   FreightAddressData copyWith({
     String? pickupState,
     String? pickupAddress,
+    String? pickupAddressNumber,
+    String? pickupAddressSource,
     String? pickupAddressComplement,
     String? pickupReferencePoint,
     double? pickupLatitude,
     double? pickupLongitude,
     String? pickupPlaceId,
     String? deliveryAddress,
+    String? deliveryAddressNumber,
+    String? deliveryAddressSource,
     String? deliveryAddressComplement,
     String? deliveryReferencePoint,
     double? deliveryLatitude,
@@ -45,11 +59,16 @@ class FreightAddressData {
     String? deliveryPlaceId,
   }) {
     return FreightAddressData(
-      pickupState: pickupState ??
+      pickupState:
+          pickupState ??
           ((pickupLatitude != null && pickupLatitude != this.pickupLatitude) ||
-                  (pickupLongitude != null && pickupLongitude != this.pickupLongitude)
-              ? null : this.pickupState),
+                  (pickupLongitude != null &&
+                      pickupLongitude != this.pickupLongitude)
+              ? null
+              : this.pickupState),
       pickupAddress: pickupAddress ?? this.pickupAddress,
+      pickupAddressNumber: pickupAddressNumber ?? this.pickupAddressNumber,
+      pickupAddressSource: pickupAddressSource ?? this.pickupAddressSource,
       pickupAddressComplement:
           pickupAddressComplement ?? this.pickupAddressComplement,
       pickupReferencePoint: pickupReferencePoint ?? this.pickupReferencePoint,
@@ -57,6 +76,10 @@ class FreightAddressData {
       pickupLongitude: pickupLongitude ?? this.pickupLongitude,
       pickupPlaceId: pickupPlaceId ?? this.pickupPlaceId,
       deliveryAddress: deliveryAddress ?? this.deliveryAddress,
+      deliveryAddressNumber:
+          deliveryAddressNumber ?? this.deliveryAddressNumber,
+      deliveryAddressSource:
+          deliveryAddressSource ?? this.deliveryAddressSource,
       deliveryAddressComplement:
           deliveryAddressComplement ?? this.deliveryAddressComplement,
       deliveryReferencePoint:
@@ -67,9 +90,11 @@ class FreightAddressData {
     );
   }
 
-  String get originAddress => pickupAddress;
+  String get originAddress =>
+      formatFreightAddress(pickupAddress, pickupAddressNumber);
 
-  String get destinationAddress => deliveryAddress;
+  String get destinationAddress =>
+      formatFreightAddress(deliveryAddress, deliveryAddressNumber);
 
   Map<String, dynamic> toJson() {
     return toRideJson();
@@ -78,14 +103,17 @@ class FreightAddressData {
   Map<String, dynamic> toRideJson() {
     return {
       if (pickupState != null) 'origin_state': pickupState,
-      'origin_address': pickupAddress,
+      'origin_address': originAddress,
+      'origin_address_number': pickupAddressNumber,
+      'origin_address_source': pickupAddressSource,
       'origin_address_complement': _blankToNull(pickupAddressComplement),
       'origin_reference_point': _blankToNull(pickupReferencePoint),
       'origin_latitude': pickupLatitude,
       'origin_longitude': pickupLongitude,
-      'destination_address': deliveryAddress,
-      'destination_address_complement':
-          _blankToNull(deliveryAddressComplement),
+      'destination_address': destinationAddress,
+      'destination_address_number': deliveryAddressNumber,
+      'destination_address_source': deliveryAddressSource,
+      'destination_address_complement': _blankToNull(deliveryAddressComplement),
       'destination_reference_point': _blankToNull(deliveryReferencePoint),
       'destination_latitude': deliveryLatitude,
       'destination_longitude': deliveryLongitude,
@@ -100,4 +128,19 @@ String? _blankToNull(String? value) {
   }
 
   return cleaned;
+}
+
+/// Keeps even partially entered text when returning to the route selection.
+class FreightDetailsDraft {
+  final FreightAddressData addressData;
+  final Map<String, String> fields;
+  final bool pickupWithoutNumber;
+  final bool deliveryWithoutNumber;
+
+  const FreightDetailsDraft({
+    required this.addressData,
+    required this.fields,
+    required this.pickupWithoutNumber,
+    required this.deliveryWithoutNumber,
+  });
 }

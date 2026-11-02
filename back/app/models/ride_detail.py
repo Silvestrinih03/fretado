@@ -14,6 +14,11 @@ from app.database.base import Base
 class RideDetail(Base):
     __tablename__ = "ride_details"
 
+    origin_address_number = Column(String(20), nullable=True)
+    destination_address_number = Column(String(20), nullable=True)
+    origin_address_source = Column(String(255), nullable=True)
+    destination_address_source = Column(String(255), nullable=True)
+
     id = Column(
         BigInteger,
         primary_key=True,

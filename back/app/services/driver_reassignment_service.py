@@ -19,7 +19,7 @@ from app.models.ride_offer import RideOffer
 from app.models.user import User
 from app.models.vehicle import Vehicle
 from app.schemas.driver_reassignment import DriverReassignmentCreate, DriverReassignmentSummary
-from app.services.geocoding_service import MapboxGeocodingService
+from app.services.geocoding_service import GeoapifyGeocodingService
 from app.services.ride_offer_service import create_offer, find_nearest_candidate
 from app.services.route_service import MapboxRouteService
 from app.services.ride_chat_service import (
@@ -431,7 +431,7 @@ def _request_delivery_transfer(db, ride, offer, detail, driver, payload):
         detail.destination_latitude,
         detail.destination_longitude,
     )
-    address = MapboxGeocodingService().reverse(float(payload.latitude), float(payload.longitude))
+    address = GeoapifyGeocodingService().reverse(float(payload.latitude), float(payload.longitude))
     reassignment = RideDriverReassignment(
         ride_id=ride.id,
         kind="delivery_transfer",

@@ -24,6 +24,9 @@ abstract class Endpoints {
 
   static const String rides = '/rides';
   static String rideById(int rideId) => '$rides/$rideId';
+  static String rideNavigation(int rideId) => '$rides/$rideId/navigation';
+  static String rideNavigationTiles(int rideId) =>
+      '$rides/$rideId/navigation/tiles/{z}/{x}/{y}';
   static String ridePickupEstimate(int rideId) =>
       '$rides/$rideId/pickup-estimate';
   static String ridesMe({

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../core/enums/home_profile.dart';
 
 import 'client_profile_page.dart';
 
@@ -9,6 +10,10 @@ class DriverProfilePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return UserProfilePage(userId: userId, roleLabel: 'Motorista');
+    return UserProfilePage(
+      userId: userId,
+      roleLabel: 'Motorista',
+      profile: HomeProfileEnum.driver,
+    );
   }
 }

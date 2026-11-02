@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 
 import '../../../../app/design_system/design_system.dart';
+import '../../../../core/enums/home_profile.dart';
 import '../../../../core/services/myself/models/myself_user_model.dart';
 import '../../../../core/services/myself/services/myself_service.dart';
+import '../../../help/presentation/pages/help_support_page.dart';
 import '../widgets/profile_widgets.dart';
 import '../widgets/editable_profile_avatar.dart';
 import 'change_password_popup.dart';
@@ -16,18 +18,24 @@ class ClientProfilePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return UserProfilePage(userId: userId, roleLabel: 'Cliente');
+    return UserProfilePage(
+      userId: userId,
+      roleLabel: 'Cliente',
+      profile: HomeProfileEnum.client,
+    );
   }
 }
 
 class UserProfilePage extends StatefulWidget {
   final int userId;
   final String roleLabel;
+  final HomeProfileEnum profile;
 
   const UserProfilePage({
     super.key,
     required this.userId,
     required this.roleLabel,
+    this.profile = HomeProfileEnum.client,
   });
 
   @override
@@ -240,10 +248,16 @@ class _UserProfilePageState extends State<UserProfilePage> {
                     ),
                   ),
                   const SizedBox(height: 10),
-                  const _ProfileActionTile(
+                  _ProfileActionTile(
                     icon: Icons.help_outline_rounded,
                     title: 'Ajuda e suporte',
-                    subtitle: 'Central de atendimento',
+                    subtitle: 'Dúvidas frequentes e orientações',
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) =>
+                            HelpSupportPage(profile: widget.profile),
+                      ),
+                    ),
                   ),
                   const SizedBox(height: 10),
                   _ProfileActionTile(

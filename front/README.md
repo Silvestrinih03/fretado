@@ -61,3 +61,23 @@ downloads offline. Mais informações: https://www.mapbox.com/pricing.
 
 Esta alteração foi solicitada sem criação ou execução de testes automatizados.
 A verificação prevista é análise estática e compilação Android.
+
+## Central de ajuda
+
+O botão **Ajuda e suporte** do perfil abre uma central com conteúdo adaptado
+a `HomeProfileEnum.client` ou `HomeProfileEnum.driver`. Busca e categorias são
+locais; consultar as respostas não exige chamadas à API.
+
+As perguntas ficam em `lib/features/help/data/help_articles.dart`, separadas da
+interface. Cada artigo tem identificador estável, categoria, pergunta,
+parágrafos, palavras de busca e, quando necessário, perfil e links de referência.
+Busca ignora maiúsculas e acentos e respeita o perfil e a categoria selecionados.
+
+Ao alterar cálculo de frete, pagamentos, cancelamentos, avaliação ou localização,
+revise também os artigos correspondentes. O conteúdo documenta os pagamentos
+simulados, a referência ANP, os intervalos de localização atuais e as regras
+implementadas, sem modificar esses comportamentos.
+
+O contato `suporte@freteja.com.br` permanece demonstrativo, com aviso visível.
+O botão de atendimento abre uma explicação; não envia e-mail nem abre um canal
+real de suporte. A central também oferece acesso a Termos e privacidade.

@@ -32,7 +32,7 @@ def create_wallet_transaction(
             detail="Driver not found.",
         )
 
-    status_id = WalletTransactionsStatusEnum.PROCESSANDO.value
+    status_id = WalletTransactionsStatusEnum.FINALIZADO.value
 
     transaction_status = (
         db.query(WalletTransactionStatus)

@@ -75,6 +75,7 @@ flutter:
 
   assets:
     - assets/images/
+    - assets/maps/
 
 flutter_native_splash:
   color: "#FFFFFF"

@@ -1,0 +1,17 @@
+{
+  "styleUri": "mapbox://styles/mapbox/streets-v12",
+  "routeColor": "#A98618",
+  "layers": [
+    { "id": "background", "property": "background-color", "value": "#F3EFE6" },
+    { "id": "land", "property": "background-color", "value": "#F3EFE6" },
+    { "id": "landcover", "property": "fill-color", "value": ["match", ["get", "class"], ["wood", "grass", "scrub"], "#DCE8D2", "#F3EFE6"] },
+    { "id": "landuse", "property": "fill-color", "value": ["match", ["get", "class"], ["park", "wood", "grass", "scrub", "cemetery", "pitch"], "#DCE8D2", "#ECE7DC"] },
+    { "id": "national-park", "property": "fill-color", "value": "#DCE8D2" },
+    { "id": "water", "property": "fill-color", "value": "#BFDCE8" },
+    { "id": "building", "property": "fill-color", "value": "#D7D1C5" },
+    { "id": "road-label", "property": "text-color", "value": "#4C4A43" },
+    { "id": "settlement-major-label", "property": "text-color", "value": "#4C4A43" },
+    { "id": "settlement-minor-label", "property": "text-color", "value": "#4C4A43" },
+    { "id": "settlement-subdivision-label", "property": "text-color", "value": "#4C4A43" }
+  ]
+}

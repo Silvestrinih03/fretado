@@ -39,6 +39,7 @@ class _AddressMapPageState extends State<AddressMapPage> {
   int _routeVersion = 0;
   String? _searchError;
   FreightDetailsDraft? _detailsDraft;
+  bool _manualPointAdjustment = false;
 
   @override
   void dispose() {
@@ -56,6 +57,7 @@ class _AddressMapPageState extends State<AddressMapPage> {
     ++_routeVersion;
     setState(() {
       _pickupActive = pickup;
+      _manualPointAdjustment = false;
       _suggestions = [];
       _searchError = null;
       _route = [];
@@ -109,11 +111,12 @@ class _AddressMapPageState extends State<AddressMapPage> {
     }
   }
 
-  void _select(bool pickup, AddressResult result) {
+  void _select(bool pickup, AddressResult result, {bool manualPoint = false}) {
     FocusScope.of(context).unfocus();
     _debounce?.cancel();
     ++_searchVersion;
     setState(() {
+      _manualPointAdjustment = manualPoint;
       if (pickup) {
         _pickup = result;
         _pickupText.text = result.label;
@@ -131,6 +134,11 @@ class _AddressMapPageState extends State<AddressMapPage> {
   }
 
   void _focusRoute() {
+    final adjusting = _pickupActive ? _pickup : _delivery;
+    if (_manualPointAdjustment && adjusting != null) {
+      _map.move(adjusting.point, 17);
+      return;
+    }
     final points = [
       if (_pickup != null) _pickup!.point,
       ..._route,
@@ -178,6 +186,24 @@ class _AddressMapPageState extends State<AddressMapPage> {
   Future<void> _pin(LatLng point) async {
     if (_locating) return;
     final pickup = _pickupActive;
+    final selected = pickup ? _pickup : _delivery;
+    if (_manualPointAdjustment && selected != null) {
+      _select(
+        pickup,
+        AddressResult(
+          label: selected.label,
+          baseAddress: selected.baseAddress,
+          point: point,
+          number: selected.number,
+          street: selected.street,
+          state: selected.state,
+          source: selected.source,
+          placeId: selected.placeId,
+        ),
+        manualPoint: true,
+      );
+      return;
+    }
     _debounce?.cancel();
     final version = ++_searchVersion;
     setState(() {
@@ -258,7 +284,7 @@ class _AddressMapPageState extends State<AddressMapPage> {
     }
   }
 
-  void _continue() {
+  Future<void> _continue() async {
     final pickup = _pickup;
     final delivery = _delivery;
     if (pickup == null || delivery == null) {
@@ -269,8 +295,8 @@ class _AddressMapPageState extends State<AddressMapPage> {
       _message('Coleta e entrega devem ser diferentes.');
       return;
     }
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(
+    final editPickup = await Navigator.of(context).push<bool>(
+      MaterialPageRoute<bool>(
         builder: (_) => FillInPackageDetailsPage(
           userId: widget.userId,
           initialDraft: _detailsDraft,
@@ -283,16 +309,25 @@ class _AddressMapPageState extends State<AddressMapPage> {
             pickupLatitude: pickup.point.latitude,
             pickupLongitude: pickup.point.longitude,
             pickupPlaceId: pickup.placeId,
+            pickupPointApproximate: pickup.pointApproximate,
             deliveryAddress: delivery.baseAddress,
             deliveryAddressNumber: delivery.number,
             deliveryAddressSource: delivery.source,
             deliveryLatitude: delivery.point.latitude,
             deliveryLongitude: delivery.point.longitude,
             deliveryPlaceId: delivery.placeId,
+            deliveryPointApproximate: delivery.pointApproximate,
           ),
         ),
       ),
     );
+    if (mounted && editPickup != null) {
+      setState(() {
+        _pickupActive = editPickup;
+        _manualPointAdjustment = true;
+      });
+      FocusScope.of(context).unfocus();
+    }
   }
 
   void _saveDetailsDraft(FreightDetailsDraft draft) {
@@ -309,6 +344,7 @@ class _AddressMapPageState extends State<AddressMapPage> {
           state: address.pickupState,
           source: address.pickupAddressSource,
           placeId: address.pickupPlaceId,
+          pointApproximate: address.pickupPointApproximate,
         );
         _delivery = AddressResult(
           label: address.destinationAddress,
@@ -317,6 +353,7 @@ class _AddressMapPageState extends State<AddressMapPage> {
           number: address.deliveryAddressNumber,
           source: address.deliveryAddressSource,
           placeId: address.deliveryPlaceId,
+          pointApproximate: address.deliveryPointApproximate,
         );
         _pickupText.text = _pickup!.label;
         _deliveryText.text = _delivery!.label;
@@ -341,6 +378,7 @@ class _AddressMapPageState extends State<AddressMapPage> {
           ++_searchVersion;
           setState(() {
             _pickupActive = pickup;
+            _manualPointAdjustment = false;
             _suggestions = [];
             _searching = false;
             _searchError = null;
@@ -432,7 +470,9 @@ class _AddressMapPageState extends State<AddressMapPage> {
                     _field(false),
                     const SizedBox(height: 10),
                     Text(
-                      'Toque no mapa para ajustar a ${_pickupActive ? 'coleta' : 'entrega'}.',
+                      _manualPointAdjustment
+                          ? 'Ajuste o ponto de ${_pickupActive ? 'coleta' : 'entrega'} tocando no mapa. O endereço informado será mantido.'
+                          : 'Toque no mapa para ajustar a ${_pickupActive ? 'coleta' : 'entrega'}.',
                       style: const TextStyle(
                         color: FretColors.textSecondary,
                         fontSize: 12,

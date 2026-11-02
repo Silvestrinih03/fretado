@@ -3,6 +3,7 @@ from decimal import Decimal, ROUND_HALF_UP
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
+from app.core.brazilian_states import normalize_brazilian_state
 from app.enums.delivery_classification import (
     DeliveryClassificationEnum,
 )
@@ -197,11 +198,7 @@ class RideQuoteService:
             )
         )
 
-        origin_state = (
-            origin.get("state")
-            if origin
-            else None
-        )
+        origin_state = normalize_brazilian_state(origin.get("state") if origin else None)
 
         if not origin_state:
             raise HTTPException(

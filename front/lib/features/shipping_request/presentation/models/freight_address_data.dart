@@ -10,6 +10,7 @@ class FreightAddressData {
   final double pickupLatitude;
   final double pickupLongitude;
   final String? pickupPlaceId;
+  final bool pickupPointApproximate;
   final String deliveryAddress;
   final String? deliveryAddressNumber;
   final String? deliveryAddressSource;
@@ -18,6 +19,7 @@ class FreightAddressData {
   final double deliveryLatitude;
   final double deliveryLongitude;
   final String? deliveryPlaceId;
+  final bool deliveryPointApproximate;
 
   const FreightAddressData({
     this.pickupState,
@@ -29,6 +31,7 @@ class FreightAddressData {
     required this.pickupLatitude,
     required this.pickupLongitude,
     this.pickupPlaceId,
+    this.pickupPointApproximate = false,
     required this.deliveryAddress,
     this.deliveryAddressNumber,
     this.deliveryAddressSource,
@@ -37,6 +40,7 @@ class FreightAddressData {
     required this.deliveryLatitude,
     required this.deliveryLongitude,
     this.deliveryPlaceId,
+    this.deliveryPointApproximate = false,
   });
 
   FreightAddressData copyWith({
@@ -49,6 +53,7 @@ class FreightAddressData {
     double? pickupLatitude,
     double? pickupLongitude,
     String? pickupPlaceId,
+    bool? pickupPointApproximate,
     String? deliveryAddress,
     String? deliveryAddressNumber,
     String? deliveryAddressSource,
@@ -57,6 +62,7 @@ class FreightAddressData {
     double? deliveryLatitude,
     double? deliveryLongitude,
     String? deliveryPlaceId,
+    bool? deliveryPointApproximate,
   }) {
     return FreightAddressData(
       pickupState:
@@ -75,6 +81,8 @@ class FreightAddressData {
       pickupLatitude: pickupLatitude ?? this.pickupLatitude,
       pickupLongitude: pickupLongitude ?? this.pickupLongitude,
       pickupPlaceId: pickupPlaceId ?? this.pickupPlaceId,
+      pickupPointApproximate:
+          pickupPointApproximate ?? this.pickupPointApproximate,
       deliveryAddress: deliveryAddress ?? this.deliveryAddress,
       deliveryAddressNumber:
           deliveryAddressNumber ?? this.deliveryAddressNumber,
@@ -87,6 +95,8 @@ class FreightAddressData {
       deliveryLatitude: deliveryLatitude ?? this.deliveryLatitude,
       deliveryLongitude: deliveryLongitude ?? this.deliveryLongitude,
       deliveryPlaceId: deliveryPlaceId ?? this.deliveryPlaceId,
+      deliveryPointApproximate:
+          deliveryPointApproximate ?? this.deliveryPointApproximate,
     );
   }
 
@@ -101,8 +111,11 @@ class FreightAddressData {
   }
 
   Map<String, dynamic> toRideJson() {
+    final originState =
+        normalizeFreightState(pickupState) ??
+        freightAddressState(pickupAddress);
     return {
-      if (pickupState != null) 'origin_state': pickupState,
+      if (originState != null) 'origin_state': originState,
       'origin_address': originAddress,
       'origin_address_number': pickupAddressNumber,
       'origin_address_source': pickupAddressSource,

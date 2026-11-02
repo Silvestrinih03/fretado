@@ -26,6 +26,16 @@ português, Brasil, até cinco sugestões, incluindo `street`, `house_number`,
 `address_without_number`, `source` e `place_id`. A mesma integração resolve
 UFs e endereços de cancelamento/transferência. A chave não é enviada ao aplicativo.
 
+A UF retornada pelo Geoapify é normalizada a partir de `state_code`,
+`iso3166_2` ou do nome completo em `state` (por exemplo, `São Paulo` → `SP`).
+A ausência da sigla no provedor não deve impedir a cotação quando o nome do
+estado estiver disponível. Se o resultado do endereço omitir todos esses
+campos, a busca reversa faz uma consulta adicional com `type=state` na mesma
+coordenada e conserva o endereço e seu pin, acrescentando somente a UF e os
+créditos necessários. Valores desconhecidos continuam sem UF; não há
+estado fixo nem substituição dos dados ANP. Reinicie a API para aplicar essa
+correção; não é necessária uma nova migration.
+
 Novas cotações e criações exigem `origin_address_number` e
 `destination_address_number`, com até 20 caracteres. Envie `S/N` apenas quando
 o cliente selecionar essa opção. Os campos `origin_address` e

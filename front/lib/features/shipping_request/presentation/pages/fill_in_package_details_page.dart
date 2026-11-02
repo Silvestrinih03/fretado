@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart';
-import '../../../../core/maps/address_result.dart';
 import '../../../../core/maps/address_point_confirmation.dart';
+import '../../../../core/maps/address_result.dart';
 import '../../../../core/maps/geocoding_credit.dart';
 
 import '../../../../app/design_system/design_system.dart';
@@ -62,6 +62,7 @@ class _FillInPackageDetailsPageState extends State<FillInPackageDetailsPage> {
   bool _deliveryWithoutNumber = false;
   String _previousPickupNumber = '';
   String _previousDeliveryNumber = '';
+  bool _savedForRouteEdit = false;
 
   @override
   void initState() {
@@ -84,9 +85,11 @@ class _FillInPackageDetailsPageState extends State<FillInPackageDetailsPage> {
       _lengthController.text = draft.fields['length'] ?? '';
       _weightController.text = draft.fields['weight'] ?? '';
       final previous = draft.addressData;
-      if (previous.pickupAddress == _address.pickupAddress &&
-          previous.pickupLatitude == _address.pickupLatitude &&
-          previous.pickupLongitude == _address.pickupLongitude) {
+      if (sameFreightAddressIdentity(
+            previous.pickupAddress,
+            _address.pickupAddress,
+          ) &&
+          previous.pickupAddressNumber == _address.pickupAddressNumber) {
         _pickupNumber.text = draft.fields['pickup_number'] ?? '';
         _pickupWithoutNumber = draft.pickupWithoutNumber;
         _pickupComplementController.text =
@@ -94,9 +97,11 @@ class _FillInPackageDetailsPageState extends State<FillInPackageDetailsPage> {
         _pickupReferenceController.text =
             draft.fields['pickup_reference'] ?? '';
       }
-      if (previous.deliveryAddress == _address.deliveryAddress &&
-          previous.deliveryLatitude == _address.deliveryLatitude &&
-          previous.deliveryLongitude == _address.deliveryLongitude) {
+      if (sameFreightAddressIdentity(
+            previous.deliveryAddress,
+            _address.deliveryAddress,
+          ) &&
+          previous.deliveryAddressNumber == _address.deliveryAddressNumber) {
         _deliveryNumber.text = draft.fields['delivery_number'] ?? '';
         _deliveryWithoutNumber = draft.deliveryWithoutNumber;
         _deliveryComplementController.text =
@@ -107,27 +112,27 @@ class _FillInPackageDetailsPageState extends State<FillInPackageDetailsPage> {
     }
   }
 
+  FreightDetailsDraft _captureDraft() => FreightDetailsDraft(
+    addressData: _address,
+    pickupWithoutNumber: _pickupWithoutNumber,
+    deliveryWithoutNumber: _deliveryWithoutNumber,
+    fields: {
+      'width': _widthController.text,
+      'height': _heightController.text,
+      'length': _lengthController.text,
+      'weight': _weightController.text,
+      'pickup_number': _pickupNumber.text,
+      'delivery_number': _deliveryNumber.text,
+      'pickup_complement': _pickupComplementController.text,
+      'pickup_reference': _pickupReferenceController.text,
+      'delivery_complement': _deliveryComplementController.text,
+      'delivery_reference': _deliveryReferenceController.text,
+    },
+  );
+
   @override
   void dispose() {
-    widget.onDraftSaved?.call(
-      FreightDetailsDraft(
-        addressData: _address,
-        pickupWithoutNumber: _pickupWithoutNumber,
-        deliveryWithoutNumber: _deliveryWithoutNumber,
-        fields: {
-          'width': _widthController.text,
-          'height': _heightController.text,
-          'length': _lengthController.text,
-          'weight': _weightController.text,
-          'pickup_number': _pickupNumber.text,
-          'delivery_number': _deliveryNumber.text,
-          'pickup_complement': _pickupComplementController.text,
-          'pickup_reference': _pickupReferenceController.text,
-          'delivery_complement': _deliveryComplementController.text,
-          'delivery_reference': _deliveryReferenceController.text,
-        },
-      ),
-    );
+    if (!_savedForRouteEdit) widget.onDraftSaved?.call(_captureDraft());
     _httpService.dispose();
     _pickupNumber.dispose();
     _deliveryNumber.dispose();
@@ -176,77 +181,80 @@ class _FillInPackageDetailsPageState extends State<FillInPackageDetailsPage> {
           children: [
             const _FreightRequestHeader(),
             Expanded(
-              child: Form(
-                key: _formKey,
-                autovalidateMode: _autovalidateMode,
-                child: ListView(
-                  padding: const EdgeInsets.fromLTRB(16, 20, 16, 22),
-                  children: [
-                    const Text(
-                      'ETAPA 2 DE 4',
-                      style: TextStyle(
+              child: AbsorbPointer(
+                absorbing: _isQuoting,
+                child: Form(
+                  key: _formKey,
+                  autovalidateMode: _autovalidateMode,
+                  child: ListView(
+                    padding: const EdgeInsets.fromLTRB(16, 20, 16, 22),
+                    children: [
+                      const Text(
+                        'ETAPA 2 DE 4',
+                        style: TextStyle(
+                          color: _orange,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                          letterSpacing: 0.2,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      const Text(
+                        'Detalhes da Entrega',
+                        style: TextStyle(
+                          color: FretColors.neutral900,
+                          fontSize: 24,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      const SizedBox(height: 18),
+                      const Text(
+                        'Confirme os pontos de acesso e conte o que vamos transportar.',
+                        style: TextStyle(
+                          color: FretColors.textSecondary,
+                          height: 1.5,
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      _AddressEditor(
+                        title: 'Coleta',
+                        address: _address.pickupAddress,
                         color: _orange,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                        letterSpacing: 0.2,
+                        number: _pickupNumber,
+                        numberKey: _pickupNumberKey,
+                        withoutNumber: _pickupWithoutNumber,
+                        onWithoutNumber: (value) =>
+                            _toggleWithoutNumber(true, value),
+                        complement: _pickupComplementController,
+                        reference: _pickupReferenceController,
                       ),
-                    ),
-                    const SizedBox(height: 8),
-                    const Text(
-                      'Detalhes da Entrega',
-                      style: TextStyle(
-                        color: FretColors.neutral900,
-                        fontSize: 24,
-                        fontWeight: FontWeight.w800,
+                      const SizedBox(height: 16),
+                      _AddressEditor(
+                        title: 'Entrega',
+                        address: _address.deliveryAddress,
+                        color: _primaryBlue,
+                        number: _deliveryNumber,
+                        numberKey: _deliveryNumberKey,
+                        withoutNumber: _deliveryWithoutNumber,
+                        onWithoutNumber: (value) =>
+                            _toggleWithoutNumber(false, value),
+                        complement: _deliveryComplementController,
+                        reference: _deliveryReferenceController,
                       ),
-                    ),
-                    const SizedBox(height: 18),
-                    const Text(
-                      'Confirme os pontos de acesso e conte o que vamos transportar.',
-                      style: TextStyle(
-                        color: FretColors.textSecondary,
-                        height: 1.5,
+                      GeocodingCredit(
+                        source:
+                            '${_address.pickupAddressSource ?? ''} | ${_address.deliveryAddressSource ?? ''}',
                       ),
-                    ),
-                    const SizedBox(height: 20),
-                    _AddressEditor(
-                      title: 'Coleta',
-                      address: _address.pickupAddress,
-                      color: _orange,
-                      number: _pickupNumber,
-                      numberKey: _pickupNumberKey,
-                      withoutNumber: _pickupWithoutNumber,
-                      onWithoutNumber: (value) =>
-                          _toggleWithoutNumber(true, value),
-                      complement: _pickupComplementController,
-                      reference: _pickupReferenceController,
-                    ),
-                    const SizedBox(height: 16),
-                    _AddressEditor(
-                      title: 'Entrega',
-                      address: _address.deliveryAddress,
-                      color: _primaryBlue,
-                      number: _deliveryNumber,
-                      numberKey: _deliveryNumberKey,
-                      withoutNumber: _deliveryWithoutNumber,
-                      onWithoutNumber: (value) =>
-                          _toggleWithoutNumber(false, value),
-                      complement: _deliveryComplementController,
-                      reference: _deliveryReferenceController,
-                    ),
-                    GeocodingCredit(
-                      source:
-                          '${_address.pickupAddressSource ?? ''} | ${_address.deliveryAddressSource ?? ''}',
-                    ),
-                    const SizedBox(height: 16),
-                    _PackageDetailsCard(
-                      key: _packageKey,
-                      widthController: _widthController,
-                      heightController: _heightController,
-                      lengthController: _lengthController,
-                      weightController: _weightController,
-                    ),
-                  ],
+                      const SizedBox(height: 16),
+                      _PackageDetailsCard(
+                        key: _packageKey,
+                        widthController: _widthController,
+                        heightController: _heightController,
+                        lengthController: _lengthController,
+                        weightController: _weightController,
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -262,6 +270,7 @@ class _FillInPackageDetailsPageState extends State<FillInPackageDetailsPage> {
   }
 
   Future<void> _goToResume() async {
+    if (_isQuoting) return;
     FocusScope.of(context).unfocus();
 
     final bool isFormValid = _formKey.currentState?.validate() ?? false;
@@ -292,11 +301,8 @@ class _FillInPackageDetailsPageState extends State<FillInPackageDetailsPage> {
     );
     setState(() => _isQuoting = true);
     try {
-      if (!await _confirmNumber(true) ||
-          !await _confirmNumber(false) ||
-          !mounted) {
-        return;
-      }
+      if (!await _confirmNumber(true) || !mounted) return;
+      if (!await _confirmNumber(false) || !mounted) return;
       final addressData = _address.copyWith(
         pickupAddressComplement: _optionalText(
           _pickupComplementController.text,
@@ -315,13 +321,27 @@ class _FillInPackageDetailsPageState extends State<FillInPackageDetailsPage> {
         body: {...addressData.toRideJson(), ...packageData.toQuoteJson()},
       );
       final quote = FreightQuoteModel.fromJson(response);
+      if (!quote.distanceKm.isFinite ||
+          quote.distanceKm <= 0 ||
+          quote.estimatedTimeMinutes < 1 ||
+          quote.routePoints.length < 2 ||
+          quote.routePoints.any(
+            (point) =>
+                !point.latitude.isFinite ||
+                !point.longitude.isFinite ||
+                point.latitude.abs() > 90 ||
+                point.longitude.abs() > 180,
+          )) {
+        throw const FormatException('A cotação retornou uma rota inválida.');
+      }
 
       if (!mounted) {
         return;
       }
 
-      Navigator.of(context).push(
-        MaterialPageRoute<void>(
+      setState(() => _isQuoting = false);
+      final editPickup = await Navigator.of(context).push<bool>(
+        MaterialPageRoute<bool>(
           builder: (_) => ShippingResumePage(
             userId: widget.userId,
             addressData: addressData,
@@ -330,6 +350,11 @@ class _FillInPackageDetailsPageState extends State<FillInPackageDetailsPage> {
           ),
         ),
       );
+      if (editPickup != null && mounted) {
+        _savedForRouteEdit = true;
+        widget.onDraftSaved?.call(_captureDraft());
+        Navigator.of(context).pop<bool>(editPickup);
+      }
     } on HttpServiceException catch (e) {
       _showMessage(e.message);
     } catch (_) {
@@ -348,24 +373,30 @@ class _FillInPackageDetailsPageState extends State<FillInPackageDetailsPage> {
     final previous = pickup
         ? _address.pickupAddressNumber
         : _address.deliveryAddressNumber;
-    if (number == previous) return true;
     final base = pickup ? _address.pickupAddress : _address.deliveryAddress;
     AddressResult? match;
-    if (number != 'S/N') {
+    if (number != 'S/N' && number != previous) {
       final response = await _httpService.get(
         Endpoints.rideGeocode(formatFreightAddress(base, number)),
       );
-      final candidates = (response['data'] as List).map(
-        (row) => AddressResult.fromJson(Map<String, dynamic>.from(row as Map)),
-      );
-      for (final candidate in candidates) {
-        if (candidate.number?.toUpperCase() == number.toUpperCase()) {
+      for (final row in response['data'] as List) {
+        final candidate = AddressResult.fromJson(
+          Map<String, dynamic>.from(row as Map),
+        );
+        if (matchesFreightAddressNumber(base, number, candidate)) {
           match = candidate;
           break;
         }
       }
     }
     if (!mounted) return false;
+    final previousApproximate = pickup
+        ? _address.pickupPointApproximate
+        : _address.deliveryPointApproximate;
+    final exactMatch =
+        number == 'S/N' ||
+        match != null ||
+        (number == previous && !previousApproximate);
     final initial =
         match?.point ??
         LatLng(
@@ -376,21 +407,77 @@ class _FillInPackageDetailsPageState extends State<FillInPackageDetailsPage> {
       context: context,
       isScrollControlled: true,
       showDragHandle: true,
+      backgroundColor: FretColors.appBackground,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      clipBehavior: Clip.antiAlias,
       builder: (_) => AddressPointConfirmation(
         title: pickup ? 'Confirmar coleta' : 'Confirmar entrega',
         address: formatFreightAddress(match?.baseAddress ?? base, number),
         initialPoint: initial,
-        exactMatch: match != null || number == 'S/N',
+        exactMatch: exactMatch,
+        isPickup: pickup,
+        source:
+            match?.source ??
+            (pickup
+                ? _address.pickupAddressSource
+                : _address.deliveryAddressSource),
       ),
     );
     if (confirmed == null || !mounted) return false;
+    final pointChanged =
+        confirmed.latitude != initial.latitude ||
+        confirmed.longitude != initial.longitude;
+    var pickupState =
+        match?.state ??
+        normalizeFreightState(_address.pickupState) ??
+        freightAddressState(base);
+    String? pointSource;
+    if (pickup && (pointChanged || pickupState == null)) {
+      // Resolve the UF of the confirmed coordinate, without changing the
+      // customer's street, number or explicitly selected access point.
+      final response = await _httpService.get(
+        Endpoints.rideReverseGeocode(
+          latitude: confirmed.latitude,
+          longitude: confirmed.longitude,
+        ),
+      );
+      if (!mounted) return false;
+      final rows = response['data'] as List;
+      final resolved = rows.isEmpty
+          ? null
+          : AddressResult.fromJson(
+              Map<String, dynamic>.from(rows.first as Map),
+            );
+      pickupState = resolved?.state;
+      pointSource = resolved?.source;
+      if (pickupState == null) {
+        _showMessage(
+          'Não foi possível identificar o estado do ponto de coleta confirmado. Volte à seleção de endereços e busque pela rua e cidade para tentar novamente.',
+        );
+        return false;
+      }
+    }
+    if (!mounted) return false;
+    final pickupSources = <String>{
+      for (final source in [
+        _address.pickupAddressSource,
+        match?.source,
+        pointSource,
+      ])
+        for (final credit in (source ?? '').split('|'))
+          if (credit.trim().isNotEmpty) credit.trim(),
+    }.join(' | ');
     setState(() {
       _address = pickup
           ? _address.copyWith(
               pickupAddress: match?.baseAddress ?? base,
               pickupAddressNumber: number,
-              pickupState: match?.state,
-              pickupAddressSource: match?.source,
+              pickupState: pickupState,
+              pickupAddressSource: pickupSources.isEmpty ? null : pickupSources,
+              pickupPlaceId: match?.placeId,
+              pickupPointApproximate: !exactMatch && !pointChanged,
               pickupLatitude: confirmed.latitude,
               pickupLongitude: confirmed.longitude,
             )
@@ -398,6 +485,8 @@ class _FillInPackageDetailsPageState extends State<FillInPackageDetailsPage> {
               deliveryAddress: match?.baseAddress ?? base,
               deliveryAddressNumber: number,
               deliveryAddressSource: match?.source,
+              deliveryPlaceId: match?.placeId,
+              deliveryPointApproximate: !exactMatch && !pointChanged,
               deliveryLatitude: confirmed.latitude,
               deliveryLongitude: confirmed.longitude,
             );

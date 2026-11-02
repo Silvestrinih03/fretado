@@ -6,6 +6,7 @@ import 'package:latlong2/latlong.dart';
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart' as mb;
 
 import '../../app/design_system/design_system.dart';
+import 'fret_map_theme.dart';
 
 const mapboxPublicToken = String.fromEnvironment('MAPBOX_PUBLIC_TOKEN');
 
@@ -202,6 +203,9 @@ class _FretMapState extends State<FretMap> {
   Future<void> _styleLoaded() async {
     final map = _map;
     if (map == null || !mounted) return;
+    await FretMapTheme.apply(map);
+    final routeColor = await FretMapTheme.routeColor();
+    if (!mounted || _map != map) return;
     for (final id in [
       'freight-route',
       'freight-pickup',
@@ -222,7 +226,7 @@ class _FretMapState extends State<FretMap> {
       mb.LineLayer(
         id: 'route-line',
         sourceId: 'freight-route',
-        lineColor: FretColors.brandGoldDark.toARGB32(),
+        lineColor: routeColor,
         lineWidth: 5,
       ),
     );
@@ -280,7 +284,7 @@ class _FretMapState extends State<FretMap> {
     }
     return mb.MapWidget(
       key: const ValueKey('fretado-mapbox'),
-      styleUri: mb.MapboxStyles.LIGHT,
+      styleUri: FretMapTheme.styleUri,
       cameraOptions: mb.CameraOptions(
         center: mb.Point(
           coordinates: mb.Position(
@@ -293,6 +297,7 @@ class _FretMapState extends State<FretMap> {
       onMapCreated: (map) {
         _map = map;
         widget.controller?._attach(map);
+        unawaited(FretMapTheme.configureOrnaments(map));
       },
       onStyleLoadedListener: (_) => unawaited(_styleLoaded()),
       onTapListener: (event) => widget.onTap?.call(

@@ -49,8 +49,48 @@ A tela consulta o destino autorizado a cada seis segundos e continua enviando
 a localização ao backend. Confirmações de coleta e entrega são manuais.
 Google Maps e Waze continuam disponíveis como opções externas.
 
+**Ver rota** abre apenas a prévia do destino, sem iniciar GPS de navegação,
+voz ou sessão do Navigation SDK. A orientação é iniciada exclusivamente pelo
+botão **Iniciar navegação no Fretado**. Ao voltar, a prévia é atualizada sem
+reabrir a orientação automaticamente.
+
 A busca de endereço usa Geoapify, incluindo atribuições visíveis. Número é
-obrigatório, com seleção explícita de S/N; alterações pedem confirmação do ponto.
+obrigatório, com seleção explícita de S/N. Ao calcular o frete, o cliente
+confirma primeiro a coleta e depois a entrega em modais com mapa, podendo
+ajustar os pontos de acesso. Só após ambas as confirmações é calculada a
+cotação e aberto o resumo. Voltar ou fechar um modal preserva os detalhes e
+não solicita a cotação.
+Um resultado só move o pin quando número, rua, cidade e UF forem compatíveis.
+Quando o número não é localizado com precisão, preservamos o pin e mostramos
+um aviso no resumo se ele não for ajustado na confirmação. S/N também usa o
+ponto escolhido, que pode ser ajustado no modal.
+
+No resumo, **Ajustar ponto de coleta/entrega** retorna ao mapa com os dados
+da encomenda e dos endereços preservados. Nessa edição, tocar no mapa ajusta
+o pin do endereço informado. A próxima cotação usa as coordenadas ajustadas.
+Os indicadores de imprecisão são locais ao aplicativo, sem novos campos na API.
+
+A UF de coleta é normalizada e enviada tanto na cotação quanto na criação.
+Se o campo estiver ausente, o aplicativo pode recuperar a sigla explícita do
+endereço selecionado no formato rua, cidade, UF, CEP. Ajustar o número com um
+resultado compatível preserva essa UF quando a busca não a repetir. Se a UF
+estiver ausente, ou o pin for movido na confirmação da coleta, o app consulta
+o estado do ponto confirmado antes de cotar, preservando o endereço e o número
+informados. A API usa uma consulta de nível estadual quando o resultado do
+endereço não inclui UF; essa correção exige reiniciar o backend atualizado.
+
+As confirmações operacionais do motorista usam um diálogo compartilhado no
+tema grafite e dourado: iniciar corrida, confirmar coleta e confirmar entrega
+para finalizar a corrida. Devoluções mantêm seus textos específicos. Fechar
+ou voltar não executa a ação; somente o botão principal confirma a etapa.
+
+Flutter e navegação Android usam Streets v12 com a paleta compartilhada em
+`assets/maps/fret_map_theme.json`: fundo areia, parques verdes, água azul,
+construções neutras e rota dourada. As cores são aplicadas depois de carregar
+o estilo; camadas ausentes mantêm o mapa funcional. A barra de escala fica
+oculta, e logo e informações Mapbox permanecem visíveis com margens discretas.
+Os créditos de geocodificação usam uma faixa neutra, com links e fontes
+adicionais preservadas. Sem sugestões ou endereços, essa faixa não é exibida.
 Nenhum mapa usa o servidor público de tiles OpenStreetMap como fallback.
 Os créditos OpenStreetMap permanecem por serem fontes dos provedores.
 

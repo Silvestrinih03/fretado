@@ -5,6 +5,8 @@ from math import isfinite
 import httpx
 from fastapi import HTTPException
 
+from app.core.brazilian_states import normalize_brazilian_state
+
 
 class GeoapifyGeocodingService:
     attribution = "Powered by Geoapify | © OpenStreetMap contributors"
@@ -45,8 +47,27 @@ class GeoapifyGeocodingService:
         return self._request("autocomplete", {"text": query, "filter": "countrycode:br", "limit": 5})
 
     def reverse(self, latitude: float, longitude: float) -> dict | None:
-        results = self._request("reverse", {"lat": float(latitude), "lon": float(longitude), "limit": 1})
-        return results[0] if results else None
+        params = {"lat": float(latitude), "lon": float(longitude), "limit": 1}
+        results = self._request("reverse", params)
+        if not results:
+            return None
+        address = results[0]
+        if not address.get("state"):
+            # An address-level result may omit its administrative state. Resolve
+            # that level explicitly at the same coordinate, never a default UF.
+            states = self._request("reverse", {**params, "type": "state"})
+            if states and states[0].get("state"):
+                address = {
+                    **address,
+                    "state": states[0]["state"],
+                    "source": " | ".join(dict.fromkeys(
+                        credit.strip()
+                        for source in (address["source"], states[0]["source"])
+                        for credit in source.split("|")
+                        if credit.strip()
+                    )),
+                }
+        return address
 
     def _result(self, row: dict) -> dict | None:
         if not isinstance(row, dict) or str(row.get("country_code", "")).lower() != "br":
@@ -60,7 +81,13 @@ class GeoapifyGeocodingService:
         label = str(row.get("formatted") or "").strip()
         if not label:
             return None
-        state = str(row.get("state_code") or row.get("iso3166_2") or "").removeprefix("BR-").upper()
+        # The provider may omit state_code while still returning the full name.
+        # Try each field independently: an invalid code must not hide a valid name.
+        state = next((
+            normalized
+            for field in ("state_code", "iso3166_2", "state")
+            if (normalized := normalize_brazilian_state(row.get(field))) is not None
+        ), None)
         street = row.get("street") or row.get("name")
         parts = [street, row.get("suburb"), row.get("city") or row.get("town") or row.get("village"), state, row.get("postcode")]
         base_address = ", ".join(dict.fromkeys(str(p).strip() for p in parts if p))

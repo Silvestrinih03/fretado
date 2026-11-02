@@ -588,10 +588,10 @@ class WalletTransactionModel {
 
   String get statusLabel {
     return switch (statusId) {
-      1 => 'PROCESSANDO',
-      2 => 'FINALIZADO',
-      3 => 'FALHA',
-      4 => 'CANCELADO',
+      1 => 'Processando',
+      2 => 'Finalizado',
+      3 => 'Erro',
+      4 => 'Cancelado',
       _ => 'STATUS $statusId',
     };
   }

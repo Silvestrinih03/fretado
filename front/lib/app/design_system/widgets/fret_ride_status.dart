@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../theme/fret_colors.dart';
-import 'fret_feedback.dart';
 
 class FretRideStatusBadge extends StatelessWidget {
   final int statusId;
@@ -125,61 +124,210 @@ class FretRideStatusStyle {
 Future<bool> showFretRideProgressConfirmation(
   BuildContext context, {
   required int statusId,
-}) {
-  final confirmation = _FretRideProgressConfirmation.fromStatusId(statusId);
+  bool isCancellationReturn = false,
+}) async {
+  final confirmation = _FretRideProgressConfirmation.fromStatusId(
+    statusId,
+    isCancellationReturn: isCancellationReturn,
+  );
   if (confirmation == null) {
-    return Future<bool>.value(true);
+    return true;
   }
 
-  return showFretConfirmationPopup(
-    context,
-    title: confirmation.title,
-    message: confirmation.message,
-    confirmLabel: confirmation.confirmLabel,
-    icon: confirmation.icon,
-    accentColor: confirmation.accentColor,
+  final result = await showDialog<bool>(
+    context: context,
+    barrierColor: FretColors.brandBlack.withValues(alpha: 0.48),
+    builder: (_) => _FretRideProgressDialog(confirmation: confirmation),
   );
+  return result ?? false;
 }
 
 class _FretRideProgressConfirmation {
+  final int step;
+  final String stage;
   final String title;
   final String message;
   final String confirmLabel;
   final IconData icon;
-  final Color accentColor;
 
   const _FretRideProgressConfirmation({
+    required this.step,
+    required this.stage,
     required this.title,
     required this.message,
     required this.confirmLabel,
     required this.icon,
-    required this.accentColor,
   });
 
-  static _FretRideProgressConfirmation? fromStatusId(int statusId) {
+  static _FretRideProgressConfirmation? fromStatusId(
+    int statusId, {
+    required bool isCancellationReturn,
+  }) {
     return switch (statusId) {
       2 => const _FretRideProgressConfirmation(
+        step: 1,
+        stage: 'INÍCIO DA CORRIDA',
         title: 'Iniciar corrida?',
-        message: 'Confirme que voce esta pronto para iniciar esta corrida.',
-        confirmLabel: 'Iniciar',
+        message:
+            'Tudo pronto para seguir até a coleta? Ao confirmar, a corrida será marcada como iniciada.',
+        confirmLabel: 'Iniciar corrida',
         icon: Icons.play_arrow_rounded,
-        accentColor: FretColors.attention800,
       ),
       3 => const _FretRideProgressConfirmation(
+        step: 2,
+        stage: 'COLETA',
         title: 'Confirmar coleta?',
-        message: 'Confirme que o pacote foi coletado com sucesso.',
-        confirmLabel: 'Confirmar',
+        message:
+            'Confira se a encomenda já está com você e pronta para o transporte. A próxima etapa será a entrega.',
+        confirmLabel: 'Confirmar coleta',
         icon: Icons.inventory_2_outlined,
-        accentColor: Color(0xFF9F3F00),
       ),
-      4 => const _FretRideProgressConfirmation(
-        title: 'Finalizar entrega?',
-        message: 'Confirme que a entrega foi concluida com sucesso.',
-        confirmLabel: 'Finalizar',
+      4 => _FretRideProgressConfirmation(
+        step: 3,
+        stage: isCancellationReturn ? 'DEVOLUÇÃO' : 'ENTREGA',
+        title: isCancellationReturn
+            ? 'Confirmar devolução?'
+            : 'Confirmar entrega?',
+        message: isCancellationReturn
+            ? 'Confirme somente após devolver a encomenda no destino combinado. Esta ação registra a devolução e finaliza a corrida.'
+            : 'Confirme somente após entregar a encomenda ao destinatário. Esta ação registra a entrega e finaliza a corrida.',
+        confirmLabel: isCancellationReturn
+            ? 'Finalizar devolução'
+            : 'Finalizar corrida',
         icon: Icons.flag_outlined,
-        accentColor: Color(0xFF5B2AA4),
       ),
       _ => null,
     };
+  }
+}
+
+class _FretRideProgressDialog extends StatelessWidget {
+  final _FretRideProgressConfirmation confirmation;
+
+  const _FretRideProgressDialog({required this.confirmation});
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+      backgroundColor: FretColors.appSurface,
+      surfaceTintColor: Colors.transparent,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(24),
+        side: const BorderSide(color: FretColors.appBorder),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 420),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 56,
+                    height: 56,
+                    decoration: BoxDecoration(
+                      color: FretColors.brandGoldSoft,
+                      borderRadius: BorderRadius.circular(18),
+                    ),
+                    child: Icon(
+                      confirmation.icon,
+                      color: FretColors.brandGoldDark,
+                      size: 28,
+                    ),
+                  ),
+                  const Spacer(),
+                  IconButton(
+                    tooltip: 'Fechar',
+                    onPressed: () => Navigator.of(context).pop(false),
+                    style: IconButton.styleFrom(
+                      backgroundColor: FretColors.appBackground,
+                      foregroundColor: FretColors.neutral600,
+                    ),
+                    icon: const Icon(Icons.close_rounded),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+              Text(
+                '${confirmation.stage} · ETAPA ${confirmation.step} DE 3',
+                style: const TextStyle(
+                  color: FretColors.brandGoldDark,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.8,
+                ),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                confirmation.title,
+                style: const TextStyle(
+                  color: FretColors.brandGraphite,
+                  fontSize: 24,
+                  fontWeight: FontWeight.w800,
+                  height: 1.2,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                confirmation.message,
+                style: const TextStyle(
+                  color: FretColors.neutral600,
+                  fontSize: 15,
+                  height: 1.5,
+                ),
+              ),
+              const SizedBox(height: 24),
+              FilledButton.icon(
+                onPressed: () => Navigator.of(context).pop(true),
+                style: FilledButton.styleFrom(
+                  backgroundColor: FretColors.brandGraphite,
+                  foregroundColor: FretColors.white,
+                  minimumSize: const Size.fromHeight(52),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 16,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  textStyle: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                icon: const Icon(
+                  Icons.check_rounded,
+                  color: FretColors.brandGold,
+                  size: 20,
+                ),
+                label: Text(
+                  confirmation.confirmLabel,
+                  textAlign: TextAlign.center,
+                ),
+              ),
+              const SizedBox(height: 10),
+              OutlinedButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: FretColors.brandGraphite,
+                  minimumSize: const Size.fromHeight(48),
+                  padding: const EdgeInsets.all(14),
+                  side: const BorderSide(color: FretColors.appBorder),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                ),
+                child: const Text('Voltar', textAlign: TextAlign.center),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }

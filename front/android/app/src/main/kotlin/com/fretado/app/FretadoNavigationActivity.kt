@@ -4,9 +4,11 @@ import android.Manifest
 import android.annotation.SuppressLint
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.content.res.ColorStateList
 import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
+import android.graphics.drawable.RippleDrawable
 import android.os.Bundle
 import android.os.SystemClock
 import android.speech.tts.TextToSpeech
@@ -168,6 +170,7 @@ class FretadoNavigationActivity : ComponentActivity() {
     private fun buildLayout() {
         val root = FrameLayout(this)
         mapView = MapView(this)
+        FretMapAppearance.configureOrnaments(mapView)
         mapView.gestures.addOnMoveListener(object : OnMoveListener {
             override fun onMoveBegin(detector: MoveGestureDetector) { follow = false }
             override fun onMove(detector: MoveGestureDetector): Boolean = false
@@ -175,10 +178,12 @@ class FretadoNavigationActivity : ComponentActivity() {
         })
         root.addView(mapView, FrameLayout.LayoutParams(-1, -1))
         mapView.mapboxMap.setCamera(CameraOptions.Builder().center(latestPosition).zoom(15.0).build())
-        mapView.mapboxMap.loadStyle(Style.LIGHT) { style ->
+        val mapTheme = FretMapAppearance.load(this)
+        mapView.mapboxMap.loadStyle(mapTheme.optString("styleUri", Style.MAPBOX_STREETS)) { style ->
+            FretMapAppearance.apply(style, mapTheme)
             style.addSource(geoJsonSource("freight-route") { featureCollection(FeatureCollection.fromFeatures(listOf<Feature>())) })
             style.addLayer(LineLayer("freight-route-border", "freight-route").lineColor(Color.WHITE).lineWidth(10.0))
-            style.addLayer(LineLayer("freight-route-line", "freight-route").lineColor(Color.rgb(169, 134, 24)).lineWidth(6.0))
+            style.addLayer(LineLayer("freight-route-line", "freight-route").lineColor(Color.parseColor(mapTheme.optString("routeColor", "#A98618"))).lineWidth(6.0))
             style.addSource(geoJsonSource("freight-target") { featureCollection(FeatureCollection.fromFeatures(listOf<Feature>())) })
             style.addLayer(CircleLayer("freight-target-dot", "freight-target").circleColor(Color.rgb(43, 43, 43)).circleRadius(9.0).circleStrokeColor(Color.WHITE).circleStrokeWidth(3.0))
             drawRoute()
@@ -191,7 +196,7 @@ class FretadoNavigationActivity : ComponentActivity() {
         val top = panel()
         distance = text(13, Color.rgb(205, 177, 63))
         maneuver = text(23, Color.WHITE).apply { text = "Preparando navegação…"; setTypeface(null, Typeface.BOLD) }
-        top.setBackgroundColor(Color.rgb(43, 43, 43))
+        top.background = roundedBackground(Color.rgb(43, 43, 43), 18)
         top.addView(distance); top.addView(maneuver)
         root.addView(top, FrameLayout.LayoutParams(-1, -2, Gravity.TOP).apply { setMargins(dp(12), dp(12), dp(12), 0) })
         val bottom = panel()
@@ -201,7 +206,12 @@ class FretadoNavigationActivity : ComponentActivity() {
         bottom.addView(destinationLabel); bottom.addView(estimate); bottom.addView(notice)
         val actions = LinearLayout(this)
         fun action(label: String, callback: () -> Unit) {
-            actions.addView(Button(this).apply { text = label; isAllCaps = false; setOnClickListener { callback() } }, LinearLayout.LayoutParams(0, dp(48), 1f))
+            val first = actions.childCount == 0
+            actions.addView(navigationButton(label, onClick = callback),
+                LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply {
+                    topMargin = dp(12)
+                    if (first) marginEnd = dp(8)
+                })
         }
         action("Centralizar") { follow = true; latestPosition?.let { mapView.mapboxMap.setCamera(CameraOptions.Builder().center(it).zoom(16.5).build()) } }
         action("Áudio ligado") {
@@ -210,10 +220,8 @@ class FretadoNavigationActivity : ComponentActivity() {
             (actions.getChildAt(1) as Button).text = if (muted) "Áudio desligado" else "Áudio ligado"
         }
         bottom.addView(actions)
-        bottom.addView(Button(this).apply {
-            text = "Voltar à corrida"; isAllCaps = false
-            setOnClickListener { close(null) }
-        })
+        bottom.addView(navigationButton("Voltar à corrida", primary = true) { close(null) },
+            LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(10) })
         // Attribution stays unobstructed above the bottom card.
         root.addView(bottom, FrameLayout.LayoutParams(-1, -2, Gravity.BOTTOM).apply { setMargins(dp(12), 0, dp(12), dp(42)) })
         ViewCompat.setOnApplyWindowInsetsListener(root) { view, insets ->
@@ -388,10 +396,33 @@ class FretadoNavigationActivity : ComponentActivity() {
         finish()
     }
 
+    private fun roundedBackground(color: Int, radius: Int) = GradientDrawable().apply {
+        setColor(color)
+        cornerRadius = dp(radius).toFloat()
+    }
+
+    private fun navigationButton(label: String, primary: Boolean = false, onClick: () -> Unit) = Button(this).apply {
+        text = label
+        isAllCaps = false
+        textSize = 14f
+        minHeight = dp(48)
+        minimumHeight = dp(48)
+        setPadding(dp(12), dp(12), dp(12), dp(12))
+        setTypeface(null, Typeface.BOLD)
+        setTextColor(if (primary) Color.WHITE else Color.rgb(43, 43, 43))
+        backgroundTintList = null
+        val shape = roundedBackground(if (primary) Color.rgb(43, 43, 43) else Color.rgb(248, 247, 243), 12)
+        if (!primary) shape.setStroke(dp(1), Color.rgb(232, 228, 219))
+        background = RippleDrawable(ColorStateList.valueOf(if (primary) 0x33FFFFFF else 0x22000000), shape, null)
+        stateListAnimator = null
+        elevation = 0f
+        setOnClickListener { onClick() }
+    }
+
     private fun panel() = LinearLayout(this).apply {
         orientation = LinearLayout.VERTICAL
         setPadding(dp(16), dp(14), dp(16), dp(12))
-        background = GradientDrawable().apply { setColor(Color.WHITE); cornerRadius = dp(18).toFloat() }
+        background = roundedBackground(Color.WHITE, 18)
         elevation = dp(4).toFloat()
     }
     private fun text(size: Int, color: Int) = TextView(this).apply {

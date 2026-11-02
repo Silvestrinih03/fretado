@@ -46,7 +46,9 @@ class _DriverNavigationPageState extends State<DriverNavigationPage> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => unawaited(_start()));
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) unawaited(_refresh());
+    });
   }
 
   Future<bool> _refresh() async {
@@ -213,6 +215,7 @@ class _DriverNavigationPageState extends State<DriverNavigationPage> {
     final confirmed = await showFretRideProgressConfirmation(
       context,
       statusId: ride.statusId,
+      isCancellationReturn: ride.isCancellationReturn,
     );
     if (!confirmed || !mounted) return;
     setState(() => _advancing = true);

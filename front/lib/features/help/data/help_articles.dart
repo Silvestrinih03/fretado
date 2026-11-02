@@ -103,7 +103,8 @@ const helpArticles = <HelpArticle>[
     question: 'Por que preciso informar o número ou marcar S/N?',
     paragraphs: [
       'Coleta e entrega precisam de um número confirmado. Se o endereço realmente não tiver numeração, selecione “Sem número — S/N”. Um campo vazio não é interpretado como S/N.',
-      'Confira números preenchidos pela busca. Se você corrigir o número, o app pode pedir a confirmação do ponto de acesso no mapa. Ajuste o pin antes de confirmar.',
+      'Confira os números preenchidos pela busca. Ao calcular o valor, uma correção de número pode atualizar o ponto quando houver um resultado compatível com a rua, a cidade e a UF. Depois, confirme a coleta e a entrega nos mapas apresentados antes de seguir para o resumo.',
+      'Se o número não for localizado com precisão, confira o ponto escolhido e toque no mapa para ajustar o acesso antes de confirmar. Para S/N, confira também o ponto selecionado. Fechar a confirmação mantém os dados dos detalhes, sem calcular o frete. No resumo, você ainda pode usar “Ajustar ponto de coleta” ou “Ajustar ponto de entrega” para voltar ao mapa com os demais dados preservados.',
       'Use complemento para apartamento, bloco ou sala e referência para algo que facilite a chegada. Esses dois campos são opcionais.',
     ],
     keywords: [
@@ -703,7 +704,7 @@ const helpArticles = <HelpArticle>[
     audience: HomeProfileEnum.driver,
     question: 'Como usar a navegação integrada, Maps ou Waze?',
     paragraphs: [
-      'Na corrida, abra a navegação para o próximo destino: coleta ou entrega. A navegação integrada no Android oferece manobras, orientação por voz e recálculo, com GPS preciso e acesso à internet.',
+      'Na corrida, “Ver rota” abre uma prévia para o próximo destino: coleta ou entrega. A orientação só começa quando você toca em “Iniciar navegação no Fretado”. No Android, ela oferece manobras, voz e recálculo, com GPS preciso e acesso à internet.',
       'A orientação integrada funciona enquanto a tela de navegação está visível. Sair dela, abrir outro app ou bloquear o aparelho encerra a sessão. Para retomar, inicie novamente; o app confere a corrida e a localização.',
       'Você também pode escolher Google Maps ou Waze. A chegada no mapa não confirma coleta ou entrega automaticamente: volte à corrida e confirme apenas depois de realizar a etapa.',
     ],

@@ -53,7 +53,11 @@ class ShippingResumePage extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 16),
-                  _RouteSummaryCard(addressData: addressData),
+                  _RouteSummaryCard(
+                    addressData: addressData,
+                    onEditPoint: (pickup) =>
+                        Navigator.of(context).pop<bool>(pickup),
+                  ),
                   const SizedBox(height: 14),
                   _RouteMapCard(addressData: addressData, quote: quote),
                   const SizedBox(height: 14),
@@ -175,8 +179,12 @@ class _StepLabel extends StatelessWidget {
 
 class _RouteSummaryCard extends StatelessWidget {
   final FreightAddressData addressData;
+  final ValueChanged<bool> onEditPoint;
 
-  const _RouteSummaryCard({required this.addressData});
+  const _RouteSummaryCard({
+    required this.addressData,
+    required this.onEditPoint,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -184,7 +192,7 @@ class _RouteSummaryCard extends StatelessWidget {
       children: [
         const _SectionTitle(
           icon: Icons.alt_route_rounded,
-          title: 'Rota Confirmada',
+          title: 'Seu trajeto',
         ),
         const SizedBox(height: 14),
         _RouteStop(
@@ -196,6 +204,11 @@ class _RouteSummaryCard extends StatelessWidget {
           ),
           isOrigin: true,
         ),
+        _AddressPointAction(
+          approximate: addressData.pickupPointApproximate,
+          onTap: () => onEditPoint(true),
+          label: 'Ajustar ponto de coleta',
+        ),
         _RouteStop(
           label: 'DESTINO (ENTREGA)',
           address: addressData.destinationAddress,
@@ -204,9 +217,72 @@ class _RouteSummaryCard extends StatelessWidget {
             addressData.deliveryLongitude,
           ),
         ),
+        _AddressPointAction(
+          approximate: addressData.deliveryPointApproximate,
+          onTap: () => onEditPoint(false),
+          label: 'Ajustar ponto de entrega',
+        ),
       ],
     );
   }
+}
+
+class _AddressPointAction extends StatelessWidget {
+  final bool approximate;
+  final VoidCallback onTap;
+  final String label;
+  const _AddressPointAction({
+    required this.approximate,
+    required this.onTap,
+    required this.label,
+  });
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(left: 24, bottom: 12),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (approximate)
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: FretColors.brandGoldSoft,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: const Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(
+                  Icons.info_outline_rounded,
+                  size: 17,
+                  color: FretColors.brandGoldDark,
+                ),
+                SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Número não localizado com precisão. Mantivemos o ponto escolhido no mapa; confira o acesso antes de continuar.',
+                    style: TextStyle(
+                      fontSize: 12,
+                      height: 1.5,
+                      color: FretColors.brandGraphite,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        TextButton.icon(
+          onPressed: onTap,
+          icon: const Icon(Icons.edit_location_alt_outlined, size: 17),
+          label: Text(label),
+          style: TextButton.styleFrom(
+            foregroundColor: FretColors.brandGoldDark,
+          ),
+        ),
+      ],
+    ),
+  );
 }
 
 class _RouteMapCard extends StatefulWidget {

@@ -776,6 +776,7 @@ class _DriverRideInProgressSectionState
     final bool confirmed = await showFretRideProgressConfirmation(
       context,
       statusId: ride.statusId,
+      isCancellationReturn: ride.isCancellationReturn,
     );
 
     if (!confirmed || !mounted) return;

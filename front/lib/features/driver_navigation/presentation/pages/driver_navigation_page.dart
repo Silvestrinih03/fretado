@@ -320,7 +320,7 @@ class _DriverNavigationPageState extends State<DriverNavigationPage> {
                       label: Text(
                         _launching
                             ? 'Navegação aberta…'
-                            : 'Iniciar navegação no Fretado',
+                            : 'Iniciar navegação pelo app',
                       ),
                     ),
                     const SizedBox(height: 10),
